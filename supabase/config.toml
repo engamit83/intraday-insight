@@ -1,1 +1,13 @@
 project_id = "emxhhxvtbjsjtjacbike"
+
+[functions.alpha-vantage]
+verify_jwt = false
+
+[functions.indicators]
+verify_jwt = false
+
+[functions.update-market-data]
+verify_jwt = false
+
+[functions.health]
+verify_jwt = false
