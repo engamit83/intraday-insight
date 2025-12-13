@@ -104,15 +104,92 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_adjustments: {
+        Row: {
+          adjusted_value: number | null
+          adjustment_reason: string | null
+          condition_type: string
+          created_at: string | null
+          id: string
+          last_updated: string | null
+          original_value: number | null
+          success_rate: number | null
+          trade_count: number | null
+        }
+        Insert: {
+          adjusted_value?: number | null
+          adjustment_reason?: string | null
+          condition_type: string
+          created_at?: string | null
+          id?: string
+          last_updated?: string | null
+          original_value?: number | null
+          success_rate?: number | null
+          trade_count?: number | null
+        }
+        Update: {
+          adjusted_value?: number | null
+          adjustment_reason?: string | null
+          condition_type?: string
+          created_at?: string | null
+          id?: string
+          last_updated?: string | null
+          original_value?: number | null
+          success_rate?: number | null
+          trade_count?: number | null
+        }
+        Relationships: []
+      }
+      market_conditions: {
+        Row: {
+          condition: string
+          confidence: number | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          index_direction: string | null
+          time_of_day: string | null
+          volatility_level: number | null
+          volume_behavior: string | null
+        }
+        Insert: {
+          condition: string
+          confidence?: number | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          index_direction?: string | null
+          time_of_day?: string | null
+          volatility_level?: number | null
+          volume_behavior?: string | null
+        }
+        Update: {
+          condition?: string
+          confidence?: number | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          index_direction?: string | null
+          time_of_day?: string | null
+          volatility_level?: number | null
+          volume_behavior?: string | null
+        }
+        Relationships: []
+      }
       signals: {
         Row: {
           confidence: number
           created_at: string
           entry_price: number
           expires_at: string | null
+          final_score: number | null
           id: string
           indicators: Json | null
           is_active: boolean | null
+          is_tradable: boolean | null
+          market_condition: string | null
+          raw_score: number | null
+          rejection_reason: string | null
           signal_type: string
           stoploss_price: number
           symbol: string
@@ -124,9 +201,14 @@ export type Database = {
           created_at?: string
           entry_price: number
           expires_at?: string | null
+          final_score?: number | null
           id?: string
           indicators?: Json | null
           is_active?: boolean | null
+          is_tradable?: boolean | null
+          market_condition?: string | null
+          raw_score?: number | null
+          rejection_reason?: string | null
           signal_type: string
           stoploss_price: number
           symbol: string
@@ -138,9 +220,14 @@ export type Database = {
           created_at?: string
           entry_price?: number
           expires_at?: string | null
+          final_score?: number | null
           id?: string
           indicators?: Json | null
           is_active?: boolean | null
+          is_tradable?: boolean | null
+          market_condition?: string | null
+          raw_score?: number | null
+          rejection_reason?: string | null
           signal_type?: string
           stoploss_price?: number
           symbol?: string
@@ -203,12 +290,68 @@ export type Database = {
         }
         Relationships: []
       }
+      trade_exits: {
+        Row: {
+          created_at: string | null
+          exit_reason: string
+          exit_type: string | null
+          id: string
+          market_condition: string | null
+          momentum_at_exit: number | null
+          notes: string | null
+          pnl_at_exit: number | null
+          time_held_minutes: number | null
+          trade_id: string | null
+          volume_at_exit: number | null
+          vwap_position: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          exit_reason: string
+          exit_type?: string | null
+          id?: string
+          market_condition?: string | null
+          momentum_at_exit?: number | null
+          notes?: string | null
+          pnl_at_exit?: number | null
+          time_held_minutes?: number | null
+          trade_id?: string | null
+          volume_at_exit?: number | null
+          vwap_position?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          exit_reason?: string
+          exit_type?: string | null
+          id?: string
+          market_condition?: string | null
+          momentum_at_exit?: number | null
+          notes?: string | null
+          pnl_at_exit?: number | null
+          time_held_minutes?: number | null
+          trade_id?: string | null
+          volume_at_exit?: number | null
+          vwap_position?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_exits_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trades: {
         Row: {
           closed_at: string | null
           entry_price: number
           exit_price: number | null
+          exit_reason: string | null
           id: string
+          momentum_at_entry: number | null
+          momentum_at_exit: number | null
           notes: string | null
           opened_at: string
           pnl: number | null
@@ -217,6 +360,7 @@ export type Database = {
           signal_id: string | null
           status: string
           symbol: string
+          time_held_minutes: number | null
           trade_mode: string
           trade_type: string
           user_id: string | null
@@ -225,7 +369,10 @@ export type Database = {
           closed_at?: string | null
           entry_price: number
           exit_price?: number | null
+          exit_reason?: string | null
           id?: string
+          momentum_at_entry?: number | null
+          momentum_at_exit?: number | null
           notes?: string | null
           opened_at?: string
           pnl?: number | null
@@ -234,6 +381,7 @@ export type Database = {
           signal_id?: string | null
           status?: string
           symbol: string
+          time_held_minutes?: number | null
           trade_mode?: string
           trade_type: string
           user_id?: string | null
@@ -242,7 +390,10 @@ export type Database = {
           closed_at?: string | null
           entry_price?: number
           exit_price?: number | null
+          exit_reason?: string | null
           id?: string
+          momentum_at_entry?: number | null
+          momentum_at_exit?: number | null
           notes?: string | null
           opened_at?: string
           pnl?: number | null
@@ -251,6 +402,7 @@ export type Database = {
           signal_id?: string | null
           status?: string
           symbol?: string
+          time_held_minutes?: number | null
           trade_mode?: string
           trade_type?: string
           user_id?: string | null
@@ -264,6 +416,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trading_rules: {
+        Row: {
+          consecutive_loss_limit: number | null
+          id: string
+          is_active: boolean | null
+          last_updated: string | null
+          market_multiplier: number | null
+          max_daily_loss: number | null
+          max_daily_trades: number | null
+          metadata: Json | null
+          min_score_threshold: number | null
+          risk_multiplier: number | null
+          rule_name: string
+          time_multiplier: number | null
+        }
+        Insert: {
+          consecutive_loss_limit?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_updated?: string | null
+          market_multiplier?: number | null
+          max_daily_loss?: number | null
+          max_daily_trades?: number | null
+          metadata?: Json | null
+          min_score_threshold?: number | null
+          risk_multiplier?: number | null
+          rule_name: string
+          time_multiplier?: number | null
+        }
+        Update: {
+          consecutive_loss_limit?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_updated?: string | null
+          market_multiplier?: number | null
+          max_daily_loss?: number | null
+          max_daily_trades?: number | null
+          metadata?: Json | null
+          min_score_threshold?: number | null
+          risk_multiplier?: number | null
+          rule_name?: string
+          time_multiplier?: number | null
+        }
+        Relationships: []
+      }
+      trading_state: {
+        Row: {
+          auto_mode_active: boolean | null
+          consecutive_losses: number | null
+          created_at: string | null
+          daily_pnl: number | null
+          date: string
+          id: string
+          last_trade_time: string | null
+          stop_reason: string | null
+          trades_today: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          auto_mode_active?: boolean | null
+          consecutive_losses?: number | null
+          created_at?: string | null
+          daily_pnl?: number | null
+          date?: string
+          id?: string
+          last_trade_time?: string | null
+          stop_reason?: string | null
+          trades_today?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          auto_mode_active?: boolean | null
+          consecutive_losses?: number | null
+          created_at?: string | null
+          daily_pnl?: number | null
+          date?: string
+          id?: string
+          last_trade_time?: string | null
+          stop_reason?: string | null
+          trades_today?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_settings: {
         Row: {

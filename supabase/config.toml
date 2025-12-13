@@ -11,3 +11,15 @@ verify_jwt = false
 
 [functions.health]
 verify_jwt = false
+
+[functions.market-conditions]
+verify_jwt = false
+
+[functions.trading-intelligence]
+verify_jwt = false
+
+[functions.exit-monitor]
+verify_jwt = false
+
+[functions.learning-engine]
+verify_jwt = false
