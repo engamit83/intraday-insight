@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.learning-engine]
 verify_jwt = false
+
+[functions.sharekhan-market-data]
+verify_jwt = false
