@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,9 +20,15 @@ import {
   Shield, 
   Key,
   Save,
-  RefreshCw
+  RefreshCw,
+  Play,
+  Lock,
+  Zap
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+type SimulatorMode = 'SIGNAL_ONLY' | 'SIMULATOR' | 'AUTO';
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -36,7 +42,47 @@ export default function Settings() {
     signalAlerts: true,
     tradeAlerts: true,
     priceAlerts: true,
+    simulatorMode: 'SIGNAL_ONLY' as SimulatorMode,
   });
+
+  // Load simulator mode from database
+  useEffect(() => {
+    async function loadSettings() {
+      const { data } = await supabase
+        .from('user_settings')
+        .select('simulator_mode')
+        .maybeSingle();
+      
+      if (data?.simulator_mode) {
+        setSettings(prev => ({ ...prev, simulatorMode: data.simulator_mode as SimulatorMode }));
+      }
+    }
+    loadSettings();
+  }, []);
+
+  const handleSimulatorModeChange = async (mode: SimulatorMode) => {
+    // Don't allow AUTO mode
+    if (mode === 'AUTO') {
+      toast.error('Auto Trading is disabled for safety');
+      return;
+    }
+    
+    setSettings(prev => ({ ...prev, simulatorMode: mode }));
+    
+    // Update in database
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({ 
+        user_id: '00000000-0000-0000-0000-000000000000', // Placeholder for single-user
+        simulator_mode: mode 
+      }, { onConflict: 'user_id' });
+    
+    if (error) {
+      toast.error('Failed to update mode');
+    } else {
+      toast.success(`Switched to ${mode === 'SIMULATOR' ? 'Simulator' : 'Signal Only'} mode`);
+    }
+  };
 
   const handleSave = () => {
     toast.success("Settings saved successfully!");
@@ -81,21 +127,70 @@ export default function Settings() {
           <div className="glass-card rounded-xl p-6 space-y-6">
             <h3 className="text-lg font-semibold text-foreground">Trading Preferences</h3>
             
+            {/* Trading Mode Selector */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Trading Mode</Label>
+              <div className="grid gap-3 md:grid-cols-3">
+                {/* Signal Only */}
+                <button
+                  onClick={() => handleSimulatorModeChange('SIGNAL_ONLY')}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    settings.simulatorMode === 'SIGNAL_ONLY' 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover:border-primary/50 bg-secondary/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="h-5 w-5 text-primary" />
+                    <span className="font-semibold">Signal Only</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    View AI signals without automatic trade execution
+                  </p>
+                </button>
+
+                {/* Simulator */}
+                <button
+                  onClick={() => handleSimulatorModeChange('SIMULATOR')}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    settings.simulatorMode === 'SIMULATOR' 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover:border-primary/50 bg-secondary/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Play className="h-5 w-5 text-bullish" />
+                    <span className="font-semibold">Simulator</span>
+                    <Badge className="bg-bullish/20 text-bullish text-xs">PAPER</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Execute virtual trades with real prices, no real money
+                  </p>
+                </button>
+
+                {/* Auto (Disabled) */}
+                <div className="p-4 rounded-lg border-2 border-border bg-secondary/20 opacity-50 cursor-not-allowed">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lock className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-semibold text-muted-foreground">Auto Trading</span>
+                    <Badge variant="outline" className="text-xs">LOCKED</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Real trade execution (requires compliance approval)
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {settings.simulatorMode === 'SIMULATOR' 
+                  ? '✓ Simulator mode active. Virtual trades will be created from signals.'
+                  : '○ Signal only mode. You will see signals but no trades will be created.'}
+              </p>
+            </div>
+
+            <div className="h-px bg-border" />
+            
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Auto Trading Mode</Label>
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-                    <div>
-                      <p className="font-medium text-foreground">Enable Auto Trading</p>
-                      <p className="text-sm text-muted-foreground">Automatically execute virtual trades based on AI signals</p>
-                    </div>
-                    <Switch 
-                      checked={settings.autoTradingEnabled}
-                      onCheckedChange={(checked) => setSettings({ ...settings, autoTradingEnabled: checked })}
-                    />
-                  </div>
-                </div>
 
                 <div className="space-y-2">
                   <Label>Preferred Sectors</Label>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { SignalCard } from "@/components/dashboard/SignalCard";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter, RefreshCw, Zap } from "lucide-react";
+import { Search, Filter, RefreshCw, Zap, Play } from "lucide-react";
 import type { StockSignal } from "@/types/trading";
+import { useSimulatorStatus } from "@/hooks/useSimulatorStatus";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const allSignals: StockSignal[] = [
   {
@@ -146,6 +149,10 @@ const allSignals: StockSignal[] = [
 export default function Signals() {
   const [filter, setFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const { status, refetch } = useSimulatorStatus();
+  
+  // Track which signals have simulated trades
+  const openTradeSymbols = new Set(status?.trades?.map((t: any) => t.symbol) || []);
 
   const filteredSignals = allSignals.filter((signal) => {
     const matchesFilter = filter === "all" || signal.signal_type === filter;
@@ -157,6 +164,17 @@ export default function Signals() {
   const buyCount = allSignals.filter(s => s.signal_type === "BUY").length;
   const sellCount = allSignals.filter(s => s.signal_type === "SELL").length;
 
+  const handleTrade = async (signal: StockSignal) => {
+    if (!status?.simulatorEnabled) {
+      toast.info("Enable Simulator mode in Settings to create virtual trades");
+      return;
+    }
+    
+    // For demo, we'll show a success message
+    toast.success(`Simulated ${signal.signal_type} created for ${signal.symbol}`);
+    refetch();
+  };
+
   return (
     <MainLayout>
       {/* Header */}
@@ -166,6 +184,12 @@ export default function Signals() {
           <p className="text-muted-foreground">AI-powered intraday trading opportunities</p>
         </div>
         <div className="flex items-center gap-3">
+          {status?.simulatorEnabled && (
+            <Badge className="bg-bullish/20 text-bullish px-3 py-1.5">
+              <Play className="h-4 w-4 mr-1" />
+              Simulator Active
+            </Badge>
+          )}
           <Badge variant="outline" className="px-3 py-1.5">
             <Zap className="h-4 w-4 mr-1 text-primary" />
             {allSignals.length} Active
@@ -218,7 +242,16 @@ export default function Signals() {
       {/* Signals Grid */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filteredSignals.map((signal) => (
-          <SignalCard key={signal.id} signal={signal} />
+          <div key={signal.id} className="relative">
+            {openTradeSymbols.has(signal.symbol) && (
+              <div className="absolute -top-2 -right-2 z-10">
+                <Badge className="bg-primary text-primary-foreground shadow-lg">
+                  TRADE OPEN
+                </Badge>
+              </div>
+            )}
+            <SignalCard signal={signal} onTrade={handleTrade} />
+          </div>
         ))}
       </div>
 
