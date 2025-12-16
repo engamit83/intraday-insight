@@ -236,6 +236,71 @@ export type Database = {
         }
         Relationships: []
       }
+      simulated_trades: {
+        Row: {
+          confidence_at_entry: number | null
+          direction: string | null
+          entry_price: number
+          entry_time: string | null
+          exit_price: number | null
+          exit_reason: string | null
+          exit_time: string | null
+          id: string
+          market_condition: string | null
+          pnl: number | null
+          pnl_percent: number | null
+          quantity: number | null
+          signal_id: string | null
+          status: string | null
+          symbol: string
+          user_id: string | null
+        }
+        Insert: {
+          confidence_at_entry?: number | null
+          direction?: string | null
+          entry_price: number
+          entry_time?: string | null
+          exit_price?: number | null
+          exit_reason?: string | null
+          exit_time?: string | null
+          id?: string
+          market_condition?: string | null
+          pnl?: number | null
+          pnl_percent?: number | null
+          quantity?: number | null
+          signal_id?: string | null
+          status?: string | null
+          symbol: string
+          user_id?: string | null
+        }
+        Update: {
+          confidence_at_entry?: number | null
+          direction?: string | null
+          entry_price?: number
+          entry_time?: string | null
+          exit_price?: number | null
+          exit_reason?: string | null
+          exit_time?: string | null
+          id?: string
+          market_condition?: string | null
+          pnl?: number | null
+          pnl_percent?: number | null
+          quantity?: number | null
+          signal_id?: string | null
+          status?: string | null
+          symbol?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulated_trades_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stocks: {
         Row: {
           id: string
@@ -519,6 +584,7 @@ export type Database = {
           sharekhan_refresh_token: string | null
           sharekhan_token_expiry: string | null
           sharekhan_token_generated_at: string | null
+          simulator_mode: string | null
           updated_at: string
           user_id: string
         }
@@ -536,6 +602,7 @@ export type Database = {
           sharekhan_refresh_token?: string | null
           sharekhan_token_expiry?: string | null
           sharekhan_token_generated_at?: string | null
+          simulator_mode?: string | null
           updated_at?: string
           user_id: string
         }
@@ -553,6 +620,7 @@ export type Database = {
           sharekhan_refresh_token?: string | null
           sharekhan_token_expiry?: string | null
           sharekhan_token_generated_at?: string | null
+          simulator_mode?: string | null
           updated_at?: string
           user_id?: string
         }
