@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.sharekhan-market-data]
 verify_jwt = false
+
+[functions.sharekhan-auth]
+verify_jwt = false

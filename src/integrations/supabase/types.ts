@@ -515,6 +515,10 @@ export type Database = {
           notification_enabled: boolean | null
           preferred_sectors: string[] | null
           risk_level: string | null
+          sharekhan_access_token: string | null
+          sharekhan_refresh_token: string | null
+          sharekhan_token_expiry: string | null
+          sharekhan_token_generated_at: string | null
           updated_at: string
           user_id: string
         }
@@ -528,6 +532,10 @@ export type Database = {
           notification_enabled?: boolean | null
           preferred_sectors?: string[] | null
           risk_level?: string | null
+          sharekhan_access_token?: string | null
+          sharekhan_refresh_token?: string | null
+          sharekhan_token_expiry?: string | null
+          sharekhan_token_generated_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -541,6 +549,10 @@ export type Database = {
           notification_enabled?: boolean | null
           preferred_sectors?: string[] | null
           risk_level?: string | null
+          sharekhan_access_token?: string | null
+          sharekhan_refresh_token?: string | null
+          sharekhan_token_expiry?: string | null
+          sharekhan_token_generated_at?: string | null
           updated_at?: string
           user_id?: string
         }
