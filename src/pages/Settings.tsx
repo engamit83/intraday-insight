@@ -23,12 +23,16 @@ import {
   RefreshCw,
   Play,
   Lock,
-  Zap
+  Zap,
+  CheckCircle,
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 type SimulatorMode = 'SIGNAL_ONLY' | 'SIMULATOR' | 'AUTO';
+type SharekhanStatus = 'checking' | 'connected' | 'disconnected' | 'error';
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -45,6 +49,9 @@ export default function Settings() {
     simulatorMode: 'SIGNAL_ONLY' as SimulatorMode,
   });
 
+  const [sharekhanStatus, setSharekhanStatus] = useState<SharekhanStatus>('checking');
+  const [isConnecting, setIsConnecting] = useState(false);
+
   // Load simulator mode from database
   useEffect(() => {
     async function loadSettings() {
@@ -59,6 +66,62 @@ export default function Settings() {
     }
     loadSettings();
   }, []);
+
+  // Check Sharekhan auth status on load
+  useEffect(() => {
+    async function checkSharekhanStatus() {
+      try {
+        const userId = '00000000-0000-0000-0000-000000000000'; // Single-user placeholder
+        const { data, error } = await supabase.functions.invoke('sharekhan-auth', {
+          body: { action: 'health', userId }
+        });
+
+        if (error) {
+          console.error('Sharekhan health check error:', error);
+          setSharekhanStatus('error');
+          return;
+        }
+
+        if (data?.status === 'AUTH_OK') {
+          setSharekhanStatus('connected');
+        } else {
+          setSharekhanStatus('disconnected');
+        }
+      } catch (err) {
+        console.error('Sharekhan status check failed:', err);
+        setSharekhanStatus('error');
+      }
+    }
+    checkSharekhanStatus();
+  }, []);
+
+  const handleConnectSharekhan = async () => {
+    setIsConnecting(true);
+    try {
+      const redirectUri = `${window.location.origin}/settings`;
+      const { data, error } = await supabase.functions.invoke('sharekhan-auth', {
+        body: { action: 'login-url', redirectUri }
+      });
+
+      if (error) {
+        toast.error('Failed to get login URL');
+        console.error('Login URL error:', error);
+        return;
+      }
+
+      if (data?.loginUrl) {
+        // Redirect to Sharekhan OAuth
+        window.location.href = data.loginUrl;
+      } else {
+        toast.error('Invalid response from auth service');
+      }
+    } catch (err) {
+      console.error('Connect Sharekhan error:', err);
+      toast.error('Failed to connect to Sharekhan');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const handleSimulatorModeChange = async (mode: SimulatorMode) => {
     // Don't allow AUTO mode
@@ -373,9 +436,79 @@ export default function Settings() {
             <h3 className="text-lg font-semibold text-foreground">API Configuration</h3>
             <p className="text-sm text-muted-foreground">Connect to market data providers for real-time stock data.</p>
             
+            {/* Sharekhan Connection */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Alpha Vantage API Key</Label>
+                <Label className="text-base font-medium">Sharekhan Integration</Label>
+                <p className="text-sm text-muted-foreground">
+                  Connect your Sharekhan account for live NSE/BSE market data
+                </p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {sharekhanStatus === 'checking' && (
+                      <>
+                        <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                        <span className="text-muted-foreground">Checking connection...</span>
+                      </>
+                    )}
+                    {sharekhanStatus === 'connected' && (
+                      <>
+                        <CheckCircle className="h-5 w-5 text-bullish" />
+                        <span className="text-bullish font-medium">Sharekhan Connected</span>
+                      </>
+                    )}
+                    {sharekhanStatus === 'disconnected' && (
+                      <>
+                        <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                        <span className="text-muted-foreground">Not connected</span>
+                      </>
+                    )}
+                    {sharekhanStatus === 'error' && (
+                      <>
+                        <div className="h-2 w-2 rounded-full bg-bearish" />
+                        <span className="text-bearish">Connection error</span>
+                      </>
+                    )}
+                  </div>
+
+                  {sharekhanStatus !== 'connected' && (
+                    <Button 
+                      onClick={handleConnectSharekhan}
+                      disabled={isConnecting || sharekhanStatus === 'checking'}
+                      className="bg-primary hover:bg-primary/90"
+                    >
+                      {isConnecting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Connect Sharekhan
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {sharekhanStatus === 'connected' && (
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Your Sharekhan account is connected. Live market data will be used for signals.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="h-px bg-border" />
+
+            {/* Alpha Vantage (Fallback) */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Alpha Vantage API Key (Fallback)</Label>
                 <div className="flex gap-2">
                   <Input 
                     type="password"
@@ -388,7 +521,7 @@ export default function Settings() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Get your free API key at{" "}
+                  Used as fallback when Sharekhan data is unavailable. Get your free API key at{" "}
                   <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     alphavantage.co
                   </a>
@@ -397,7 +530,7 @@ export default function Settings() {
 
               <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
                 <p className="text-sm text-foreground">
-                  <strong>Note:</strong> Currently using simulated data. Connect your API key for live market data.
+                  <strong>Note:</strong> Connect Sharekhan for real-time NSE/BSE data. Alpha Vantage serves as a fallback.
                 </p>
               </div>
             </div>
