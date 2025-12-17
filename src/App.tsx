@@ -11,8 +11,26 @@ import Watchlist from "./pages/Watchlist";
 import Performance from "./pages/Performance";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { useSharekhanCallback } from "./hooks/useSharekhanCallback";
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  useSharekhanCallback();
+  
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/signals" element={<Signals />} />
+      <Route path="/auto-trading" element={<AutoTrading />} />
+      <Route path="/manual-trades" element={<ManualTrades />} />
+      <Route path="/watchlist" element={<Watchlist />} />
+      <Route path="/performance" element={<Performance />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -20,16 +38,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/signals" element={<Signals />} />
-          <Route path="/auto-trading" element={<AutoTrading />} />
-          <Route path="/manual-trades" element={<ManualTrades />} />
-          <Route path="/watchlist" element={<Watchlist />} />
-          <Route path="/performance" element={<Performance />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AppContent />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
