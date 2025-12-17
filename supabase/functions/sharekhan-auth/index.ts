@@ -284,7 +284,23 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get('action');
+    
+    // Support both query params and body for action/params
+    let action = url.searchParams.get('action');
+    let body: Record<string, unknown> = {};
+    
+    // Parse body if present (POST requests)
+    if (req.method === 'POST') {
+      try {
+        body = await req.json();
+        // If action not in query params, check body
+        if (!action && body.action) {
+          action = body.action as string;
+        }
+      } catch {
+        // Body parsing failed, continue with query params only
+      }
+    }
 
     console.log(`Sharekhan Auth - Action: ${action}`);
 
@@ -302,7 +318,7 @@ serve(async (req) => {
 
     // Action: Generate login URL
     if (action === 'login-url') {
-      const redirectUri = url.searchParams.get('redirect_uri');
+      const redirectUri = url.searchParams.get('redirect_uri') || (body.redirectUri as string);
       
       if (!redirectUri) {
         return new Response(
@@ -326,8 +342,8 @@ serve(async (req) => {
 
     // Action: Exchange request_token for access_token
     if (action === 'exchange-token') {
-      const body = await req.json();
-      const { request_token, user_id } = body;
+      const request_token = body.request_token as string;
+      const user_id = body.user_id as string;
 
       if (!request_token) {
         return new Response(
@@ -397,7 +413,7 @@ serve(async (req) => {
 
     // Action: Health check
     if (action === 'health') {
-      const userId = url.searchParams.get('user_id');
+      const userId = url.searchParams.get('user_id') || (body.userId as string);
 
       if (!userId) {
         return new Response(
@@ -411,7 +427,7 @@ serve(async (req) => {
 
     // Action: Get token for internal use (backend only - returns token for edge functions)
     if (action === 'get-token') {
-      const userId = url.searchParams.get('user_id');
+      const userId = url.searchParams.get('user_id') || (body.userId as string);
 
       if (!userId) {
         return new Response(
