@@ -98,16 +98,27 @@ export default function Settings() {
   const handleConnectSharekhan = async () => {
     setIsConnecting(true);
     try {
-      const redirectUri = `${window.location.origin}/settings`;
-      const { data, error } = await supabase.functions.invoke('sharekhan-auth', {
-        body: { action: 'login-url', redirectUri }
-      });
+      const redirectUri = 'https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app/settings';
+      
+      // Call edge function with redirect_uri as query parameter
+      const response = await fetch(
+        `https://emxhhxvtbjsjtjacbike.supabase.co/functions/v1/sharekhan-auth?action=login-url&redirect_uri=${encodeURIComponent(redirectUri)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      if (error) {
-        toast.error('Failed to get login URL');
-        console.error('Login URL error:', error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to get login URL');
+        console.error('Login URL error:', errorData);
         return;
       }
+
+      const data = await response.json();
 
       if (data?.loginUrl) {
         // Redirect to Sharekhan OAuth
