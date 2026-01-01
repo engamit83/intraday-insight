@@ -98,30 +98,21 @@ export default function Settings() {
   const handleConnectSharekhan = async () => {
     setIsConnecting(true);
     try {
-      const redirectUri = 'https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app/settings';
-      
-      // Call edge function with redirect_uri as query parameter
-      const response = await fetch(
-        `https://emxhhxvtbjsjtjacbike.supabase.co/functions/v1/sharekhan-auth?action=login-url&redirect_uri=${encodeURIComponent(redirectUri)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+      const redirect_uri = 'https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app';
+
+      // Backend expects redirect_uri as a query param
+      const { data, error } = await supabase.functions.invoke(
+        `sharekhan-auth?action=login-url&redirect_uri=${encodeURIComponent(redirect_uri)}`,
+        { method: 'GET' }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to get login URL');
-        console.error('Login URL error:', errorData);
+      if (error) {
+        console.error('Login URL error:', error);
+        toast.error('Failed to get login URL');
         return;
       }
 
-      const data = await response.json();
-
       if (data?.loginUrl) {
-        // Redirect to Sharekhan OAuth
         window.location.href = data.loginUrl;
       } else {
         toast.error('Invalid response from auth service');
