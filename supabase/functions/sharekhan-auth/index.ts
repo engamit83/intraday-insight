@@ -210,7 +210,8 @@ async function verifyToken(userId: string, tokenObj: any) {
 
     return { status: newStatus };
   } catch (err) {
-    await log("sharekhan-auth", "verify-token-exception", { userId, error: err.message }, "ERROR");
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    await log("sharekhan-auth", "verify-token-exception", { userId, error: errorMessage }, "ERROR");
     return { status: "API_UNREACHABLE" };
   }
 }
@@ -403,8 +404,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    await log("sharekhan-auth", "unhandled-error", { error: err.message }, "ERROR");
-    return new Response(JSON.stringify({ error: err.message }), {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    await log("sharekhan-auth", "unhandled-error", { error: errorMessage }, "ERROR");
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
