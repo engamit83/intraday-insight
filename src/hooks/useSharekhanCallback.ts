@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-const PLACEHOLDER_USER_ID = '00000000-0000-0000-0000-000000000000';
-
 export const useSharekhanCallback = () => {
   const hasProcessed = useRef(false);
 
@@ -20,13 +18,24 @@ export const useSharekhanCallback = () => {
       hasProcessed.current = true;
 
       try {
-        console.log('Sharekhan OAuth: Exchanging request_token...');
+        console.log('Sharekhan OAuth: Extracting request_token...');
+
+        // Get the logged-in user's ID (MANDATORY)
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user?.id) {
+          console.error('Sharekhan OAuth: No logged-in user found', userError);
+          toast.error('Please log in before connecting Sharekhan');
+          return;
+        }
+
+        console.log('Sharekhan OAuth: Exchanging token for user:', user.id);
 
         const { data, error } = await supabase.functions.invoke('sharekhan-auth', {
           body: {
             action: 'exchange-token',
             request_token: requestToken,
-            user_id: PLACEHOLDER_USER_ID
+            user_id: user.id
           }
         });
 
