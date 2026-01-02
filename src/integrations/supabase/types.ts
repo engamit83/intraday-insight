@@ -176,6 +176,30 @@ export type Database = {
         }
         Relationships: []
       }
+      scripcodes: {
+        Row: {
+          exchange: string
+          id: string
+          scrip_code: number
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          exchange?: string
+          id?: string
+          scrip_code: number
+          symbol: string
+          updated_at?: string
+        }
+        Update: {
+          exchange?: string
+          id?: string
+          scrip_code?: number
+          symbol?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       signals: {
         Row: {
           confidence: number
