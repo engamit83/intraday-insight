@@ -30,5 +30,8 @@ verify_jwt = false
 [functions.sharekhan-auth]
 verify_jwt = false
 
+[functions.scrip-master-sync]
+verify_jwt = false
+
 [functions.simulate-trade]
 verify_jwt = false
