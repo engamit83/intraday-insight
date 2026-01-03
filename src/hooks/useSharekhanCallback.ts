@@ -8,114 +8,133 @@ export const useSharekhanCallback = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleOAuthCallback = async () => {
-      // Prevent double processing
-      if (hasProcessed.current) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestToken = urlParams.get('request_token');
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const requestToken = urlParams.get('request_token');
+    // Exit early if no request_token in URL
+    if (!requestToken) return;
 
-      if (!requestToken) return;
+    // Prevent double processing
+    if (hasProcessed.current) return;
 
-      hasProcessed.current = true;
+    const cleanUrl = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('request_token');
+      window.history.replaceState({}, document.title, url.pathname + url.search);
+    };
 
-      // Show loading toast - indicate session restoration
-      const loadingToast = toast.loading('Restoring Session & Connecting...');
+    const processToken = async (userId: string) => {
+      const loadingToast = toast.loading('Connecting to Sharekhan...');
 
       try {
-        console.log('Sharekhan OAuth: Extracting request_token...');
+        console.log('Sharekhan OAuth: Exchanging token for user:', userId);
 
-        // Wait for session to hydrate with retry logic (3 attempts, 500ms apart)
-        let user = null;
-        const maxRetries = 3;
-        const retryDelay = 500;
-
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          console.log(`Sharekhan OAuth: Attempt ${attempt}/${maxRetries} to get session...`);
-          
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session?.user) {
-            user = session.user;
-            console.log('Sharekhan OAuth: Session found for user:', user.id);
-            break;
-          }
-
-          if (attempt < maxRetries) {
-            console.log(`Sharekhan OAuth: No session yet, waiting ${retryDelay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-          }
-        }
-
-        if (!user?.id) {
-          console.error('Sharekhan OAuth: No logged-in user found after retries');
-          toast.dismiss(loadingToast);
-          toast.error('Please log in before connecting Sharekhan');
-          return;
-        }
-
-        console.log('Sharekhan OAuth: Exchanging token for user:', user.id);
-
+        // Step 1: Exchange request_token for access token
         const { data, error } = await supabase.functions.invoke('sharekhan-auth', {
           body: {
             action: 'exchange-token',
             request_token: requestToken,
-            user_id: user.id
+            user_id: userId
           }
         });
 
         if (error) {
           console.error('Sharekhan OAuth exchange error:', error);
           toast.dismiss(loadingToast);
-          toast.error('Failed to connect Sharekhan. Please try again.');
+          toast.error(`Broker connection failed: ${error.message}`);
           return;
         }
 
-        if (data?.success) {
-          console.log('Sharekhan OAuth: Token exchanged successfully');
-          toast.dismiss(loadingToast);
-          toast.success('Broker Connected! Starting Master Sync...');
-
-          // Trigger scrip master sync with the new access token
-          console.log('Sharekhan OAuth: Triggering scrip master sync...');
-          toast.loading('Syncing stock master data...', { id: 'scrip-sync' });
-
-          const { data: syncData, error: syncError } = await supabase.functions.invoke('scrip-master-sync', {
-            body: {
-              action: 'sync_master',
-              accessToken: data.accessToken
-            }
-          });
-
-          if (syncError) {
-            console.error('Scrip master sync error:', syncError);
-            toast.dismiss('scrip-sync');
-            toast.warning('Connected but master sync failed. You can retry from Settings.');
-          } else {
-            console.log('Scrip master sync completed:', syncData);
-            toast.dismiss('scrip-sync');
-            toast.success(`Synced ${syncData?.processed || 0} stocks from Sharekhan`);
-          }
-
-          // Navigate to settings page after successful connection
-          navigate('/settings');
-        } else {
+        if (!data?.success) {
           console.error('Sharekhan OAuth exchange failed:', data?.error);
           toast.dismiss(loadingToast);
           toast.error(data?.error || 'Failed to connect Sharekhan');
+          return;
         }
+
+        console.log('Sharekhan OAuth: Token exchanged successfully');
+
+        // Step 2: Save broker data to user_settings
+        const { error: upsertError } = await supabase
+          .from('user_settings')
+          .upsert({
+            user_id: userId,
+            sharekhan_access_token: data.accessToken,
+            sharekhan_refresh_token: data.refreshToken || null,
+            sharekhan_token_expiry: data.expiresAt || null,
+            sharekhan_token_generated_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+
+        if (upsertError) {
+          console.error('Failed to save broker data:', upsertError);
+          toast.dismiss(loadingToast);
+          toast.error('Connected but failed to save settings. Please try again.');
+          return;
+        }
+
+        console.log('Sharekhan OAuth: Broker data saved to user_settings');
+        toast.dismiss(loadingToast);
+        toast.success('Broker Connected! Starting Master Sync...');
+
+        // Step 3: Trigger scrip master sync ONLY after successful upsert
+        toast.loading('Syncing stock master data...', { id: 'scrip-sync' });
+
+        const { data: syncData, error: syncError } = await supabase.functions.invoke('scrip-master-sync', {
+          body: {
+            action: 'sync_master',
+            accessToken: data.accessToken
+          }
+        });
+
+        toast.dismiss('scrip-sync');
+        if (syncError) {
+          console.error('Scrip master sync error:', syncError);
+          toast.warning('Connected but master sync failed. Retry from Settings.');
+        } else {
+          console.log('Scrip master sync completed:', syncData);
+          toast.success(`Synced ${syncData?.processed || 0} stocks from Sharekhan`);
+        }
+
+        // Step 4: Navigate to settings after all operations complete
+        navigate('/settings');
+
       } catch (err) {
         console.error('Sharekhan OAuth callback error:', err);
         toast.dismiss();
         toast.error('Failed to complete Sharekhan authentication');
       } finally {
-        // Clean URL by removing request_token
-        const url = new URL(window.location.href);
-        url.searchParams.delete('request_token');
-        window.history.replaceState({}, document.title, url.pathname + url.search);
+        cleanUrl();
       }
     };
 
-    handleOAuthCallback();
+    // Use onAuthStateChange to wait for session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (hasProcessed.current) return;
+
+      if (session?.user) {
+        hasProcessed.current = true;
+        console.log('Sharekhan OAuth: Session active for user:', session.user.id);
+        processToken(session.user.id);
+        subscription.unsubscribe();
+      }
+    });
+
+    // Also check for existing session immediately
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (hasProcessed.current) return;
+
+      if (session?.user) {
+        hasProcessed.current = true;
+        console.log('Sharekhan OAuth: Existing session found for user:', session.user.id);
+        processToken(session.user.id);
+        subscription.unsubscribe();
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 };
