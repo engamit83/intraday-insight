@@ -19,17 +19,36 @@ export const useSharekhanCallback = () => {
 
       hasProcessed.current = true;
 
-      // Show loading toast
-      const loadingToast = toast.loading('Verifying Broker Session...');
+      // Show loading toast - indicate session restoration
+      const loadingToast = toast.loading('Restoring Session & Connecting...');
 
       try {
         console.log('Sharekhan OAuth: Extracting request_token...');
 
-        // Get the logged-in user's ID (MANDATORY)
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user?.id) {
-          console.error('Sharekhan OAuth: No logged-in user found', userError);
+        // Wait for session to hydrate with retry logic (3 attempts, 500ms apart)
+        let user = null;
+        const maxRetries = 3;
+        const retryDelay = 500;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          console.log(`Sharekhan OAuth: Attempt ${attempt}/${maxRetries} to get session...`);
+          
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session?.user) {
+            user = session.user;
+            console.log('Sharekhan OAuth: Session found for user:', user.id);
+            break;
+          }
+
+          if (attempt < maxRetries) {
+            console.log(`Sharekhan OAuth: No session yet, waiting ${retryDelay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          }
+        }
+
+        if (!user?.id) {
+          console.error('Sharekhan OAuth: No logged-in user found after retries');
           toast.dismiss(loadingToast);
           toast.error('Please log in before connecting Sharekhan');
           return;
