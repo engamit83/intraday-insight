@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export const useSharekhanCallback = () => {
   const hasProcessed = useRef(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
@@ -53,7 +55,7 @@ export const useSharekhanCallback = () => {
         if (data?.success) {
           console.log('Sharekhan OAuth: Token exchanged successfully');
           toast.dismiss(loadingToast);
-          toast.success('Sharekhan connected successfully!');
+          toast.success('Broker Connected! Starting Master Sync...');
 
           // Trigger scrip master sync with the new access token
           console.log('Sharekhan OAuth: Triggering scrip master sync...');
@@ -75,6 +77,9 @@ export const useSharekhanCallback = () => {
             toast.dismiss('scrip-sync');
             toast.success(`Synced ${syncData?.processed || 0} stocks from Sharekhan`);
           }
+
+          // Navigate to settings page after successful connection
+          navigate('/settings');
         } else {
           console.error('Sharekhan OAuth exchange failed:', data?.error);
           toast.dismiss(loadingToast);
@@ -93,5 +98,5 @@ export const useSharekhanCallback = () => {
     };
 
     handleOAuthCallback();
-  }, []);
+  }, [navigate]);
 };
