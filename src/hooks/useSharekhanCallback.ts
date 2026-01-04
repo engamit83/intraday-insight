@@ -23,6 +23,8 @@ export const useSharekhanCallback = () => {
       window.history.replaceState({}, document.title, url.pathname + url.search);
     };
 
+    const REDIRECT_URI = 'https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app/';
+    
     const processToken = async (userId: string) => {
       const loadingToast = toast.loading('Connecting to Sharekhan...');
 
