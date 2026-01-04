@@ -98,7 +98,7 @@ export default function Settings() {
   const handleConnectSharekhan = async () => {
     setIsConnecting(true);
     try {
-      const redirect_uri = 'https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app';
+      const redirect_uri = 'https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app/';
 
       // Backend expects redirect_uri as a query param
       const { data, error } = await supabase.functions.invoke(
