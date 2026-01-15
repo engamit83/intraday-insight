@@ -2,11 +2,7 @@
 // Computes technical indicators: VWAP, RSI, MACD, ATR, Volume patterns, Candle patterns
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { verifyAuth, corsHeaders, sanitizeSymbol, isValidSymbol } from '../_shared/auth.ts'
 
 interface OHLCVData {
   timestamp: string
@@ -312,18 +308,49 @@ Deno.serve(async (req) => {
   }
   
   try {
+    // Require authentication
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const userId = authResult.userId
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    const { symbol, data: rawData, timeframe = '5min' } = await req.json()
+    const { symbol: rawSymbol, data: rawData, timeframe = '5min' } = await req.json()
     
-    if (!symbol) {
+    if (!rawSymbol || typeof rawSymbol !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Symbol is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    
+    // Sanitize and validate symbol
+    const symbol = sanitizeSymbol(rawSymbol)
+    if (!isValidSymbol(symbol)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid symbol format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Validate timeframe
+    const validTimeframes = ['1min', '5min', '15min', '30min', '60min', 'daily']
+    if (!validTimeframes.includes(timeframe)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid timeframe' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log(`[Indicators] User ${userId} requesting indicators for ${symbol}`)
     
     let ohlcvData: OHLCVData[] = rawData
     
