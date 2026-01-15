@@ -28,6 +28,12 @@ export async function verifyAuth(req: Request): Promise<AuthResult> {
   
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+
+  // When the client is not logged in, the SDK uses the anon key as a Bearer token.
+  // That token is NOT a user session JWT, so treat it as unauthenticated.
+  if (token === supabaseAnonKey) {
+    return { authenticated: false, error: 'Missing user session' }
+  }
   
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } }
