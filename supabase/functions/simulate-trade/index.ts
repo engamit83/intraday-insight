@@ -288,17 +288,6 @@ Deno.serve(async (req) => {
   }
   
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.userId) {
-      return new Response(
-        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
-    const userId = authResult.userId
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -314,20 +303,30 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Validate signalId if provided
-    if (signalId && !isValidUUID(signalId)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid signalId format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
-    console.log(`[SimulateTrade] Action: ${action}, User: ${userId}`)
-    
-    // Check if simulator is enabled for this user
-    const simulatorEnabled = await isSimulatorEnabled(supabase, userId)
-    
+    // For get_status, allow unauthenticated access with default response
     if (action === 'get_status') {
+      const authResult = await verifyAuth(req)
+      
+      // If not authenticated, return disabled simulator status
+      if (!authResult.authenticated || !authResult.userId) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            simulatorEnabled: false,
+            openTrades: 0,
+            todayPnl: 0,
+            todayTrades: 0,
+            winRate: 0,
+            trades: [],
+            message: 'Login required for simulator'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      const userId = authResult.userId
+      const simulatorEnabled = await isSimulatorEnabled(supabase, userId)
+      
       // Return simulator status and stats for this user
       const { data: openTrades } = await supabase
         .from('simulated_trades')
@@ -359,6 +358,30 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    
+    // All other actions require authentication
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const userId = authResult.userId
+    
+    // Validate signalId if provided
+    if (signalId && !isValidUUID(signalId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid signalId format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log(`[SimulateTrade] Action: ${action}, User: ${userId}`)
+    
+    // Check if simulator is enabled for this user
+    const simulatorEnabled = await isSimulatorEnabled(supabase, userId)
     
     if (action === 'execute_signal' && signalId) {
       if (!simulatorEnabled) {
