@@ -3,11 +3,7 @@
 // This function is designed to be called on a schedule (every 5 minutes via pg_cron)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { verifyAuth, corsHeaders } from '../_shared/auth.ts'
 
 interface OHLCVData {
   timestamp: string
@@ -153,13 +149,33 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  // Authentication: Allow service role (cron jobs) OR authenticated users
+  const authHeader = req.headers.get('authorization')
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  
+  // Check if this is a service role request (cron job)
+  const isServiceRoleRequest = authHeader?.includes(serviceRoleKey.substring(0, 30))
+  
+  if (!isServiceRoleRequest) {
+    // If not service role, require JWT authentication
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required. Use service role for cron or JWT for manual triggers.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    console.log(`[Scheduler] Manual trigger by user: ${authResult.userId}`)
+  } else {
+    console.log('[Scheduler] Service role request (cron job)')
+  }
+
   const startTime = Date.now()
   const results: UpdateResult[] = []
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Get API keys from environment
     const sharekhanApiKey = Deno.env.get('SHAREKHAN_API_KEY')
