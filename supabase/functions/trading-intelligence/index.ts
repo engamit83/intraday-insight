@@ -8,6 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Allowed actions for input validation
+const ALLOWED_ACTIONS = ['score_signal', 'check_entry', 'get_status', 'update_state']
+
 interface TradingRules {
   market_multiplier: number
   risk_multiplier: number
@@ -31,6 +34,53 @@ interface SignalScore {
   finalScore: number
   isTradable: boolean
   rejectionReason: string | null
+}
+
+// Validate UUID format
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
+
+// Validate stock symbol format
+function isValidSymbol(symbol: string): boolean {
+  const symbolRegex = /^[A-Z0-9&-]{1,20}$/
+  return symbolRegex.test(symbol.toUpperCase())
+}
+
+// Sanitize symbol input
+function sanitizeSymbol(symbol: string): string {
+  return symbol.toUpperCase().replace(/\.(NS|NSE|BSE)$/i, '').replace(/[^A-Z0-9&-]/g, '').substring(0, 20)
+}
+
+// Verify JWT and get user ID
+async function verifyAuth(req: Request): Promise<{ authenticated: boolean; userId?: string; error?: string }> {
+  const authHeader = req.headers.get('authorization')
+  
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { authenticated: false, error: 'Missing or invalid Authorization header' }
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  })
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token)
+    
+    if (error || !data.user) {
+      return { authenticated: false, error: 'Invalid or expired token' }
+    }
+
+    return { authenticated: true, userId: data.user.id }
+  } catch {
+    return { authenticated: false, error: 'Token verification failed' }
+  }
 }
 
 // Calculate raw technical score from indicators
@@ -186,13 +236,13 @@ function calculateFinalScore(
     rejectionReason = `Daily trade limit reached (${rules.max_daily_trades})`
   } else if (state.daily_pnl <= -rules.max_daily_loss) {
     isTradable = false
-    rejectionReason = `Daily loss limit reached (₹${rules.max_daily_loss})`
+    rejectionReason = `Daily loss limit reached`
   } else if (state.consecutive_losses >= rules.consecutive_loss_limit) {
     isTradable = false
     rejectionReason = `Consecutive loss limit reached (${rules.consecutive_loss_limit})`
   } else if (finalScore < rules.min_score_threshold) {
     isTradable = false
-    rejectionReason = `Score below threshold (${finalScore} < ${rules.min_score_threshold})`
+    rejectionReason = `Score below threshold`
   } else if (timeMultiplier === 0) {
     isTradable = false
     rejectionReason = 'Market is closed'
@@ -207,13 +257,41 @@ Deno.serve(async (req) => {
   }
   
   try {
+    // Verify authentication
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const userId = authResult.userId
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    const { action, symbol, signalId, userId } = await req.json()
+    const body = await req.json().catch(() => ({}))
+    const { action, symbol, signalId } = body
     
-    console.log(`[TradingIntelligence] Action: ${action}, Symbol: ${symbol || 'N/A'}`)
+    // Validate action
+    if (!action || !ALLOWED_ACTIONS.includes(action)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid action. Allowed: ${ALLOWED_ACTIONS.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Validate signalId if provided
+    if (signalId && !isValidUUID(signalId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid signalId format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log(`[TradingIntelligence] Action: ${action}, Symbol: ${symbol || 'N/A'}, User: ${userId}`)
     
     // Fetch current market condition
     const { data: marketData } = await supabase
@@ -244,20 +322,20 @@ Deno.serve(async (req) => {
       consecutive_loss_limit: 3
     }
     
-    // Fetch or create trading state for today
+    // Fetch or create trading state for today for this user
     const today = new Date().toISOString().split('T')[0]
     let { data: stateData } = await supabase
       .from('trading_state')
       .select('*')
       .eq('date', today)
-      .is('user_id', userId || null)
+      .eq('user_id', userId)
       .maybeSingle()
     
     if (!stateData) {
       const { data: newState } = await supabase
         .from('trading_state')
         .insert({
-          user_id: userId || null,
+          user_id: userId,
           date: today,
           trades_today: 0,
           daily_pnl: 0,
@@ -281,14 +359,27 @@ Deno.serve(async (req) => {
     switch (action) {
       case 'score_signal': {
         if (!symbol) {
-          throw new Error('Symbol is required for scoring')
+          return new Response(
+            JSON.stringify({ error: 'Symbol is required for scoring' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
         }
+        
+        // Validate and sanitize symbol
+        if (!isValidSymbol(symbol)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid symbol format' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        
+        const sanitizedSymbol = sanitizeSymbol(symbol)
         
         // Fetch indicators for this symbol
         const { data: indicators } = await supabase
           .from('indicator_cache')
           .select('*')
-          .eq('symbol', symbol.toUpperCase())
+          .eq('symbol', sanitizedSymbol)
           .order('computed_at', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -320,7 +411,7 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({
             success: true,
-            symbol,
+            symbol: sanitizedSymbol,
             marketCondition,
             ...scoreResult,
             multipliers: {
@@ -363,7 +454,29 @@ Deno.serve(async (req) => {
       }
       
       case 'update_state': {
-        const { tradesToday, dailyPnl, consecutiveLosses, autoModeActive, stopReason } = await req.json()
+        const { tradesToday, dailyPnl, consecutiveLosses, autoModeActive, stopReason } = body
+        
+        // Validate numeric inputs
+        if (tradesToday !== undefined && (typeof tradesToday !== 'number' || tradesToday < 0 || tradesToday > 100)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid tradesToday value' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        
+        if (dailyPnl !== undefined && (typeof dailyPnl !== 'number' || dailyPnl < -1000000 || dailyPnl > 1000000)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid dailyPnl value' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        
+        if (consecutiveLosses !== undefined && (typeof consecutiveLosses !== 'number' || consecutiveLosses < 0 || consecutiveLosses > 20)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid consecutiveLosses value' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
         
         const { error: updateError } = await supabase
           .from('trading_state')
@@ -376,7 +489,7 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString()
           })
           .eq('date', today)
-          .is('user_id', userId || null)
+          .eq('user_id', userId)
         
         if (updateError) {
           throw updateError
@@ -397,9 +510,8 @@ Deno.serve(async (req) => {
     
   } catch (error) {
     console.error('[TradingIntelligence] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

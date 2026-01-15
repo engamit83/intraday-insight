@@ -1,5 +1,5 @@
 // ======================================================
-//   SHAREKHAN MARKET DATA ENGINE — FINAL PRODUCTION
+//   SHAREKHAN MARKET DATA ENGINE — SECURED VERSION
 // ======================================================
 // Uses:
 //  - scripcodes table (synced via scrip-master-sync)
@@ -14,6 +14,53 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// Allowed actions
+const ALLOWED_ACTIONS = ['fetch', 'batch'];
+
+// Allowed intervals
+const ALLOWED_INTERVALS = ['1min', '3min', '5min', '15min', '30min', '60min', '1hour', 'daily', '1day'];
+
+// Validate stock symbol format
+function isValidSymbol(symbol: string): boolean {
+  const symbolRegex = /^[A-Z0-9&-]{1,20}$/;
+  return symbolRegex.test(symbol.toUpperCase());
+}
+
+// Sanitize symbol input
+function sanitizeSymbol(symbol: string): string {
+  return symbol.toUpperCase().replace(/\.(NS|NSE|BSE)$/i, '').replace(/[^A-Z0-9&-]/g, '').substring(0, 20);
+}
+
+// Verify JWT and get user ID
+async function verifyAuth(req: Request): Promise<{ authenticated: boolean; userId?: string; error?: string }> {
+  const authHeader = req.headers.get('authorization');
+  
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { authenticated: false, error: 'Missing or invalid Authorization header' };
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    
+    if (error || !data.user) {
+      return { authenticated: false, error: 'Invalid or expired token' };
+    }
+
+    return { authenticated: true, userId: data.user.id };
+  } catch {
+    return { authenticated: false, error: 'Token verification failed' };
+  }
+}
 
 // ----------------------------------------------
 // Fetch encrypted token from AUTH function
@@ -145,22 +192,42 @@ Deno.serve(async (req) => {
 
   const start = Date.now();
   try {
+    // Verify authentication
+    const authResult = await verifyAuth(req);
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const userId = authResult.userId;
+    
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
     const body = await req.json().catch(() => ({}));
-    const { action, symbol, symbols, interval = "5min", userId } = body;
+    const { action, symbol, symbols, interval = "5min" } = body;
+
+    // Validate action
+    if (!action || !ALLOWED_ACTIONS.includes(action)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid action. Allowed: ${ALLOWED_ACTIONS.join(', ')}` }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    
+    // Validate interval
+    if (!ALLOWED_INTERVALS.includes(interval)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid interval. Allowed: ${ALLOWED_INTERVALS.join(', ')}` }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
 
     const apiKey = Deno.env.get("SHAREKHAN_API_KEY");
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "userId required" }), {
-        status: 400,
-        headers: corsHeaders,
-      });
-    }
 
     const accessToken = await loadSharekhanToken(userId);
     if (!accessToken) {
@@ -174,13 +241,22 @@ Deno.serve(async (req) => {
     // 🔵 ACTION: SINGLE SYMBOL FETCH
     // ==========================================
     if (action === "fetch") {
-      if (!symbol)
+      if (!symbol) {
         return new Response(
           JSON.stringify({ error: "symbol required" }),
           { status: 400, headers: corsHeaders }
         );
+      }
+      
+      // Validate and sanitize symbol
+      if (!isValidSymbol(symbol)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid symbol format" }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
 
-      const sym = symbol.toUpperCase().replace(/\.(NS|NSE|BSE)$/i, "");
+      const sym = sanitizeSymbol(symbol);
 
       // fetch scripcode
       const { data: scrip } = await supabase
@@ -189,11 +265,12 @@ Deno.serve(async (req) => {
         .eq("symbol", sym)
         .maybeSingle();
 
-      if (!scrip)
+      if (!scrip) {
         return new Response(
           JSON.stringify({ error: "Unknown symbol" }),
           { status: 400, headers: corsHeaders }
         );
+      }
 
       const res = await fetchOHLC(
         scrip.scrip_code,
@@ -202,11 +279,12 @@ Deno.serve(async (req) => {
         accessToken
       );
 
-      if (!res.data)
+      if (!res.data) {
         return new Response(JSON.stringify(res), {
           status: 500,
           headers: corsHeaders,
         });
+      }
 
       // Indicators
       const indicators = computeIndicators(res.data);
@@ -249,16 +327,31 @@ Deno.serve(async (req) => {
     // 🔵 ACTION: BATCH FETCH
     // ==========================================
     if (action === "batch") {
-      if (!symbols || !Array.isArray(symbols))
+      if (!symbols || !Array.isArray(symbols)) {
         return new Response(
           JSON.stringify({ error: "symbols[] required" }),
           { status: 400, headers: corsHeaders }
         );
+      }
+      
+      // Limit batch size to prevent DoS
+      if (symbols.length > 50) {
+        return new Response(
+          JSON.stringify({ error: "Maximum 50 symbols per batch" }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
 
       const results: any = {};
 
       for (const symRaw of symbols) {
-        const sym = symRaw.toUpperCase().replace(/\.(NS|NSE|BSE)$/i, "");
+        // Validate each symbol
+        if (!isValidSymbol(symRaw)) {
+          results[symRaw] = { error: "Invalid symbol format" };
+          continue;
+        }
+        
+        const sym = sanitizeSymbol(symRaw);
 
         const { data: scrip } = await supabase
           .from("scripcodes")
@@ -331,8 +424,9 @@ Deno.serve(async (req) => {
       headers: corsHeaders,
     });
   } catch (err) {
+    console.error('[sharekhan-market-data] Error:', err);
     return new Response(
-      JSON.stringify({ error: (err as Error).message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: corsHeaders }
     );
   }

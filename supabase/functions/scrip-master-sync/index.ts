@@ -1,3 +1,6 @@
+// Scrip Master Sync - Requires authenticated access
+// Syncs Sharekhan master list to scripcodes table
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -6,12 +9,54 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 }
 
+// Allowed actions
+const ALLOWED_ACTIONS = ['sync_master'];
+
+// Verify JWT and get user ID
+async function verifyAuth(req: Request): Promise<{ authenticated: boolean; userId?: string; error?: string }> {
+  const authHeader = req.headers.get('authorization');
+  
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { authenticated: false, error: 'Missing or invalid Authorization header' };
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    
+    if (error || !data.user) {
+      return { authenticated: false, error: 'Invalid or expired token' };
+    }
+
+    return { authenticated: true, userId: data.user.id };
+  } catch {
+    return { authenticated: false, error: 'Token verification failed' };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    // Verify authentication
+    const authResult = await verifyAuth(req);
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -22,11 +67,12 @@ Deno.serve(async (req) => {
     const accessToken = body.accessToken
     const apiKey = Deno.env.get("SHAREKHAN_API_KEY")
 
-    if (!action) {
-      return new Response(JSON.stringify({ error: "action missing" }), {
-        status: 400,
-        headers: corsHeaders,
-      })
+    // Validate action
+    if (!action || !ALLOWED_ACTIONS.includes(action)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid action. Allowed: ${ALLOWED_ACTIONS.join(', ')}` }),
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     if (action === "sync_master") {
@@ -96,7 +142,8 @@ Deno.serve(async (req) => {
     })
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error('[scrip-master-sync] Error:', err);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: corsHeaders,
     })
