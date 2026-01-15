@@ -2,11 +2,10 @@
 // Monitors open trades and triggers early exits when conditions weaken
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders, verifyAuth, isValidUUID, isValidAction } from '../_shared/auth.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+// Allowed actions for this function
+const ALLOWED_ACTIONS = ['monitor_all', 'check_single']
 
 type ExitType = 'TARGET_HIT' | 'STOPLOSS_HIT' | 'EARLY_EXIT' | 'MANUAL' | 'AUTO_STOP'
 
@@ -186,13 +185,40 @@ Deno.serve(async (req) => {
   }
   
   try {
+    // Verify authentication
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const userId = authResult.userId
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     const { action, tradeId } = await req.json()
     
-    console.log(`[ExitMonitor] Action: ${action}`)
+    // Validate action
+    if (!action || typeof action !== 'string' || !isValidAction(action, ALLOWED_ACTIONS)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid action' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Validate tradeId if provided
+    if (tradeId && !isValidUUID(tradeId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid trade ID format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log(`[ExitMonitor] Action: ${action}, User: ${userId.substring(0, 8)}...`)
     
     // Get current market condition
     const { data: marketData } = await supabase
@@ -206,11 +232,12 @@ Deno.serve(async (req) => {
     const marketCondition = marketData?.condition || 'RANGE'
     
     if (action === 'monitor_all') {
-      // Fetch all open trades
+      // Fetch only user's open trades
       const { data: openTrades, error: tradesError } = await supabase
         .from('trades')
         .select('*')
         .eq('status', 'OPEN')
+        .eq('user_id', userId)
       
       if (tradesError) {
         throw new Error(`Failed to fetch open trades: ${tradesError.message}`)
@@ -314,12 +341,13 @@ Deno.serve(async (req) => {
               pnl_at_exit: Math.round(pnl * 100) / 100
             })
           
-          // Update trading state
+          // Update trading state for THIS USER
           const today = new Date().toISOString().split('T')[0]
           const { data: stateData } = await supabase
             .from('trading_state')
             .select('*')
             .eq('date', today)
+            .eq('user_id', userId)
             .maybeSingle()
           
           if (stateData) {
@@ -351,14 +379,19 @@ Deno.serve(async (req) => {
     }
     
     if (action === 'check_single' && tradeId) {
+      // Fetch only if trade belongs to this user
       const { data: trade, error: tradeError } = await supabase
         .from('trades')
         .select('*')
         .eq('id', tradeId)
+        .eq('user_id', userId)
         .maybeSingle()
       
       if (tradeError || !trade) {
-        throw new Error('Trade not found')
+        return new Response(
+          JSON.stringify({ error: 'Trade not found or access denied' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
       
       const { data: indicators } = await supabase
