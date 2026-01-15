@@ -30,11 +30,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 type SimulatorMode = 'SIGNAL_ONLY' | 'SIMULATOR' | 'AUTO';
 type SharekhanStatus = 'checking' | 'connected' | 'disconnected' | 'error';
 
 export default function Settings() {
+  const { user } = useAuth();
   const [settings, setSettings] = useState({
     riskAppetite: "MEDIUM",
     maxPositionSize: 50000,
@@ -54,10 +56,13 @@ export default function Settings() {
 
   // Load simulator mode from database
   useEffect(() => {
+    if (!user) return;
+    
     async function loadSettings() {
       const { data } = await supabase
         .from('user_settings')
         .select('simulator_mode')
+        .eq('user_id', user!.id)
         .maybeSingle();
       
       if (data?.simulator_mode) {
@@ -65,15 +70,16 @@ export default function Settings() {
       }
     }
     loadSettings();
-  }, []);
+  }, [user]);
 
   // Check Sharekhan auth status on load
   useEffect(() => {
+    if (!user) return;
+    
     async function checkSharekhanStatus() {
       try {
-        const userId = '00000000-0000-0000-0000-000000000000'; // Single-user placeholder
         const { data, error } = await supabase.functions.invoke('sharekhan-auth', {
-          body: { action: 'health', userId }
+          body: { action: 'health', userId: user!.id }
         });
 
         if (error) {
@@ -93,7 +99,7 @@ export default function Settings() {
       }
     }
     checkSharekhanStatus();
-  }, []);
+  }, [user]);
 
   const handleConnectSharekhan = async () => {
     setIsConnecting(true);
@@ -132,13 +138,18 @@ export default function Settings() {
       return;
     }
     
+    if (!user) {
+      toast.error('Please sign in to change settings');
+      return;
+    }
+    
     setSettings(prev => ({ ...prev, simulatorMode: mode }));
     
     // Update in database
     const { error } = await supabase
       .from('user_settings')
       .upsert({ 
-        user_id: '00000000-0000-0000-0000-000000000000', // Placeholder for single-user
+        user_id: user.id,
         simulator_mode: mode 
       }, { onConflict: 'user_id' });
     
