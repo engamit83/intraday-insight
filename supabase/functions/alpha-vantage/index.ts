@@ -2,11 +2,7 @@
 // Fetches intraday stock data with rate limiting and caching
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { verifyAuth, corsHeaders, sanitizeSymbol, isValidSymbol } from '../_shared/auth.ts'
 
 interface OHLCVData {
   timestamp: string
@@ -141,31 +137,52 @@ Deno.serve(async (req) => {
   }
   
   try {
+    // Verify authentication
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    const { symbol, interval = '5min', apiKey } = await req.json()
+    const { symbol, interval = '5min' } = await req.json()
     
-    if (!symbol) {
+    if (!symbol || typeof symbol !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Symbol is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
-    // Get API key from request or fall back to stored settings
-    let alphaVantageApiKey = apiKey
-    
-    if (!alphaVantageApiKey) {
-      // Try to get from environment (for scheduled jobs)
-      alphaVantageApiKey = Deno.env.get('ALPHA_VANTAGE_API_KEY')
+    // Validate and sanitize symbol
+    const sanitizedSymbol = sanitizeSymbol(symbol)
+    if (!isValidSymbol(sanitizedSymbol)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid symbol format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
+
+    // Validate interval
+    if (interval !== '1min' && interval !== '5min') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid interval. Must be 1min or 5min' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Get API key from environment only (never from client)
+    const alphaVantageApiKey = Deno.env.get('ALPHA_VANTAGE_API_KEY')
     
     if (!alphaVantageApiKey) {
       return new Response(
-        JSON.stringify({ error: 'Alpha Vantage API key is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Alpha Vantage API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
@@ -173,14 +190,14 @@ Deno.serve(async (req) => {
     const { data: cachedData } = await supabase
       .from('indicator_cache')
       .select('raw_data, computed_at')
-      .eq('symbol', symbol.toUpperCase())
+      .eq('symbol', sanitizedSymbol)
       .eq('timeframe', interval)
       .maybeSingle()
     
     if (cachedData && cachedData.raw_data) {
       const cacheAge = Date.now() - new Date(cachedData.computed_at).getTime()
       if (cacheAge < 5 * 60 * 1000) { // 5 minutes
-        console.log(`[Alpha Vantage] Using cached data for ${symbol}`)
+        console.log(`[Alpha Vantage] Using cached data for ${sanitizedSymbol}`)
         return new Response(
           JSON.stringify({ 
             data: cachedData.raw_data, 
@@ -193,15 +210,15 @@ Deno.serve(async (req) => {
     }
     
     // Fetch fresh data
-    const result = await fetchIntraday(symbol.toUpperCase(), alphaVantageApiKey, interval)
+    const result = await fetchIntraday(sanitizedSymbol, alphaVantageApiKey, interval)
     
     if (result.error) {
-      // Log error
+      // Log error (sanitized - no user input in logs)
       await supabase.from('system_logs').insert({
         level: 'ERROR',
         source: 'alpha-vantage',
-        message: result.error,
-        metadata: { symbol, interval }
+        message: 'Data fetch failed',
+        metadata: { interval }
       })
       
       return new Response(
@@ -216,7 +233,7 @@ Deno.serve(async (req) => {
       await supabase
         .from('stocks')
         .upsert({
-          symbol: symbol.toUpperCase(),
+          symbol: sanitizedSymbol,
           last_price: latestPrice,
           updated_at: new Date().toISOString()
         }, { onConflict: 'symbol' })
@@ -225,18 +242,18 @@ Deno.serve(async (req) => {
       await supabase
         .from('indicator_cache')
         .upsert({
-          symbol: symbol.toUpperCase(),
+          symbol: sanitizedSymbol,
           timeframe: interval,
           raw_data: result.data,
           computed_at: new Date().toISOString()
         }, { onConflict: 'symbol,timeframe' })
       
-      // Log success
+      // Log success (sanitized - no user input in logs)
       await supabase.from('system_logs').insert({
         level: 'INFO',
         source: 'alpha-vantage',
-        message: `Fetched ${result.data.length} data points`,
-        metadata: { symbol, interval, latestPrice }
+        message: 'Data fetch successful',
+        metadata: { interval, dataPoints: result.data.length }
       })
     }
     
