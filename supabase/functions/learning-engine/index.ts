@@ -196,13 +196,32 @@ Deno.serve(async (req) => {
   }
   
   try {
+    // Require authentication for all learning engine operations
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const userId = authResult.userId
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     const { action, applyAdjustments } = await req.json()
     
-    console.log(`[LearningEngine] Action: ${action}`)
+    // Validate action
+    if (!action || typeof action !== 'string' || !ALLOWED_ACTIONS.includes(action)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid action. Allowed: ' + ALLOWED_ACTIONS.join(', ') }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log(`[LearningEngine] Action: ${action}, User: ${userId}`)
     
     if (action === 'analyze') {
       // Perform comprehensive analysis
