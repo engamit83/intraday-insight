@@ -8,6 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Allowed actions for input validation
+const ALLOWED_ACTIONS = ['get_status', 'execute_signal', 'monitor_trades', 'process_new_signals']
+
 interface SimulatedTrade {
   id: string
   symbol: string
@@ -26,11 +29,48 @@ interface SimulatedTrade {
   confidence_at_entry?: number
 }
 
-// Check if simulator mode is enabled
-async function isSimulatorEnabled(supabase: any): Promise<boolean> {
+// Validate UUID format
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
+
+// Verify JWT and get user ID
+async function verifyAuth(req: Request): Promise<{ authenticated: boolean; userId?: string; error?: string }> {
+  const authHeader = req.headers.get('authorization')
+  
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { authenticated: false, error: 'Missing or invalid Authorization header' }
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  })
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token)
+    
+    if (error || !data.user) {
+      return { authenticated: false, error: 'Invalid or expired token' }
+    }
+
+    return { authenticated: true, userId: data.user.id }
+  } catch {
+    return { authenticated: false, error: 'Token verification failed' }
+  }
+}
+
+// Check if simulator mode is enabled for a specific user
+async function isSimulatorEnabled(supabase: any, userId: string): Promise<boolean> {
   const { data: settings } = await supabase
     .from('user_settings')
     .select('simulator_mode')
+    .eq('user_id', userId)
     .maybeSingle()
   
   return settings?.simulator_mode === 'SIMULATOR'
@@ -77,7 +117,8 @@ async function getIndicators(supabase: any, symbol: string): Promise<any> {
 async function createSimulatedTrade(
   supabase: any,
   signal: any,
-  marketCondition: string
+  marketCondition: string,
+  userId: string
 ): Promise<SimulatedTrade | null> {
   const { data, error } = await supabase
     .from('simulated_trades')
@@ -89,7 +130,8 @@ async function createSimulatedTrade(
       quantity: 1,
       status: 'OPEN',
       market_condition: marketCondition,
-      confidence_at_entry: signal.confidence || signal.final_score
+      confidence_at_entry: signal.confidence || signal.final_score,
+      user_id: userId
     })
     .select()
     .single()
@@ -246,28 +288,58 @@ Deno.serve(async (req) => {
   }
   
   try {
+    // Verify authentication
+    const authResult = await verifyAuth(req)
+    if (!authResult.authenticated || !authResult.userId) {
+      return new Response(
+        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const userId = authResult.userId
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    const { action, signalId } = await req.json()
+    const body = await req.json().catch(() => ({}))
+    const { action, signalId } = body
     
-    console.log(`[SimulateTrade] Action: ${action}`)
+    // Validate action
+    if (!action || !ALLOWED_ACTIONS.includes(action)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid action. Allowed: ${ALLOWED_ACTIONS.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
-    // Check if simulator is enabled
-    const simulatorEnabled = await isSimulatorEnabled(supabase)
+    // Validate signalId if provided
+    if (signalId && !isValidUUID(signalId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid signalId format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log(`[SimulateTrade] Action: ${action}, User: ${userId}`)
+    
+    // Check if simulator is enabled for this user
+    const simulatorEnabled = await isSimulatorEnabled(supabase, userId)
     
     if (action === 'get_status') {
-      // Return simulator status and stats
+      // Return simulator status and stats for this user
       const { data: openTrades } = await supabase
         .from('simulated_trades')
         .select('*')
         .eq('status', 'OPEN')
+        .eq('user_id', userId)
       
       const today = new Date().toISOString().split('T')[0]
       const { data: todayTrades } = await supabase
         .from('simulated_trades')
         .select('pnl, status')
+        .eq('user_id', userId)
         .gte('entry_time', today)
       
       const todayPnl = todayTrades?.reduce((sum, t) => sum + (t.pnl || 0), 0) || 0
@@ -317,6 +389,7 @@ Deno.serve(async (req) => {
         .select('id')
         .eq('signal_id', signalId)
         .eq('status', 'OPEN')
+        .eq('user_id', userId)
         .maybeSingle()
       
       if (existingTrade) {
@@ -336,16 +409,7 @@ Deno.serve(async (req) => {
         )
       }
       
-      const trade = await createSimulatedTrade(supabase, signal, marketCondition)
-      
-      if (trade) {
-        await supabase.from('system_logs').insert({
-          level: 'INFO',
-          source: 'simulate-trade',
-          message: `Created simulated ${signal.signal_type} trade for ${signal.symbol}`,
-          metadata: { tradeId: trade.id, signalId, marketCondition }
-        })
-      }
+      const trade = await createSimulatedTrade(supabase, signal, marketCondition, userId)
       
       return new Response(
         JSON.stringify({ success: !!trade, trade }),
@@ -354,11 +418,12 @@ Deno.serve(async (req) => {
     }
     
     if (action === 'monitor_trades') {
-      // Monitor all open simulated trades for exit conditions
+      // Monitor all open simulated trades for this user
       const { data: openTrades, error: tradesError } = await supabase
         .from('simulated_trades')
         .select('*')
         .eq('status', 'OPEN')
+        .eq('user_id', userId)
       
       if (tradesError || !openTrades || openTrades.length === 0) {
         return new Response(
@@ -421,7 +486,7 @@ Deno.serve(async (req) => {
           await supabase.functions.invoke('learning-engine', {
             body: { action: 'analyze' }
           })
-        } catch (e) {
+        } catch {
           console.log('[SimulateTrade] Learning engine trigger skipped')
         }
       }
@@ -456,7 +521,7 @@ Deno.serve(async (req) => {
         )
       }
       
-      // Get active signals without simulated trades
+      // Get active signals without simulated trades for this user
       const { data: activeSignals } = await supabase
         .from('signals')
         .select('*')
@@ -471,10 +536,11 @@ Deno.serve(async (req) => {
         )
       }
       
-      // Check which signals don't have open trades
+      // Check which signals don't have open trades for this user
       const { data: existingTrades } = await supabase
         .from('simulated_trades')
         .select('signal_id')
+        .eq('user_id', userId)
         .in('signal_id', activeSignals.map(s => s.id))
       
       const existingSignalIds = new Set(existingTrades?.map(t => t.signal_id) || [])
@@ -482,37 +548,32 @@ Deno.serve(async (req) => {
       
       const created = []
       for (const signal of newSignals) {
-        const trade = await createSimulatedTrade(supabase, signal, marketCondition)
+        const trade = await createSimulatedTrade(supabase, signal, marketCondition, userId)
         if (trade) {
           created.push({ symbol: signal.symbol, direction: signal.signal_type, tradeId: trade.id })
         }
       }
       
-      if (created.length > 0) {
-        await supabase.from('system_logs').insert({
-          level: 'INFO',
-          source: 'simulate-trade',
-          message: `Auto-created ${created.length} simulated trades`,
-          metadata: { trades: created, marketCondition }
-        })
-      }
-      
       return new Response(
-        JSON.stringify({ success: true, tradesCreated: created.length, trades: created }),
+        JSON.stringify({ 
+          success: true, 
+          marketCondition,
+          tradesCreated: created.length,
+          trades: created 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
     return new Response(
-      JSON.stringify({ error: 'Invalid action' }),
+      JSON.stringify({ error: 'Unknown action' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
     
   } catch (error) {
     console.error('[SimulateTrade] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
