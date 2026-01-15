@@ -1,6 +1,6 @@
 // =============================
-//  SHAREKHAN AUTH – FINAL BUILD
-//  PRODUCTION-GRADE VERSION
+//  SHAREKHAN AUTH – STABLE BUILD
+//  UNCRASHABLE + ATOMIC UPSERT
 // =============================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -11,6 +11,7 @@ import Utf8 from "https://esm.sh/crypto-js@4.1.1/enc-utf8";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 // ========= ENV ==========
@@ -20,7 +21,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const AUTH_ENCRYPTION_KEY = Deno.env.get("AUTH_ENCRYPTION_KEY") || "DEFAULT_KEY_CHANGE_ME";
 
-// ========= ENDPOINTS (NEW OFFICIAL) ==========
+// ========= ENDPOINTS ==========
 const SHAREKHAN_LOGIN_URL = "https://api.sharekhan.com/skapi/auth/login.html";
 const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/getAccessToken";
 const SHAREKHAN_PROFILE_URL = "https://api.sharekhan.com/skapi/services/profile/getProfile";
@@ -61,102 +62,133 @@ function buildLoginUrl(redirect: string): string {
   return `${SHAREKHAN_LOGIN_URL}?${params.toString()}`;
 }
 
-// ========= HARDCODED REDIRECT URI ==========
-const REDIRECT_URI = 'https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app/';
+// ========= EXCHANGE TOKEN (UNCRASHABLE) ==========
+interface ExchangeResult {
+  success: boolean;
+  error?: string;
+  rawBody?: string;
+  message?: string;
+  accessToken?: string;
+  access_token?: string;
+  refreshToken?: string;
+  refresh_token?: string;
+  expiresIn?: number;
+  expires_in?: number;
+  data?: {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+  };
+  [key: string]: unknown;
+}
 
-// ========= EXCHANGE TOKEN ==========
-async function exchangeToken(requestToken: string) {
+async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
   await log("sharekhan-auth", "exchange-token-start", { 
     hasRequestToken: !!requestToken,
     requestTokenLength: requestToken?.length || 0,
     requestTokenPreview: requestToken ? requestToken.substring(0, 20) + '...' : 'NONE'
   });
 
+  // Generate checksum = SHA256(api_key + request_token + api_secret)
+  const text = SHAREKHAN_API_KEY + requestToken + SHAREKHAN_API_SECURE_KEY;
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  const checksum = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+  const requestBody = {
+    api_key: SHAREKHAN_API_KEY,
+    request_token: requestToken,
+    checksum,
+  };
+
+  console.log("[sharekhan-auth] Calling getAccessToken with:", {
+    endpoint: SHAREKHAN_TOKEN_URL,
+    api_key_preview: SHAREKHAN_API_KEY.substring(0, 8) + '...',
+    request_token_preview: requestToken.substring(0, 20) + '...',
+    checksum_preview: checksum.substring(0, 16) + '...',
+  });
+
+  await log("sharekhan-auth", "exchange-token-calling-api", { 
+    endpoint: SHAREKHAN_TOKEN_URL,
+    apiKeyLength: SHAREKHAN_API_KEY.length,
+    checksumLength: checksum.length
+  });
+
+  // Make the API call with apiKey in headers as well
+  const resp = await fetch(SHAREKHAN_TOKEN_URL, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      "apiKey": SHAREKHAN_API_KEY,  // Some Sharekhan environments require this in headers
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  // CRITICAL: Capture raw response text IMMEDIATELY
+  const respText = await resp.text();
+  
+  console.log("[sharekhan-auth] RAW RESPONSE STATUS:", resp.status);
+  console.log("[sharekhan-auth] CRITICAL RAW RESPONSE:", respText);
+
+  await log("sharekhan-auth", "exchange-token-raw-response", { 
+    status: resp.status, 
+    ok: resp.ok,
+    rawBody: respText.substring(0, 1000), // Store up to 1000 chars
+    contentType: resp.headers.get("content-type")
+  });
+
+  // Try to parse JSON - catch parse errors specifically
+  let parsed: Record<string, unknown>;
   try {
-    // checksum = SHA256(api_key + request_token + api_secret)
-    const text = SHAREKHAN_API_KEY + requestToken + SHAREKHAN_API_SECURE_KEY;
-    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-    const checksum = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
-
-    const requestBody = {
-      api_key: SHAREKHAN_API_KEY,
-      request_token: requestToken,
-      checksum,
-    };
-
-    console.log("[sharekhan-auth] Calling getAccessToken with:", {
-      endpoint: SHAREKHAN_TOKEN_URL,
-      api_key_preview: SHAREKHAN_API_KEY.substring(0, 8) + '...',
-      request_token_preview: requestToken.substring(0, 20) + '...',
-      checksum_preview: checksum.substring(0, 16) + '...',
-    });
-
-    await log("sharekhan-auth", "exchange-token-calling-api", { 
-      endpoint: SHAREKHAN_TOKEN_URL,
-      apiKeyLength: SHAREKHAN_API_KEY.length,
-      checksumLength: checksum.length
-    });
-
-    const resp = await fetch(SHAREKHAN_TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-    });
-
-    // CRITICAL: Log the raw response text for debugging
-    const rawText = await resp.text();
-    console.log("[sharekhan-auth] RAW RESPONSE STATUS:", resp.status);
-    console.log("[sharekhan-auth] RAW RESPONSE BODY:", rawText);
-
-    await log("sharekhan-auth", "exchange-token-raw-response", { 
-      status: resp.status, 
-      ok: resp.ok,
-      rawBody: rawText.substring(0, 500), // First 500 chars for safety
-      contentType: resp.headers.get("content-type")
-    });
-
-    if (!resp.ok) {
-      await log("sharekhan-auth", "exchange-token-failed", { 
-        status: resp.status,
-        rawBody: rawText.substring(0, 1000)
-      }, "ERROR");
-      throw new Error(`Sharekhan rejected token: ${resp.status} - ${rawText}`);
-    }
-
-    // Try to parse as JSON
-    let parsed;
-    try {
-      parsed = JSON.parse(rawText);
-    } catch (parseErr) {
-      console.log("[sharekhan-auth] JSON PARSE ERROR:", parseErr);
-      await log("sharekhan-auth", "exchange-token-parse-error", { 
-        error: String(parseErr),
-        rawBody: rawText.substring(0, 500)
-      }, "ERROR");
-      throw new Error(`Failed to parse Sharekhan response: ${rawText.substring(0, 200)}`);
-    }
-
-    console.log("[sharekhan-auth] PARSED RESPONSE KEYS:", Object.keys(parsed));
+    parsed = JSON.parse(respText);
+  } catch (parseErr) {
+    // Log as RAW_HTML_OR_TEXT so we can see the broker error
+    console.log("[sharekhan-auth] RAW_HTML_OR_TEXT:", respText);
+    await log("sharekhan-auth", "exchange-token-parse-error", { 
+      error: "RAW_HTML_OR_TEXT",
+      rawBody: respText.substring(0, 1000),
+      parseError: String(parseErr)
+    }, "ERROR");
     
-    await log("sharekhan-auth", "exchange-token-success", { 
-      responseKeys: Object.keys(parsed),
-      hasAccessToken: !!(parsed.accessToken || parsed.access_token || parsed.data?.accessToken),
-      hasRefreshToken: !!(parsed.refreshToken || parsed.refresh_token || parsed.data?.refreshToken),
-      hasData: !!parsed.data,
-      hasStatus: !!parsed.status,
-      statusValue: parsed.status
-    });
-
-    return parsed;
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    console.log("[sharekhan-auth] EXCHANGE TOKEN ERROR:", errorMessage);
-    await log("sharekhan-auth", "exchange-token-exception", { error: errorMessage }, "ERROR");
-    throw err;
+    // Return a structured error that won't crash
+    return { 
+      success: false, 
+      error: "PARSE_ERROR", 
+      rawBody: respText.substring(0, 500),
+      message: "Broker returned non-JSON response"
+    };
   }
+
+  console.log("[sharekhan-auth] PARSED RESPONSE KEYS:", Object.keys(parsed));
+  
+  // Check if the broker returned an error in the JSON
+  if (!resp.ok || parsed.status === "error" || parsed.error) {
+    await log("sharekhan-auth", "exchange-token-broker-error", { 
+      status: resp.status,
+      parsedError: parsed.error || parsed.message || parsed.status,
+      rawBody: respText.substring(0, 500)
+    }, "ERROR");
+    
+    return {
+      success: false,
+      error: String(parsed.error || parsed.message || "BROKER_ERROR"),
+      rawBody: respText.substring(0, 500),
+      message: String(parsed.message || parsed.error || "Unknown broker error")
+    };
+  }
+
+  await log("sharekhan-auth", "exchange-token-success", { 
+    responseKeys: Object.keys(parsed),
+    hasAccessToken: !!(parsed.accessToken || parsed.access_token || (parsed.data as any)?.accessToken),
+    hasRefreshToken: !!(parsed.refreshToken || parsed.refresh_token || (parsed.data as any)?.refreshToken),
+    hasData: !!parsed.data,
+    hasStatus: !!parsed.status,
+    statusValue: parsed.status
+  });
+
+  return { success: true, ...parsed } as ExchangeResult;
 }
 
-// ========= STORE TOKENS (Encrypted + Buffer) ==========
+// ========= STORE TOKENS (ATOMIC UPSERT) ==========
 async function storeTokens(userId: string, access: string, refresh: string | null, expiresIn: number) {
   console.log("[sharekhan-auth] STORE TOKENS START for user:", userId);
   
@@ -172,7 +204,9 @@ async function storeTokens(userId: string, access: string, refresh: string | nul
     accessTokenLength: access?.length || 0
   });
 
-  const encrypted = {
+  // ATOMIC UPSERT - No more race condition possible
+  const upsertData = {
+    user_id: userId,
     sharekhan_access_token: encrypt(access),
     sharekhan_refresh_token: refresh ? encrypt(refresh) : null,
     sharekhan_token_generated_at: now.toISOString(),
@@ -180,42 +214,24 @@ async function storeTokens(userId: string, access: string, refresh: string | nul
     updated_at: now.toISOString(),
   };
 
-  console.log("[sharekhan-auth] Looking up existing row for user:", userId);
+  console.log("[sharekhan-auth] UPSERTING tokens for user:", userId);
 
-  const { data: row, error: lookupError } = await supabase
+  const { error } = await supabase
     .from("user_settings")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
+    .upsert(upsertData, { onConflict: "user_id" });
 
-  if (lookupError) {
-    console.log("[sharekhan-auth] LOOKUP ERROR:", lookupError.message);
-    await log("sharekhan-auth", "store-tokens-lookup-failed", { error: lookupError.message }, "ERROR");
+  if (error) {
+    console.log("[sharekhan-auth] UPSERT FAILED:", error.message);
+    await log("sharekhan-auth", "store-tokens-upsert-failed", { 
+      error: error.message,
+      code: error.code,
+      details: error.details 
+    }, "ERROR");
+    throw error;
   }
 
-  console.log("[sharekhan-auth] Existing row found:", !!row);
-
-  if (row) {
-    console.log("[sharekhan-auth] UPDATING existing row for user:", userId);
-    const { error } = await supabase.from("user_settings").update(encrypted).eq("user_id", userId);
-    if (error) {
-      console.log("[sharekhan-auth] UPDATE FAILED:", error.message);
-      await log("sharekhan-auth", "store-tokens-update-failed", { error: error.message }, "ERROR");
-      throw error;
-    }
-    console.log("[sharekhan-auth] UPDATE SUCCESS for user:", userId);
-    await log("sharekhan-auth", "store-tokens-updated", { userId });
-  } else {
-    console.log("[sharekhan-auth] INSERTING new row for user:", userId);
-    const { error } = await supabase.from("user_settings").insert({ user_id: userId, ...encrypted });
-    if (error) {
-      console.log("[sharekhan-auth] INSERT FAILED:", error.message);
-      await log("sharekhan-auth", "store-tokens-insert-failed", { error: error.message }, "ERROR");
-      throw error;
-    }
-    console.log("[sharekhan-auth] INSERT SUCCESS for user:", userId);
-    await log("sharekhan-auth", "store-tokens-inserted", { userId });
-  }
+  console.log("[sharekhan-auth] UPSERT SUCCESS for user:", userId);
+  await log("sharekhan-auth", "store-tokens-upserted", { userId });
 }
 
 // ========= GET STORED TOKEN ==========
@@ -240,7 +256,7 @@ async function loadToken(userId: string) {
   };
 }
 
-// ========= VERIFY TOKEN (Rate Limited) ==========
+// ========= VERIFY TOKEN ==========
 async function verifyToken(userId: string, tokenObj: any) {
   const now = new Date();
   const expiry = tokenObj.expiry ? new Date(tokenObj.expiry) : null;
@@ -259,7 +275,7 @@ async function verifyToken(userId: string, tokenObj: any) {
     return { status: "VALID" };
   }
 
-  // Hit Sharekhan API to verify (rate limited check)
+  // Hit Sharekhan API to verify
   await log("sharekhan-auth", "verify-token-api-check", { userId });
 
   try {
@@ -295,7 +311,7 @@ serve(async (req) => {
   const method = req.method;
 
   try {
-    // CORS
+    // CORS - ensure all responses have proper headers
     if (method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
@@ -346,7 +362,7 @@ serve(async (req) => {
 
       if (!requestToken || !userId) {
         await log("sharekhan-auth", "exchange-token-missing-params", { hasToken: !!requestToken, hasUserId: !!userId }, "ERROR");
-        return new Response(JSON.stringify({ error: "request_token and user_id required" }), {
+        return new Response(JSON.stringify({ error: "request_token and user_id required", success: false }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -354,20 +370,43 @@ serve(async (req) => {
 
       const tokenData = await exchangeToken(requestToken);
       
+      // Check if exchange failed (uncrashable - returns structured error)
+      if (tokenData.success === false) {
+        await log("sharekhan-auth", "exchange-token-returned-error", { 
+          error: tokenData.error,
+          message: tokenData.message,
+          rawBody: tokenData.rawBody
+        }, "ERROR");
+        
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: tokenData.error,
+          message: tokenData.message,
+          rawBody: tokenData.rawBody
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       // Handle different response formats from Sharekhan
-      const accessToken = tokenData.accessToken || tokenData.access_token || tokenData.data?.accessToken;
-      const refreshToken = tokenData.refreshToken || tokenData.refresh_token || tokenData.data?.refreshToken;
-      const expiresIn = tokenData.expiresIn || tokenData.expires_in || tokenData.data?.expiresIn || 86400; // Default 24h
+      const accessToken = tokenData.accessToken || tokenData.access_token || (tokenData.data as any)?.accessToken;
+      const refreshToken = tokenData.refreshToken || tokenData.refresh_token || (tokenData.data as any)?.refreshToken;
+      const expiresIn = tokenData.expiresIn || tokenData.expires_in || (tokenData.data as any)?.expiresIn || 86400;
 
       if (!accessToken) {
         await log("sharekhan-auth", "exchange-token-no-access-token", { responseKeys: Object.keys(tokenData) }, "ERROR");
-        return new Response(JSON.stringify({ error: "No access token in response", success: false }), {
+        return new Response(JSON.stringify({ 
+          error: "No access token in response", 
+          success: false,
+          responseKeys: Object.keys(tokenData)
+        }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      await storeTokens(userId, accessToken, refreshToken, expiresIn);
+      await storeTokens(userId, accessToken as string, refreshToken as string | null, expiresIn as number);
 
       return new Response(JSON.stringify({ status: "SUCCESS", success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -429,12 +468,12 @@ serve(async (req) => {
       );
     }
 
-    // Diagnostics
+    // Diagnostics (Enhanced with rawBody in logs)
     if (actionFromBody === "diagnose") {
       const userId = url.searchParams.get("user_id") || body.user_id;
       const supabase = getSupabaseClient();
 
-      // Get recent logs
+      // Get recent logs including rawBody captured during failures
       const { data: logs } = await supabase
         .from("system_logs")
         .select("*")
@@ -458,13 +497,15 @@ serve(async (req) => {
           hasApiKey: !!SHAREKHAN_API_KEY,
           hasSecureKey: !!SHAREKHAN_API_SECURE_KEY,
           hasEncryptionKey: AUTH_ENCRYPTION_KEY !== "DEFAULT_KEY_CHANGE_ME",
+          apiKeyPreview: SHAREKHAN_API_KEY ? SHAREKHAN_API_KEY.substring(0, 8) + '...' : 'MISSING',
         },
         tokenStatus,
         hasToken,
         recentLogs: logs?.map(l => ({ 
           message: l.message, 
           level: l.level, 
-          time: l.created_at 
+          time: l.created_at,
+          metadata: l.metadata  // Include full metadata with rawBody
         })) || [],
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -478,7 +519,7 @@ serve(async (req) => {
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     await log("sharekhan-auth", "unhandled-error", { error: errorMessage }, "ERROR");
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: errorMessage, success: false }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
