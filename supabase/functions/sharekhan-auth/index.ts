@@ -23,7 +23,7 @@ const AUTH_ENCRYPTION_KEY = Deno.env.get("AUTH_ENCRYPTION_KEY") || "DEFAULT_KEY_
 
 // ========= ENDPOINTS ==========
 const SHAREKHAN_LOGIN_URL = "https://api.sharekhan.com/skapi/auth/login.html";
-const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/getAccessToken";
+const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/accessToken";
 const SHAREKHAN_PROFILE_URL = "https://api.sharekhan.com/skapi/services/profile/getProfile";
 
 // ========= HELPERS ==========
