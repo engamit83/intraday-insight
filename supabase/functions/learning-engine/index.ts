@@ -2,11 +2,9 @@
 // Analyzes trade outcomes and adjusts multipliers (rule-based, not ML)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { verifyAuth, corsHeaders } from '../_shared/auth.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const ALLOWED_ACTIONS = ['analyze', 'apply_adjustments']
 
 interface TradeAnalysis {
   totalTrades: number
