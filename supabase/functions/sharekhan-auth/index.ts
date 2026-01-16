@@ -39,7 +39,7 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
 
 // ========= ENDPOINTS ==========
 const SHAREKHAN_LOGIN_URL = "https://api.sharekhan.com/skapi/auth/login.html";
-const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/accessToken";
+const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/getAccessToken";
 const SHAREKHAN_PROFILE_URL = "https://api.sharekhan.com/skapi/services/profile";
 
 // ========= HELPERS ==========
@@ -105,14 +105,28 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
     requestTokenPreview: requestToken ? requestToken.substring(0, 20) + '...' : 'NONE'
   });
 
-  // Generate checksum = HEX(SHA256(request_token + api_key + api_secret)) - V2 Protocol Order
-  const text = requestToken + SHAREKHAN_API_KEY + SHAREKHAN_API_SECRET;
+  // TOKEN SWAP LOGIC: If request_token contains "|", split and swap parts (A|B → B|A)
+  let processedToken = requestToken;
+  if (requestToken.includes('|')) {
+    const parts = requestToken.split('|');
+    if (parts.length === 2) {
+      processedToken = parts[1] + '|' + parts[0]; // Swap: B|A
+      console.log("[sharekhan-auth] TOKEN SWAP applied:", {
+        original: requestToken.substring(0, 20) + '...',
+        swapped: processedToken.substring(0, 20) + '...'
+      });
+    }
+  }
+
+  // Generate checksum = HEX(SHA256(swapped_token + api_key + api_secret))
+  const text = processedToken + SHAREKHAN_API_KEY + SHAREKHAN_API_SECRET;
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   const checksum = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
+  // Use camelCase keys as per V2 spec
   const requestBody = {
-    api_key: SHAREKHAN_API_KEY,
-    request_token: requestToken,
+    apiKey: SHAREKHAN_API_KEY,
+    requestToken: processedToken,
     checksum,
   };
 
