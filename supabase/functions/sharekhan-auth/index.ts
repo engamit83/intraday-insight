@@ -16,10 +16,26 @@ const corsHeaders = {
 
 // ========= ENV ==========
 const SHAREKHAN_API_KEY = Deno.env.get("SHAREKHAN_API_KEY") || "";
-const SHAREKHAN_API_SECURE_KEY = Deno.env.get("SHAREKHAN_API_SECURE_KEY") || "";
+const SHAREKHAN_API_SECRET = Deno.env.get("SHAREKHAN_API_SECRET") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const AUTH_ENCRYPTION_KEY = Deno.env.get("AUTH_ENCRYPTION_KEY") || "DEFAULT_KEY_CHANGE_ME";
+
+// ========= TIMEOUT HELPER ==========
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 // ========= ENDPOINTS ==========
 const SHAREKHAN_LOGIN_URL = "https://api.sharekhan.com/skapi/auth/login.html";
@@ -90,7 +106,7 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
   });
 
   // Generate checksum = HEX(SHA256(request_token + api_key + api_secret)) - V2 Protocol Order
-  const text = requestToken + SHAREKHAN_API_KEY + SHAREKHAN_API_SECURE_KEY;
+  const text = requestToken + SHAREKHAN_API_KEY + SHAREKHAN_API_SECRET;
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   const checksum = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
@@ -100,28 +116,47 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
     checksum,
   };
 
-  console.log("[sharekhan-auth] Calling getAccessToken with:", {
+  console.log("[sharekhan-auth] REQUEST STARTED - Calling getAccessToken with:", {
     endpoint: SHAREKHAN_TOKEN_URL,
     api_key_preview: SHAREKHAN_API_KEY.substring(0, 8) + '...',
     request_token_preview: requestToken.substring(0, 20) + '...',
     checksum_preview: checksum.substring(0, 16) + '...',
+    timeout: '15 seconds'
   });
 
   await log("sharekhan-auth", "exchange-token-calling-api", { 
     endpoint: SHAREKHAN_TOKEN_URL,
     apiKeyLength: SHAREKHAN_API_KEY.length,
-    checksumLength: checksum.length
+    secretLength: SHAREKHAN_API_SECRET.length,
+    checksumLength: checksum.length,
+    message: "REQUEST STARTED with 15s timeout"
   });
 
-  // Make the API call with api-key in headers (V2 Gateway requirement)
-  const resp = await fetch(SHAREKHAN_TOKEN_URL, {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      "api-key": SHAREKHAN_API_KEY,  // V2 Gateway requires api-key header
-    },
-    body: JSON.stringify(requestBody),
-  });
+  // Make the API call with api-key in headers (V2 Gateway) + 15s timeout
+  let resp: Response;
+  try {
+    resp = await fetchWithTimeout(SHAREKHAN_TOKEN_URL, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "api-key": SHAREKHAN_API_KEY,
+      },
+      body: JSON.stringify(requestBody),
+    }, 15000);
+  } catch (fetchErr) {
+    const errMsg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+    console.log("[sharekhan-auth] FETCH FAILED (timeout or network):", errMsg);
+    await log("sharekhan-auth", "exchange-token-fetch-failed", { 
+      error: errMsg,
+      isTimeout: errMsg.includes("abort")
+    }, "ERROR");
+    
+    return { 
+      success: false, 
+      error: errMsg.includes("abort") ? "TIMEOUT_15S" : "FETCH_FAILED",
+      message: errMsg
+    };
+  }
 
   // CRITICAL: Capture raw response text IMMEDIATELY
   const respText = await resp.text();
@@ -333,8 +368,11 @@ serve(async (req) => {
     }
 
     // Config check
-    if (!SHAREKHAN_API_KEY || !SHAREKHAN_API_SECURE_KEY) {
-      await log("sharekhan-auth", "config-missing", {}, "ERROR");
+    if (!SHAREKHAN_API_KEY || !SHAREKHAN_API_SECRET) {
+      await log("sharekhan-auth", "config-missing", { 
+        hasApiKey: !!SHAREKHAN_API_KEY, 
+        hasApiSecret: !!SHAREKHAN_API_SECRET 
+      }, "ERROR");
       return new Response(JSON.stringify({ error: "Sharekhan API keys not configured", status: "CONFIG_ERROR" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -511,7 +549,7 @@ serve(async (req) => {
         ok: true,
         config: {
           hasApiKey: !!SHAREKHAN_API_KEY,
-          hasSecureKey: !!SHAREKHAN_API_SECURE_KEY,
+          hasApiSecret: !!SHAREKHAN_API_SECRET,
           hasEncryptionKey: AUTH_ENCRYPTION_KEY !== "DEFAULT_KEY_CHANGE_ME",
           apiKeyPreview: SHAREKHAN_API_KEY ? SHAREKHAN_API_KEY.substring(0, 8) + '...' : 'MISSING',
         },
