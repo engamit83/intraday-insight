@@ -39,8 +39,8 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
 
 // ========= ENDPOINTS ==========
 const SHAREKHAN_LOGIN_URL = "https://api.sharekhan.com/skapi/auth/login.html";
-const SHAREKHAN_TOKEN_URL = "https://tradesapi.sharekhan.com/skapi/auth/accessToken";
-const SHAREKHAN_PROFILE_URL = "https://tradesapi.sharekhan.com/skapi/services/profile";
+const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/accessToken";
+const SHAREKHAN_PROFILE_URL = "https://api.sharekhan.com/skapi/services/profile";
 
 // ========= HELPERS ==========
 function getSupabaseClient() {
