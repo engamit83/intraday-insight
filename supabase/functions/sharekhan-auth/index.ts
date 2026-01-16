@@ -23,8 +23,8 @@ const AUTH_ENCRYPTION_KEY = Deno.env.get("AUTH_ENCRYPTION_KEY") || "DEFAULT_KEY_
 
 // ========= ENDPOINTS ==========
 const SHAREKHAN_LOGIN_URL = "https://api.sharekhan.com/skapi/auth/login.html";
-const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/accessToken";
-const SHAREKHAN_PROFILE_URL = "https://api.sharekhan.com/skapi/services/profile/getProfile";
+const SHAREKHAN_TOKEN_URL = "https://tradesapi.sharekhan.com/skapi/auth/accessToken";
+const SHAREKHAN_PROFILE_URL = "https://tradesapi.sharekhan.com/skapi/services/profile";
 
 // ========= HELPERS ==========
 function getSupabaseClient() {
@@ -89,8 +89,8 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
     requestTokenPreview: requestToken ? requestToken.substring(0, 20) + '...' : 'NONE'
   });
 
-  // Generate checksum = SHA256(api_key + request_token + api_secret)
-  const text = SHAREKHAN_API_KEY + requestToken + SHAREKHAN_API_SECURE_KEY;
+  // Generate checksum = HEX(SHA256(request_token + api_key + api_secret)) - V2 Protocol Order
+  const text = requestToken + SHAREKHAN_API_KEY + SHAREKHAN_API_SECURE_KEY;
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   const checksum = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
@@ -113,12 +113,12 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
     checksumLength: checksum.length
   });
 
-  // Make the API call with apiKey in headers as well
+  // Make the API call with api-key in headers (V2 Gateway requirement)
   const resp = await fetch(SHAREKHAN_TOKEN_URL, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
-      "apiKey": SHAREKHAN_API_KEY,  // Some Sharekhan environments require this in headers
+      "api-key": SHAREKHAN_API_KEY,  // V2 Gateway requires api-key header
     },
     body: JSON.stringify(requestBody),
   });
@@ -161,18 +161,34 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
   console.log("[sharekhan-auth] PARSED RESPONSE KEYS:", Object.keys(parsed));
   
   // Check if the broker returned an error in the JSON
+  // Log detailed Sharekhan error response fields: status, detail, instance
   if (!resp.ok || parsed.status === "error" || parsed.error) {
     await log("sharekhan-auth", "exchange-token-broker-error", { 
-      status: resp.status,
-      parsedError: parsed.error || parsed.message || parsed.status,
+      httpStatus: resp.status,
+      parsedStatus: parsed.status,
+      parsedError: parsed.error,
+      parsedDetail: parsed.detail,
+      parsedInstance: parsed.instance,
+      parsedMessage: parsed.message,
       rawBody: respText.substring(0, 500)
     }, "ERROR");
     
+    console.log("[sharekhan-auth] BROKER ERROR DETAILS:", {
+      httpStatus: resp.status,
+      status: parsed.status,
+      detail: parsed.detail,
+      instance: parsed.instance,
+      error: parsed.error,
+      message: parsed.message
+    });
+    
     return {
       success: false,
-      error: String(parsed.error || parsed.message || "BROKER_ERROR"),
+      error: String(parsed.error || parsed.detail || parsed.message || "BROKER_ERROR"),
       rawBody: respText.substring(0, 500),
-      message: String(parsed.message || parsed.error || "Unknown broker error")
+      message: String(parsed.message || parsed.detail || parsed.error || "Unknown broker error"),
+      detail: parsed.detail,
+      instance: parsed.instance
     };
   }
 
