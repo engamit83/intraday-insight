@@ -116,8 +116,8 @@ export default function Settings() {
         return;
       }
 
-      // Backend returns login_url (snake_case)
-      const fullUrl = data?.login_url;
+      // Backend returns fullUrl
+      const fullUrl = data?.fullUrl;
       
       if (fullUrl && typeof fullUrl === 'string') {
         console.log('[Settings] Redirecting to Sharekhan:', fullUrl.substring(0, 80) + '...');

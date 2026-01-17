@@ -25,7 +25,7 @@ const SHAREKHAN_REDIRECT_URI = "https://emxhhxvtbjsjtjacbike.supabase.co/functio
 
 // ========= ENDPOINTS ==========
 const SHAREKHAN_LOGIN_URL = "https://api.sharekhan.com/skapi/auth/login.html";
-const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/getAccessToken";
+const SHAREKHAN_TOKEN_URL = "https://api.sharekhan.com/skapi/auth/access-token";
 const SHAREKHAN_PROFILE_URL = "https://api.sharekhan.com/skapi/services/profile";
 
 // ========= HELPERS ==========
