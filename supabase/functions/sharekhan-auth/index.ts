@@ -1,11 +1,10 @@
-// =============================
-//  SHAREKHAN AUTH – STABLE BUILD
-//  UNCRASHABLE + ATOMIC UPSERT
-// =============================
+// sharekhan-auth Edge Function - V2 Protocol with Token Swap
+// Handles Sharekhan OAuth flow: login redirect + token exchange
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import AES from "https://esm.sh/crypto-js@4.1.1/aes";
+import CryptoJS from "https://esm.sh/crypto-js@4.1.1";
+import Hex from "https://esm.sh/crypto-js@4.1.1/enc-hex";
 import Utf8 from "https://esm.sh/crypto-js@4.1.1/enc-utf8";
 
 const corsHeaders = {
@@ -17,25 +16,12 @@ const corsHeaders = {
 // ========= ENV ==========
 const SHAREKHAN_API_KEY = Deno.env.get("SHAREKHAN_API_KEY") || "";
 const SHAREKHAN_API_SECRET = Deno.env.get("SHAREKHAN_API_SECRET") || "";
+const AUTH_ENCRYPTION_KEY = Deno.env.get("AUTH_ENCRYPTION_KEY") || "default-key";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const AUTH_ENCRYPTION_KEY = Deno.env.get("AUTH_ENCRYPTION_KEY") || "DEFAULT_KEY_CHANGE_ME";
 
-// ========= TIMEOUT HELPER ==========
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 15000): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
+// ========= HARDCODED REDIRECT URI ==========
+const SHAREKHAN_REDIRECT_URI = "https://emxhhxvtbjsjtjacbike.supabase.co/functions/v1/sharekhan-auth";
 
 // ========= ENDPOINTS ==========
 const SHAREKHAN_LOGIN_URL = "https://api.sharekhan.com/skapi/auth/login.html";
@@ -48,60 +34,79 @@ function getSupabaseClient() {
 }
 
 function encrypt(text: string): string {
-  return AES.encrypt(text, AUTH_ENCRYPTION_KEY).toString();
+  return CryptoJS.AES.encrypt(text, AUTH_ENCRYPTION_KEY).toString();
 }
 
-function decrypt(cipher: string | null): string | null {
-  if (!cipher) return null;
-  try {
-    return AES.decrypt(cipher, AUTH_ENCRYPTION_KEY).toString(Utf8);
-  } catch {
-    return null;
-  }
+function decrypt(ciphertext: string): string {
+  const bytes = CryptoJS.AES.decrypt(ciphertext, AUTH_ENCRYPTION_KEY);
+  return bytes.toString(Utf8);
 }
 
-async function log(source: string, stage: string, metadata: Record<string, unknown> = {}, level = "INFO") {
+async function log(source: string, message: string, metadata: Record<string, unknown> = {}, level = "INFO") {
   try {
     const supabase = getSupabaseClient();
-    await supabase.from("system_logs").insert({ source, message: stage, level, metadata });
-  } catch {
-    // Silent fail for logging
+    await supabase.from("system_logs").insert({
+      source,
+      message,
+      metadata,
+      level,
+    });
+  } catch (e) {
+    console.error("[sharekhan-auth] Failed to write log:", e);
   }
 }
 
-// ========= LOGIN URL ==========
-function buildLoginUrl(redirect: string): string {
+// Fetch with timeout helper
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+// ========= GENERATE LOGIN URL ==========
+async function generateLoginUrl(state: string): Promise<string> {
   const params = new URLSearchParams({
     api_key: SHAREKHAN_API_KEY,
-    redirect_uri: redirect,
+    redirect_uri: SHAREKHAN_REDIRECT_URI,
+    state,
   });
-  return `${SHAREKHAN_LOGIN_URL}?${params.toString()}`;
+  
+  const loginUrl = `${SHAREKHAN_LOGIN_URL}?${params.toString()}`;
+  
+  console.log("[sharekhan-auth] GENERATED LOGIN URL:", {
+    baseUrl: SHAREKHAN_LOGIN_URL,
+    redirect_uri: SHAREKHAN_REDIRECT_URI,
+    state_preview: state.substring(0, 20) + '...',
+    fullUrl: loginUrl.substring(0, 100) + '...'
+  });
+  
+  await log("sharekhan-auth", "generate-login-url", {
+    redirect_uri: SHAREKHAN_REDIRECT_URI,
+    state_preview: state.substring(0, 20),
+  });
+  
+  return loginUrl;
 }
 
-// ========= EXCHANGE TOKEN (UNCRASHABLE) ==========
-interface ExchangeResult {
-  success: boolean;
+// ========= EXCHANGE TOKEN ==========
+async function exchangeToken(requestToken: string): Promise<{ 
+  success: boolean; 
+  access_token?: string; 
+  refresh_token?: string; 
   error?: string;
-  rawBody?: string;
   message?: string;
-  accessToken?: string;
-  access_token?: string;
-  refreshToken?: string;
-  refresh_token?: string;
-  expiresIn?: number;
-  expires_in?: number;
-  data?: {
-    accessToken?: string;
-    refreshToken?: string;
-    expiresIn?: number;
-  };
-  [key: string]: unknown;
-}
-
-async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
-  await log("sharekhan-auth", "exchange-token-start", { 
-    hasRequestToken: !!requestToken,
-    requestTokenLength: requestToken?.length || 0,
+}> {
+  console.log("[sharekhan-auth] EXCHANGE TOKEN STARTED:", {
+    apiKeyPreview: SHAREKHAN_API_KEY ? SHAREKHAN_API_KEY.substring(0, 8) + '...' : 'MISSING',
+    secretPreview: SHAREKHAN_API_SECRET ? '***SET***' : 'MISSING',
     requestTokenPreview: requestToken ? requestToken.substring(0, 20) + '...' : 'NONE'
   });
 
@@ -111,16 +116,18 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
     const parts = requestToken.split('|');
     if (parts.length === 2) {
       processedToken = parts[1] + '|' + parts[0]; // Swap: B|A
-      console.log("[sharekhan-auth] TOKEN SWAP applied:", {
-        original: requestToken.substring(0, 20) + '...',
-        swapped: processedToken.substring(0, 20) + '...'
+      console.log("[sharekhan-auth] TOKEN SWAP APPLIED:", {
+        original: requestToken.substring(0, 30) + '...',
+        swapped: processedToken.substring(0, 30) + '...'
       });
     }
+  } else {
+    console.log("[sharekhan-auth] NO PIPE IN TOKEN - using as-is");
   }
 
   // Generate checksum = HEX(SHA256(swapped_token + api_key + api_secret))
-  const text = processedToken + SHAREKHAN_API_KEY + SHAREKHAN_API_SECRET;
-  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  const checksumInput = processedToken + SHAREKHAN_API_KEY + SHAREKHAN_API_SECRET;
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(checksumInput));
   const checksum = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
   // Use camelCase keys as per V2 spec
@@ -130,11 +137,14 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
     checksum,
   };
 
-  console.log("[sharekhan-auth] REQUEST STARTED - Calling getAccessToken with:", {
+  console.log("[sharekhan-auth] REQUEST DETAILS:", {
     endpoint: SHAREKHAN_TOKEN_URL,
-    api_key_preview: SHAREKHAN_API_KEY.substring(0, 8) + '...',
-    request_token_preview: requestToken.substring(0, 20) + '...',
-    checksum_preview: checksum.substring(0, 16) + '...',
+    method: "POST",
+    bodyKeys: Object.keys(requestBody),
+    apiKey: SHAREKHAN_API_KEY.substring(0, 8) + '***',
+    requestToken: processedToken.substring(0, 20) + '***',
+    checksum: checksum.substring(0, 16) + '***',
+    secretUsed: SHAREKHAN_API_SECRET ? 'YES (masked)' : 'NO - MISSING!',
     timeout: '15 seconds'
   });
 
@@ -143,12 +153,13 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
     apiKeyLength: SHAREKHAN_API_KEY.length,
     secretLength: SHAREKHAN_API_SECRET.length,
     checksumLength: checksum.length,
+    tokenSwapped: requestToken.includes('|'),
     message: "REQUEST STARTED with 15s timeout"
   });
 
-  // Make the API call with api-key in headers (V2 Gateway) + 15s timeout
   let resp: Response;
   try {
+    console.log("[sharekhan-auth] FETCH STARTING NOW...");
     resp = await fetchWithTimeout(SHAREKHAN_TOKEN_URL, {
       method: "POST",
       headers: { 
@@ -157,9 +168,10 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
       },
       body: JSON.stringify(requestBody),
     }, 15000);
+    console.log("[sharekhan-auth] FETCH COMPLETED - Status:", resp.status);
   } catch (fetchErr) {
     const errMsg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-    console.log("[sharekhan-auth] FETCH FAILED (timeout or network):", errMsg);
+    console.log("[sharekhan-auth] FETCH FAILED:", errMsg);
     await log("sharekhan-auth", "exchange-token-fetch-failed", { 
       error: errMsg,
       isTimeout: errMsg.includes("abort")
@@ -176,100 +188,73 @@ async function exchangeToken(requestToken: string): Promise<ExchangeResult> {
   const respText = await resp.text();
   
   console.log("[sharekhan-auth] RAW RESPONSE STATUS:", resp.status);
-  console.log("[sharekhan-auth] CRITICAL RAW RESPONSE:", respText);
+  console.log("[sharekhan-auth] RAW RESPONSE BODY:", respText);
 
   await log("sharekhan-auth", "exchange-token-raw-response", { 
     status: resp.status, 
     ok: resp.ok,
-    rawBody: respText.substring(0, 1000), // Store up to 1000 chars
+    rawBody: respText.substring(0, 1000),
     contentType: resp.headers.get("content-type")
   });
 
-  // Try to parse JSON - catch parse errors specifically
-  let parsed: Record<string, unknown>;
+  // Parse response
+  let data: Record<string, unknown>;
   try {
-    parsed = JSON.parse(respText);
-  } catch (parseErr) {
-    // Log as RAW_HTML_OR_TEXT so we can see the broker error
-    console.log("[sharekhan-auth] RAW_HTML_OR_TEXT:", respText);
-    await log("sharekhan-auth", "exchange-token-parse-error", { 
-      error: "RAW_HTML_OR_TEXT",
-      rawBody: respText.substring(0, 1000),
-      parseError: String(parseErr)
+    data = JSON.parse(respText);
+  } catch {
+    console.log("[sharekhan-auth] JSON PARSE FAILED - response is not valid JSON");
+    await log("sharekhan-auth", "exchange-token-json-parse-failed", { 
+      rawBody: respText.substring(0, 500) 
     }, "ERROR");
-    
-    // Return a structured error that won't crash
     return { 
       success: false, 
-      error: "PARSE_ERROR", 
-      rawBody: respText.substring(0, 500),
-      message: "Broker returned non-JSON response"
+      error: "INVALID_JSON_RESPONSE",
+      message: respText.substring(0, 200)
     };
   }
 
-  console.log("[sharekhan-auth] PARSED RESPONSE KEYS:", Object.keys(parsed));
-  
-  // Check if the broker returned an error in the JSON
-  // Log detailed Sharekhan error response fields: status, detail, instance
-  if (!resp.ok || parsed.status === "error" || parsed.error) {
-    await log("sharekhan-auth", "exchange-token-broker-error", { 
-      httpStatus: resp.status,
-      parsedStatus: parsed.status,
-      parsedError: parsed.error,
-      parsedDetail: parsed.detail,
-      parsedInstance: parsed.instance,
-      parsedMessage: parsed.message,
-      rawBody: respText.substring(0, 500)
-    }, "ERROR");
+  console.log("[sharekhan-auth] PARSED RESPONSE:", JSON.stringify(data, null, 2));
+
+  // Check for success indicators
+  if (data.access_token || data.accessToken) {
+    const accessToken = (data.access_token || data.accessToken) as string;
+    const refreshToken = (data.refresh_token || data.refreshToken || null) as string | null;
     
-    console.log("[sharekhan-auth] BROKER ERROR DETAILS:", {
-      httpStatus: resp.status,
-      status: parsed.status,
-      detail: parsed.detail,
-      instance: parsed.instance,
-      error: parsed.error,
-      message: parsed.message
+    console.log("[sharekhan-auth] SUCCESS - Got access token");
+    await log("sharekhan-auth", "exchange-token-success", { 
+      hasAccessToken: true,
+      hasRefreshToken: !!refreshToken
     });
     
-    return {
-      success: false,
-      error: String(parsed.error || parsed.detail || parsed.message || "BROKER_ERROR"),
-      rawBody: respText.substring(0, 500),
-      message: String(parsed.message || parsed.detail || parsed.error || "Unknown broker error"),
-      detail: parsed.detail,
-      instance: parsed.instance
+    return { 
+      success: true, 
+      access_token: accessToken,
+      refresh_token: refreshToken || undefined
     };
   }
 
-  await log("sharekhan-auth", "exchange-token-success", { 
-    responseKeys: Object.keys(parsed),
-    hasAccessToken: !!(parsed.accessToken || parsed.access_token || (parsed.data as any)?.accessToken),
-    hasRefreshToken: !!(parsed.refreshToken || parsed.refresh_token || (parsed.data as any)?.refreshToken),
-    hasData: !!parsed.data,
-    hasStatus: !!parsed.status,
-    statusValue: parsed.status
-  });
+  // Handle error responses
+  const errorMsg = (data.message || data.error || data.status || "UNKNOWN_ERROR") as string;
+  console.log("[sharekhan-auth] API ERROR RESPONSE:", errorMsg);
+  
+  await log("sharekhan-auth", "exchange-token-api-error", { 
+    data,
+    errorMsg
+  }, "ERROR");
 
-  return { success: true, ...parsed } as ExchangeResult;
+  return { 
+    success: false, 
+    error: "API_ERROR",
+    message: errorMsg
+  };
 }
 
-// ========= STORE TOKENS (ATOMIC UPSERT) ==========
-async function storeTokens(userId: string, access: string, refresh: string | null, expiresIn: number) {
-  console.log("[sharekhan-auth] STORE TOKENS START for user:", userId);
-  
+// ========= STORE TOKENS ==========
+async function storeTokens(userId: string, access: string, refresh?: string): Promise<boolean> {
   const supabase = getSupabaseClient();
-
   const now = new Date();
-  const expiry = new Date(now.getTime() + expiresIn * 1000 - 15 * 60 * 1000); // 15 min buffer
+  const expiry = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
 
-  await log("sharekhan-auth", "store-tokens-start", { 
-    userId, 
-    expiresIn, 
-    bufferApplied: true,
-    accessTokenLength: access?.length || 0
-  });
-
-  // ATOMIC UPSERT - No more race condition possible
   const upsertData = {
     user_id: userId,
     sharekhan_access_token: encrypt(access),
@@ -286,94 +271,44 @@ async function storeTokens(userId: string, access: string, refresh: string | nul
     .upsert(upsertData, { onConflict: "user_id" });
 
   if (error) {
-    console.log("[sharekhan-auth] UPSERT FAILED:", error.message);
-    await log("sharekhan-auth", "store-tokens-upsert-failed", { 
-      error: error.message,
-      code: error.code,
-      details: error.details 
-    }, "ERROR");
-    throw error;
+    console.error("[sharekhan-auth] Failed to store tokens:", error);
+    await log("sharekhan-auth", "store-tokens-failed", { error: error.message }, "ERROR");
+    return false;
   }
 
-  console.log("[sharekhan-auth] UPSERT SUCCESS for user:", userId);
-  await log("sharekhan-auth", "store-tokens-upserted", { userId });
+  console.log("[sharekhan-auth] Tokens stored successfully");
+  await log("sharekhan-auth", "store-tokens-success", { userId });
+  return true;
 }
 
-// ========= GET STORED TOKEN ==========
-async function loadToken(userId: string) {
+// ========= GET USER FROM AUTH HEADER ==========
+async function getUserFromAuth(authHeader: string | null): Promise<string | null> {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  
+  const token = authHeader.replace("Bearer ", "");
   const supabase = getSupabaseClient();
-  const { data } = await supabase
-    .from("user_settings")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (!data) return null;
-
-  const access = decrypt(data.sharekhan_access_token);
-  const refresh = decrypt(data.sharekhan_refresh_token);
-
-  return {
-    accessToken: access,
-    refreshToken: refresh,
-    expiry: data.sharekhan_token_expiry,
-    generatedAt: data.sharekhan_token_generated_at,
-  };
+  
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) {
+    console.log("[sharekhan-auth] Auth failed:", error?.message);
+    return null;
+  }
+  
+  return data.user.id;
 }
 
-// ========= VERIFY TOKEN ==========
-async function verifyToken(userId: string, tokenObj: any) {
-  const now = new Date();
-  const expiry = tokenObj.expiry ? new Date(tokenObj.expiry) : null;
-
-  if (!expiry || expiry < now) {
-    await log("sharekhan-auth", "verify-token-expired", { userId });
-    return { status: "EXPIRED" };
-  }
-
-  // Check token freshness - if generated within last 10 minutes, trust it
-  const generatedAt = tokenObj.generatedAt ? new Date(tokenObj.generatedAt) : null;
-  const minutesSinceGenerated = generatedAt ? (now.getTime() - generatedAt.getTime()) / 60000 : 999;
-
-  if (minutesSinceGenerated < 10) {
-    await log("sharekhan-auth", "verify-token-fresh", { userId, minutesSinceGenerated });
-    return { status: "VALID" };
-  }
-
-  // Hit Sharekhan API to verify
-  await log("sharekhan-auth", "verify-token-api-check", { userId });
-
-  try {
-    const resp = await fetch(SHAREKHAN_PROFILE_URL, {
-      headers: { Authorization: `Bearer ${tokenObj.accessToken}` },
-    });
-
-    let newStatus = "VALID";
-
-    if (resp.status === 401 || resp.status === 403) {
-      newStatus = "DOUBLE_LOGIN";
-      await log("sharekhan-auth", "verify-token-double-login", { userId, status: resp.status }, "ERROR");
-    } else if (resp.status === 429) {
-      newStatus = "RATE_LIMIT";
-      await log("sharekhan-auth", "verify-token-rate-limit", { userId }, "ERROR");
-    } else if (!resp.ok) {
-      newStatus = "API_ERROR";
-      await log("sharekhan-auth", "verify-token-api-error", { userId, status: resp.status }, "ERROR");
-    }
-
-    return { status: newStatus };
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    await log("sharekhan-auth", "verify-token-exception", { userId, error: errorMessage }, "ERROR");
-    return { status: "API_UNREACHABLE" };
-  }
-}
-
-// ========= ROUTER ==========
-serve(async (req) => {
+// ========= MAIN HANDLER ==========
+serve(async (req: Request) => {
   const url = new URL(req.url);
-  const action = url.searchParams.get("action");
   const method = req.method;
+
+  console.log("[sharekhan-auth] INCOMING REQUEST:", {
+    method,
+    path: url.pathname,
+    searchParams: Object.fromEntries(url.searchParams)
+  });
 
   try {
     // CORS - ensure all responses have proper headers
@@ -383,213 +318,100 @@ serve(async (req) => {
 
     // Config check
     if (!SHAREKHAN_API_KEY || !SHAREKHAN_API_SECRET) {
-      await log("sharekhan-auth", "config-missing", { 
-        hasApiKey: !!SHAREKHAN_API_KEY, 
-        hasApiSecret: !!SHAREKHAN_API_SECRET 
-      }, "ERROR");
-      return new Response(JSON.stringify({ error: "Sharekhan API keys not configured", status: "CONFIG_ERROR" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.error("[sharekhan-auth] MISSING CONFIG:", {
+        hasApiKey: !!SHAREKHAN_API_KEY,
+        hasSecret: !!SHAREKHAN_API_SECRET
       });
-    }
-
-    // Handle POST body for actions
-    let body: any = {};
-    if (method === "POST") {
-      try {
-        body = await req.json();
-      } catch {
-        body = {};
-      }
-    }
-
-    const actionFromBody = body.action || action;
-
-    await log("sharekhan-auth", "request-received", { action: actionFromBody, method });
-
-    // Login-URL
-    if (actionFromBody === "login-url") {
-      const redirect = url.searchParams.get("redirect_uri") || body.redirect_uri;
-      if (!redirect) {
-        return new Response(JSON.stringify({ error: "redirect_uri required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const finalUrl = buildLoginUrl(redirect);
-      await log("sharekhan-auth", "login-url-generated", { redirect });
-      return new Response(JSON.stringify({ loginUrl: finalUrl }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Exchange Token
-    if (actionFromBody === "exchange-token") {
-      const requestToken = body.request_token;
-      const userId = body.user_id;
-
-      if (!requestToken || !userId) {
-        await log("sharekhan-auth", "exchange-token-missing-params", { hasToken: !!requestToken, hasUserId: !!userId }, "ERROR");
-        return new Response(JSON.stringify({ error: "request_token and user_id required", success: false }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const tokenData = await exchangeToken(requestToken);
-      
-      // Check if exchange failed (uncrashable - returns structured error)
-      if (tokenData.success === false) {
-        await log("sharekhan-auth", "exchange-token-returned-error", { 
-          error: tokenData.error,
-          message: tokenData.message,
-          rawBody: tokenData.rawBody
-        }, "ERROR");
-        
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: tokenData.error,
-          message: tokenData.message,
-          rawBody: tokenData.rawBody
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      
-      // Handle different response formats from Sharekhan
-      const accessToken = tokenData.accessToken || tokenData.access_token || (tokenData.data as any)?.accessToken;
-      const refreshToken = tokenData.refreshToken || tokenData.refresh_token || (tokenData.data as any)?.refreshToken;
-      const expiresIn = tokenData.expiresIn || tokenData.expires_in || (tokenData.data as any)?.expiresIn || 86400;
-
-      if (!accessToken) {
-        await log("sharekhan-auth", "exchange-token-no-access-token", { responseKeys: Object.keys(tokenData) }, "ERROR");
-        return new Response(JSON.stringify({ 
-          error: "No access token in response", 
-          success: false,
-          responseKeys: Object.keys(tokenData)
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      await storeTokens(userId, accessToken as string, refreshToken as string | null, expiresIn as number);
-
-      return new Response(JSON.stringify({ status: "SUCCESS", success: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Health
-    if (actionFromBody === "health") {
-      const userId = url.searchParams.get("user_id") || body.user_id;
-      
-      if (!userId) {
-        return new Response(JSON.stringify({ status: "AUTH_REQUIRED", reason: "No user_id provided" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const tokenObj = await loadToken(userId);
-
-      if (!tokenObj?.accessToken) {
-        await log("sharekhan-auth", "health-no-token", { userId });
-        return new Response(JSON.stringify({ status: "AUTH_REQUIRED" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const check = await verifyToken(userId, tokenObj);
-      await log("sharekhan-auth", "health-check-result", { userId, status: check.status });
-
-      return new Response(JSON.stringify({ status: check.status }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Get Token (For Market Engine)
-    if (actionFromBody === "get-token") {
-      const userId = url.searchParams.get("user_id") || body.user_id;
-
-      if (!userId) {
-        return new Response(JSON.stringify({ status: "AUTH_REQUIRED" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const tokenObj = await loadToken(userId);
-
-      if (!tokenObj?.accessToken) {
-        return new Response(JSON.stringify({ status: "AUTH_REQUIRED" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
       return new Response(
-        JSON.stringify({
-          status: "AUTH_OK",
-          accessToken: tokenObj.accessToken,
-          expiry: tokenObj.expiry,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Sharekhan API not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Diagnostics (Enhanced with rawBody in logs)
-    if (actionFromBody === "diagnose") {
-      const userId = url.searchParams.get("user_id") || body.user_id;
-      const supabase = getSupabaseClient();
+    // ========= OAUTH CALLBACK (GET with request_token) ==========
+    const requestToken = url.searchParams.get("request_token");
+    const state = url.searchParams.get("state");
+    
+    if (method === "GET" && requestToken) {
+      console.log("[sharekhan-auth] OAUTH CALLBACK received:", {
+        hasRequestToken: true,
+        hasState: !!state,
+        tokenPreview: requestToken.substring(0, 20) + '...'
+      });
 
-      // Get recent logs including rawBody captured during failures
-      const { data: logs } = await supabase
-        .from("system_logs")
-        .select("*")
-        .eq("source", "sharekhan-auth")
-        .order("created_at", { ascending: false })
-        .limit(10);
+      await log("sharekhan-auth", "oauth-callback-received", {
+        hasState: !!state,
+        requestTokenLength: requestToken.length
+      });
 
-      // Check token status
-      let tokenStatus = "NO_USER_ID";
-      let hasToken = false;
-
-      if (userId) {
-        const tokenObj = await loadToken(userId);
-        hasToken = !!tokenObj?.accessToken;
-        tokenStatus = hasToken ? "TOKEN_PRESENT" : "NO_TOKEN";
+      // Exchange token
+      const result = await exchangeToken(requestToken);
+      
+      if (!result.success) {
+        console.log("[sharekhan-auth] Token exchange failed:", result.error);
+        // Redirect to frontend with error
+        const errorUrl = `${url.origin}/settings?sharekhan_error=${encodeURIComponent(result.message || result.error || 'unknown')}`;
+        return new Response(null, {
+          status: 302,
+          headers: { ...corsHeaders, Location: errorUrl }
+        });
       }
 
-      return new Response(JSON.stringify({ 
-        ok: true,
-        config: {
-          hasApiKey: !!SHAREKHAN_API_KEY,
-          hasApiSecret: !!SHAREKHAN_API_SECRET,
-          hasEncryptionKey: AUTH_ENCRYPTION_KEY !== "DEFAULT_KEY_CHANGE_ME",
-          apiKeyPreview: SHAREKHAN_API_KEY ? SHAREKHAN_API_KEY.substring(0, 8) + '...' : 'MISSING',
-        },
-        tokenStatus,
-        hasToken,
-        recentLogs: logs?.map(l => ({ 
-          message: l.message, 
-          level: l.level, 
-          time: l.created_at,
-          metadata: l.metadata  // Include full metadata with rawBody
-        })) || [],
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // If we have state, it should contain the user_id
+      let userId = state;
+      
+      if (userId && result.access_token) {
+        await storeTokens(userId, result.access_token, result.refresh_token);
+      }
+
+      // Redirect to frontend with success
+      const successUrl = `${url.origin}/settings?sharekhan_connected=true`;
+      console.log("[sharekhan-auth] Redirecting to success URL:", successUrl);
+      
+      return new Response(null, {
+        status: 302,
+        headers: { ...corsHeaders, Location: successUrl }
       });
     }
 
-    return new Response(JSON.stringify({ error: "INVALID_ACTION" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    await log("sharekhan-auth", "unhandled-error", { error: errorMessage }, "ERROR");
-    return new Response(JSON.stringify({ error: errorMessage, success: false }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // ========= GENERATE LOGIN URL (POST) ==========
+    if (method === "POST") {
+      const authHeader = req.headers.get("authorization");
+      const userId = await getUserFromAuth(authHeader);
+      
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Use userId as state for callback
+      const loginUrl = await generateLoginUrl(userId);
+      
+      console.log("[sharekhan-auth] Returning login URL for user:", userId);
+      
+      return new Response(
+        JSON.stringify({ login_url: loginUrl }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ========= UNKNOWN REQUEST ==========
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("[sharekhan-auth] UNHANDLED ERROR:", errMsg);
+    
+    await log("sharekhan-auth", "unhandled-error", { error: errMsg }, "ERROR");
+    
+    return new Response(
+      JSON.stringify({ error: "Internal server error", details: errMsg }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
