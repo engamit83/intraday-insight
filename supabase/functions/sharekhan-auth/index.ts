@@ -387,12 +387,13 @@ serve(async (req: Request) => {
       }
 
       // Use userId as state for callback
-      const loginUrl = await generateLoginUrl(userId);
+      const fullUrl = await generateLoginUrl(userId);
       
-      console.log("[sharekhan-auth] Returning login URL for user:", userId);
+      console.log("[sharekhan-auth] Returning fullUrl for user:", userId, "URL:", fullUrl.substring(0, 80) + '...');
       
+      // Return as JSON with fullUrl key for frontend compatibility
       return new Response(
-        JSON.stringify({ login_url: loginUrl }),
+        JSON.stringify({ login_url: fullUrl, fullUrl: fullUrl }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
