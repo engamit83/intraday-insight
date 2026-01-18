@@ -1,554 +1,146 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Settings as SettingsIcon, 
-  Bell, 
-  Shield, 
-  Key,
-  Save,
-  RefreshCw,
-  Play,
-  Lock,
-  Zap,
-  CheckCircle,
-  ExternalLink,
-  Loader2
-} from "lucide-react";
-import { toast } from "sonner";
+import { ExternalLink, Loader2, CheckCircle, Key } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-type SimulatorMode = 'SIGNAL_ONLY' | 'SIMULATOR' | 'AUTO';
-type SharekhanStatus = 'checking' | 'connected' | 'disconnected' | 'error';
+type SharekhanStatus = "checking" | "connected" | "disconnected" | "error";
 
 export default function Settings() {
   const { user } = useAuth();
-  const [settings, setSettings] = useState({
-    riskAppetite: "MEDIUM",
-    maxPositionSize: 50000,
-    defaultStoploss: 2,
-    autoTradingEnabled: true,
-    notificationsEnabled: true,
-    emailAlerts: true,
-    pushNotifications: false,
-    signalAlerts: true,
-    tradeAlerts: true,
-    priceAlerts: true,
-    simulatorMode: 'SIGNAL_ONLY' as SimulatorMode,
-  });
+  const [status, setStatus] = useState<SharekhanStatus>("checking");
+  const [connecting, setConnecting] = useState(false);
 
-  const [sharekhanStatus, setSharekhanStatus] = useState<SharekhanStatus>('checking');
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  // Load simulator mode from database
+  // Backend health check (source of truth)
   useEffect(() => {
     if (!user) return;
-    
-    async function loadSettings() {
-      const { data } = await supabase
-        .from('user_settings')
-        .select('simulator_mode')
-        .eq('user_id', user!.id)
-        .maybeSingle();
-      
-      if (data?.simulator_mode) {
-        setSettings(prev => ({ ...prev, simulatorMode: data.simulator_mode as SimulatorMode }));
-      }
-    }
-    loadSettings();
-  }, [user]);
 
-  // Check Sharekhan auth status on load
-  useEffect(() => {
-    if (!user) return;
-    
-    async function checkSharekhanStatus() {
-      try {
-        const { data, error } = await supabase.functions.invoke('sharekhan-auth', {
-          body: { action: 'health', userId: user!.id }
-        });
+    const checkHealth = async () => {
+      setStatus("checking");
 
-        if (error) {
-          console.error('Sharekhan health check error:', error);
-          setSharekhanStatus('error');
-          return;
-        }
-
-        if (data?.status === 'AUTH_OK') {
-          setSharekhanStatus('connected');
-        } else {
-          setSharekhanStatus('disconnected');
-        }
-      } catch (err) {
-        console.error('Sharekhan status check failed:', err);
-        setSharekhanStatus('error');
-      }
-    }
-    checkSharekhanStatus();
-  }, [user]);
-
-  const handleConnectSharekhan = async () => {
-    setIsConnecting(true);
-    try {
-      // Call edge function via POST - it returns { login_url: "..." }
-      const { data, error } = await supabase.functions.invoke('sharekhan-auth', {
-        method: 'POST',
-        body: {}
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "sharekhan-auth",
+        { body: { action: "health" } }
+      );
 
       if (error) {
-        console.error('Login URL error:', error);
-        toast.error('Failed to get login URL: ' + (error.message || 'Unknown error'));
+        console.error(error);
+        setStatus("error");
         return;
       }
 
-      // Backend returns fullUrl
-      const fullUrl = data?.fullUrl;
-      
-      if (fullUrl && typeof fullUrl === 'string') {
-        console.log('[Settings] Redirecting to Sharekhan:', fullUrl.substring(0, 80) + '...');
-        window.location.href = fullUrl;
-      } else {
-        console.error('[Settings] Invalid response:', data);
-        toast.error('Invalid response from auth service');
-      }
-    } catch (err) {
-      console.error('Connect Sharekhan error:', err);
-      toast.error('Failed to connect to Sharekhan');
-    } finally {
-      setIsConnecting(false);
-    }
-  };
+      setStatus(data?.status === "AUTH_OK" ? "connected" : "disconnected");
+    };
 
-  const handleSimulatorModeChange = async (mode: SimulatorMode) => {
-    // Don't allow AUTO mode
-    if (mode === 'AUTO') {
-      toast.error('Auto Trading is disabled for safety');
-      return;
-    }
-    
+    checkHealth();
+  }, [user]);
+
+  // Start Sharekhan OAuth (hard redirect only)
+  const connectSharekhan = async () => {
     if (!user) {
-      toast.error('Please sign in to change settings');
+      toast.error("Please sign in first");
       return;
     }
-    
-    setSettings(prev => ({ ...prev, simulatorMode: mode }));
-    
-    // Update in database
-    const { error } = await supabase
-      .from('user_settings')
-      .upsert({ 
-        user_id: user.id,
-        simulator_mode: mode 
-      }, { onConflict: 'user_id' });
-    
-    if (error) {
-      toast.error('Failed to update mode');
-    } else {
-      toast.success(`Switched to ${mode === 'SIMULATOR' ? 'Simulator' : 'Signal Only'} mode`);
-    }
-  };
 
-  const handleSave = () => {
-    toast.success("Settings saved successfully!");
+    setConnecting(true);
+
+    const { data, error } = await supabase.functions.invoke(
+      "sharekhan-auth",
+      { method: "POST" }
+    );
+
+    if (error || !data?.fullUrl) {
+      console.error(error);
+      toast.error("Failed to start Sharekhan login");
+      setConnecting(false);
+      return;
+    }
+
+    window.location.href = data.fullUrl;
   };
 
   return (
     <MainLayout>
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-          <p className="text-muted-foreground">Configure your trading preferences</p>
-        </div>
-        <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
-        </Button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
       </div>
 
-      <Tabs defaultValue="trading" className="space-y-6">
+      <Tabs defaultValue="api" className="space-y-6">
         <TabsList className="bg-secondary/50 p-1">
-          <TabsTrigger value="trading" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <SettingsIcon className="h-4 w-4 mr-2" />
-            Trading
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Bell className="h-4 w-4 mr-2" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="risk" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Shield className="h-4 w-4 mr-2" />
-            Risk Management
-          </TabsTrigger>
-          <TabsTrigger value="api" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsTrigger
+            value="api"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+          >
             <Key className="h-4 w-4 mr-2" />
             API Keys
           </TabsTrigger>
         </TabsList>
 
-        {/* Trading Settings */}
-        <TabsContent value="trading">
-          <div className="glass-card rounded-xl p-6 space-y-6">
-            <h3 className="text-lg font-semibold text-foreground">Trading Preferences</h3>
-            
-            {/* Trading Mode Selector */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Trading Mode</Label>
-              <div className="grid gap-3 md:grid-cols-3">
-                {/* Signal Only */}
-                <button
-                  onClick={() => handleSimulatorModeChange('SIGNAL_ONLY')}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
-                    settings.simulatorMode === 'SIGNAL_ONLY' 
-                      ? 'border-primary bg-primary/10' 
-                      : 'border-border hover:border-primary/50 bg-secondary/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">Signal Only</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    View AI signals without automatic trade execution
-                  </p>
-                </button>
-
-                {/* Simulator */}
-                <button
-                  onClick={() => handleSimulatorModeChange('SIMULATOR')}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
-                    settings.simulatorMode === 'SIMULATOR' 
-                      ? 'border-primary bg-primary/10' 
-                      : 'border-border hover:border-primary/50 bg-secondary/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Play className="h-5 w-5 text-bullish" />
-                    <span className="font-semibold">Simulator</span>
-                    <Badge className="bg-bullish/20 text-bullish text-xs">PAPER</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Execute virtual trades with real prices, no real money
-                  </p>
-                </button>
-
-                {/* Auto (Disabled) */}
-                <div className="p-4 rounded-lg border-2 border-border bg-secondary/20 opacity-50 cursor-not-allowed">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Lock className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-semibold text-muted-foreground">Auto Trading</span>
-                    <Badge variant="outline" className="text-xs">LOCKED</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Real trade execution (requires compliance approval)
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {settings.simulatorMode === 'SIMULATOR' 
-                  ? '✓ Simulator mode active. Virtual trades will be created from signals.'
-                  : '○ Signal only mode. You will see signals but no trades will be created.'}
-              </p>
-            </div>
-
-            <div className="h-px bg-border" />
-            
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-4">
-
-                <div className="space-y-2">
-                  <Label>Preferred Sectors</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Banking', 'IT', 'Auto', 'Pharma', 'Energy', 'FMCG'].map((sector) => (
-                      <Badge 
-                        key={sector} 
-                        variant="outline" 
-                        className="cursor-pointer hover:bg-primary/10"
-                      >
-                        {sector}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Signal Confidence Threshold</Label>
-                  <p className="text-sm text-muted-foreground mb-2">Minimum confidence score for signals</p>
-                  <Slider defaultValue={[70]} max={100} step={5} className="py-4" />
-                  <p className="text-sm text-primary font-medium">70%</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Signal Types</Label>
-                  <Select defaultValue="all">
-                    <SelectTrigger className="bg-secondary/50">
-                      <SelectValue placeholder="Select signal types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Signals</SelectItem>
-                      <SelectItem value="buy">Buy Only</SelectItem>
-                      <SelectItem value="sell">Sell Only</SelectItem>
-                      <SelectItem value="strong">Strong Signals Only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Notifications */}
-        <TabsContent value="notifications">
-          <div className="glass-card rounded-xl p-6 space-y-6">
-            <h3 className="text-lg font-semibold text-foreground">Notification Settings</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-                <div>
-                  <p className="font-medium text-foreground">Email Alerts</p>
-                  <p className="text-sm text-muted-foreground">Receive trading alerts via email</p>
-                </div>
-                <Switch 
-                  checked={settings.emailAlerts}
-                  onCheckedChange={(checked) => setSettings({ ...settings, emailAlerts: checked })}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-                <div>
-                  <p className="font-medium text-foreground">Push Notifications</p>
-                  <p className="text-sm text-muted-foreground">Get instant push notifications</p>
-                </div>
-                <Switch 
-                  checked={settings.pushNotifications}
-                  onCheckedChange={(checked) => setSettings({ ...settings, pushNotifications: checked })}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-                <div>
-                  <p className="font-medium text-foreground">Signal Alerts</p>
-                  <p className="text-sm text-muted-foreground">Alert when new signals are generated</p>
-                </div>
-                <Switch 
-                  checked={settings.signalAlerts}
-                  onCheckedChange={(checked) => setSettings({ ...settings, signalAlerts: checked })}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-                <div>
-                  <p className="font-medium text-foreground">Trade Alerts</p>
-                  <p className="text-sm text-muted-foreground">Alert on trade execution and completion</p>
-                </div>
-                <Switch 
-                  checked={settings.tradeAlerts}
-                  onCheckedChange={(checked) => setSettings({ ...settings, tradeAlerts: checked })}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
-                <div>
-                  <p className="font-medium text-foreground">Price Alerts</p>
-                  <p className="text-sm text-muted-foreground">Alert when watchlist stocks hit price targets</p>
-                </div>
-                <Switch 
-                  checked={settings.priceAlerts}
-                  onCheckedChange={(checked) => setSettings({ ...settings, priceAlerts: checked })}
-                />
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Risk Management */}
-        <TabsContent value="risk">
-          <div className="glass-card rounded-xl p-6 space-y-6">
-            <h3 className="text-lg font-semibold text-foreground">Risk Management</h3>
-            
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Risk Appetite</Label>
-                  <Select 
-                    value={settings.riskAppetite}
-                    onValueChange={(value) => setSettings({ ...settings, riskAppetite: value })}
-                  >
-                    <SelectTrigger className="bg-secondary/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LOW">Low Risk</SelectItem>
-                      <SelectItem value="MEDIUM">Medium Risk</SelectItem>
-                      <SelectItem value="HIGH">High Risk</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {settings.riskAppetite === "LOW" && "Conservative approach with lower returns and lower risk"}
-                    {settings.riskAppetite === "MEDIUM" && "Balanced approach with moderate risk and returns"}
-                    {settings.riskAppetite === "HIGH" && "Aggressive approach with higher potential returns and risk"}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Maximum Position Size (₹)</Label>
-                  <Input 
-                    type="number"
-                    value={settings.maxPositionSize}
-                    onChange={(e) => setSettings({ ...settings, maxPositionSize: parseInt(e.target.value) || 0 })}
-                    className="bg-secondary/50"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Default Stoploss (%)</Label>
-                  <p className="text-sm text-muted-foreground mb-2">Auto-set stoploss percentage for trades</p>
-                  <Slider 
-                    value={[settings.defaultStoploss]} 
-                    onValueChange={(v) => setSettings({ ...settings, defaultStoploss: v[0] })}
-                    max={10} 
-                    step={0.5} 
-                    className="py-4" 
-                  />
-                  <p className="text-sm text-primary font-medium">{settings.defaultStoploss}%</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Maximum Daily Loss (₹)</Label>
-                  <Input 
-                    type="number"
-                    defaultValue={5000}
-                    className="bg-secondary/50"
-                  />
-                  <p className="text-xs text-muted-foreground">Stop auto-trading when daily loss exceeds this amount</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* API Keys */}
         <TabsContent value="api">
           <div className="glass-card rounded-xl p-6 space-y-6">
-            <h3 className="text-lg font-semibold text-foreground">API Configuration</h3>
-            <p className="text-sm text-muted-foreground">Connect to market data providers for real-time stock data.</p>
-            
-            {/* Sharekhan Connection */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-base font-medium">Sharekhan Integration</Label>
-                <p className="text-sm text-muted-foreground">
-                  Connect your Sharekhan account for live NSE/BSE market data
-                </p>
-              </div>
+            <h3 className="text-lg font-semibold text-foreground">
+              Sharekhan Integration
+            </h3>
 
-              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {sharekhanStatus === 'checking' && (
-                      <>
-                        <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-                        <span className="text-muted-foreground">Checking connection...</span>
-                      </>
-                    )}
-                    {sharekhanStatus === 'connected' && (
-                      <>
-                        <CheckCircle className="h-5 w-5 text-bullish" />
-                        <span className="text-bullish font-medium">Sharekhan Connected</span>
-                      </>
-                    )}
-                    {sharekhanStatus === 'disconnected' && (
-                      <>
-                        <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-                        <span className="text-muted-foreground">Not connected</span>
-                      </>
-                    )}
-                    {sharekhanStatus === 'error' && (
-                      <>
-                        <div className="h-2 w-2 rounded-full bg-bearish" />
-                        <span className="text-bearish">Connection error</span>
-                      </>
-                    )}
-                  </div>
+            <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {status === "checking" && (
+                    <>
+                      <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                      <span className="text-muted-foreground">
+                        Checking connection…
+                      </span>
+                    </>
+                  )}
 
-                  {sharekhanStatus !== 'connected' && (
-                    <Button 
-                      onClick={handleConnectSharekhan}
-                      disabled={isConnecting || sharekhanStatus === 'checking'}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      {isConnecting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Connect Sharekhan
-                        </>
-                      )}
-                    </Button>
+                  {status === "connected" && (
+                    <>
+                      <CheckCircle className="h-5 w-5 text-bullish" />
+                      <span className="text-bullish font-medium">
+                        Connected
+                      </span>
+                    </>
+                  )}
+
+                  {status === "disconnected" && (
+                    <span className="text-muted-foreground">Not connected</span>
+                  )}
+
+                  {status === "error" && (
+                    <span className="text-bearish">Connection error</span>
                   )}
                 </div>
 
-                {sharekhanStatus === 'connected' && (
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Your Sharekhan account is connected. Live market data will be used for signals.
-                  </p>
+                {status !== "connected" && (
+                  <Button
+                    onClick={connectSharekhan}
+                    disabled={connecting || status === "checking"}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    {connecting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Connecting…
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Connect Sharekhan
+                      </>
+                    )}
+                  </Button>
                 )}
               </div>
-            </div>
 
-            <div className="h-px bg-border" />
-
-            {/* Alpha Vantage (Fallback) */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Alpha Vantage API Key (Fallback)</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    type="password"
-                    placeholder="Enter your API key"
-                    className="bg-secondary/50"
-                  />
-                  <Button variant="outline">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Test
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Used as fallback when Sharekhan data is unavailable. Get your free API key at{" "}
-                  <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    alphavantage.co
-                  </a>
+              {status === "connected" && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Sharekhan account is connected. Live broker data will be used.
                 </p>
-              </div>
-
-              <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
-                <p className="text-sm text-foreground">
-                  <strong>Note:</strong> Connect Sharekhan for real-time NSE/BSE data. Alpha Vantage serves as a fallback.
-                </p>
-              </div>
+              )}
             </div>
           </div>
         </TabsContent>
