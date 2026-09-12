@@ -1,0 +1,1 @@
+REVOKE SELECT (sharekhan_access_token, sharekhan_refresh_token, alpha_vantage_api_key) ON public.user_settings FROM anon, authenticated;
