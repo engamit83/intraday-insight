@@ -177,9 +177,9 @@ serve(async (req) => {
     // ===== OAUTH CALLBACK =====
     if (req.method === "GET" && url.searchParams.get("request_token")) {
       const requestToken = url.searchParams.get("request_token")!;
-      const userId = url.searchParams.get("state");
+      const userId = verifyState(url.searchParams.get("state"));
 
-      if (!userId) throw new Error("Missing state (user_id)");
+      if (!userId) throw new Error("Invalid or expired OAuth state");
 
       const { accessToken, refreshToken } =
         await exchangeToken(requestToken);
@@ -234,7 +234,7 @@ serve(async (req) => {
       const params = new URLSearchParams({
         api_key: SHAREKHAN_API_KEY,
         redirect_uri: SHAREKHAN_REDIRECT_URI,
-        state: userId,
+        state: signState(userId),
       });
 
       const loginUrl = `${SHAREKHAN_LOGIN_URL}?${params.toString()}`;
