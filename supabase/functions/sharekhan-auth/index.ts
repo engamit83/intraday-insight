@@ -233,7 +233,6 @@ serve(async (req) => {
 
       const params = new URLSearchParams({
         api_key: SHAREKHAN_API_KEY,
-        redirect_uri: SHAREKHAN_REDIRECT_URI,
         state: signState(userId),
       });
 
