@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownRight, Target, Shield, Clock } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Target, Shield, Clock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,18 @@ import type { StockSignal } from "@/types/trading";
 interface SignalCardProps {
   signal: StockSignal;
   onTrade?: (signal: StockSignal) => void;
+  isTrading?: boolean;
 }
 
-export function SignalCard({ signal, onTrade }: SignalCardProps) {
+function formatTimeRemaining(expiresAt: string): string {
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  if (diffMs <= 0) return "Expired";
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  return `Expires in ${hours}h ${minutes}m`;
+}
+
+export function SignalCard({ signal, onTrade, isTrading }: SignalCardProps) {
   const isBuy = signal.signal_type === "BUY";
   const riskReward = signal.analysis.risk_reward_ratio;
 
@@ -107,7 +116,7 @@ export function SignalCard({ signal, onTrade }: SignalCardProps) {
         <div className="flex items-center justify-between pt-3 border-t border-border/50">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
-            <span>Expires in 4h 30m</span>
+            <span>{formatTimeRemaining(signal.expires_at)}</span>
           </div>
           <Button 
             size="sm"
@@ -117,8 +126,15 @@ export function SignalCard({ signal, onTrade }: SignalCardProps) {
               isBuy && "bg-bullish hover:bg-bullish/90"
             )}
             onClick={() => onTrade?.(signal)}
+            disabled={isTrading}
           >
-            Trade Now
+            {isTrading ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Placing...
+              </>
+            ) : (
+              "Trade Now"
+            )}
           </Button>
         </div>
       </div>

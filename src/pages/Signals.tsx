@@ -17,141 +17,59 @@ import { useSimulatorStatus } from "@/hooks/useSimulatorStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const allSignals: StockSignal[] = [
-  {
-    id: "1",
-    symbol: "TATAMOTORS",
-    company_name: "Tata Motors Ltd",
-    signal_type: "BUY",
-    entry_price: 985.50,
-    target_price: 1015.00,
-    stoploss_price: 968.00,
-    confidence_score: 87,
-    signal_strength: "STRONG",
-    analysis: {
-      vwap_analysis: "Price above VWAP, bullish momentum",
-      volume_analysis: "Volume spike detected, 2.5x average",
-      trend_analysis: "Uptrend with higher highs",
-      pattern_detected: "Breakout",
-      risk_reward_ratio: 1.68,
-    },
-    created_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-    is_active: true,
-  },
-  {
-    id: "2",
-    symbol: "BHARTIARTL",
-    company_name: "Bharti Airtel Ltd",
-    signal_type: "SELL",
-    entry_price: 1685.20,
-    target_price: 1645.00,
-    stoploss_price: 1705.00,
-    confidence_score: 72,
-    signal_strength: "MODERATE",
-    analysis: {
-      vwap_analysis: "Price below VWAP, bearish pressure",
-      volume_analysis: "Selling volume increasing",
-      trend_analysis: "Resistance rejection",
-      pattern_detected: "Reversal",
-      risk_reward_ratio: 2.03,
-    },
-    created_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
-    is_active: true,
-  },
-  {
-    id: "3",
-    symbol: "HDFCBANK",
-    company_name: "HDFC Bank Ltd",
-    signal_type: "BUY",
-    entry_price: 1685.75,
-    target_price: 1720.00,
-    stoploss_price: 1665.00,
-    confidence_score: 81,
-    signal_strength: "STRONG",
-    analysis: {
-      vwap_analysis: "Crossing above VWAP",
-      volume_analysis: "Above average volume",
-      trend_analysis: "Bullish flag pattern",
-      pattern_detected: "Flag Breakout",
-      risk_reward_ratio: 1.65,
-    },
-    created_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
-    is_active: true,
-  },
-  {
-    id: "4",
-    symbol: "INFY",
-    company_name: "Infosys Ltd",
-    signal_type: "BUY",
-    entry_price: 1892.40,
-    target_price: 1935.00,
-    stoploss_price: 1870.00,
-    confidence_score: 68,
-    signal_strength: "MODERATE",
-    analysis: {
-      vwap_analysis: "Hovering near VWAP",
-      volume_analysis: "Moderate volume",
-      trend_analysis: "Support bounce",
-      pattern_detected: "Double Bottom",
-      risk_reward_ratio: 1.90,
-    },
-    created_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-    is_active: true,
-  },
-  {
-    id: "5",
-    symbol: "SBIN",
-    company_name: "State Bank of India",
-    signal_type: "SELL",
-    entry_price: 825.30,
-    target_price: 805.00,
-    stoploss_price: 838.00,
-    confidence_score: 75,
-    signal_strength: "MODERATE",
-    analysis: {
-      vwap_analysis: "Below VWAP with rejection",
-      volume_analysis: "High selling volume",
-      trend_analysis: "Lower high formation",
-      pattern_detected: "Head & Shoulders",
-      risk_reward_ratio: 1.60,
-    },
-    created_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-    is_active: true,
-  },
-  {
-    id: "6",
-    symbol: "RELIANCE",
-    company_name: "Reliance Industries",
-    signal_type: "BUY",
-    entry_price: 2845.50,
-    target_price: 2905.00,
-    stoploss_price: 2815.00,
-    confidence_score: 92,
-    signal_strength: "STRONG",
-    analysis: {
-      vwap_analysis: "Strong above VWAP",
-      volume_analysis: "Institutional buying detected",
-      trend_analysis: "Strong uptrend",
-      pattern_detected: "Cup & Handle",
-      risk_reward_ratio: 1.95,
-    },
-    created_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
-    is_active: true,
-  },
-];
-
 export default function Signals() {
+  const [allSignals, setAllSignals] = useState<StockSignal[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [tradingSymbol, setTradingSymbol] = useState<string | null>(null);
   const { status, refetch } = useSimulatorStatus();
-  
-  // Track which signals have simulated trades
+
+  const fetchSignals = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("signals")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to load signals");
+      setAllSignals([]);
+    } else {
+      const mapped: StockSignal[] = (data || []).map((s) => ({
+        id: s.id,
+        symbol: s.symbol,
+        company_name: s.symbol, // signals table has no company-name column
+        signal_type: s.signal_type as "BUY" | "SELL",
+        entry_price: s.entry_price,
+        target_price: s.target_price,
+        stoploss_price: s.stoploss_price,
+        confidence_score: Math.round(s.confidence),
+        signal_strength: s.confidence >= 80 ? "STRONG" : s.confidence >= 60 ? "MODERATE" : "WEAK",
+        analysis: {
+          vwap_analysis: (s.indicators as any)?.vwap_analysis ?? "No VWAP data available",
+          volume_analysis: (s.indicators as any)?.volume_analysis ?? "No volume data available",
+          trend_analysis: (s.indicators as any)?.trend_analysis ?? "No trend data available",
+          pattern_detected: (s.indicators as any)?.pattern_detected ?? "N/A",
+          risk_reward_ratio:
+            Math.abs(s.target_price - s.entry_price) /
+            (Math.abs(s.entry_price - s.stoploss_price) || 1),
+        },
+        created_at: s.created_at,
+        expires_at: s.expires_at ?? new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+        is_active: s.is_active ?? true,
+      }));
+      setAllSignals(mapped);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchSignals();
+  }, []);
+
   const openTradeSymbols = new Set(status?.trades?.map((t: any) => t.symbol) || []);
 
   const filteredSignals = allSignals.filter((signal) => {
@@ -169,8 +87,19 @@ export default function Signals() {
       toast.info("Enable Simulator mode in Settings to create virtual trades");
       return;
     }
-    
-    // For demo, we'll show a success message
+
+    setTradingSymbol(signal.symbol);
+    const { data, error } = await supabase.functions.invoke("simulate-trade", {
+      body: { action: "execute_signal", signalId: signal.id },
+    });
+    setTradingSymbol(null);
+
+    if (error || data?.success === false) {
+      console.error(error || data?.message);
+      toast.error(data?.message || "Failed to create simulated trade");
+      return;
+    }
+
     toast.success(`Simulated ${signal.signal_type} created for ${signal.symbol}`);
     refetch();
   };
@@ -194,8 +123,8 @@ export default function Signals() {
             <Zap className="h-4 w-4 mr-1 text-primary" />
             {allSignals.length} Active
           </Badge>
-          <Button variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={fetchSignals} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
@@ -240,27 +169,44 @@ export default function Signals() {
       </div>
 
       {/* Signals Grid */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filteredSignals.map((signal) => (
-          <div key={signal.id} className="relative">
-            {openTradeSymbols.has(signal.symbol) && (
-              <div className="absolute -top-2 -right-2 z-10">
-                <Badge className="bg-primary text-primary-foreground shadow-lg">
-                  TRADE OPEN
-                </Badge>
-              </div>
-            )}
-            <SignalCard signal={signal} onTrade={handleTrade} />
-          </div>
-        ))}
-      </div>
-
-      {filteredSignals.length === 0 && (
+      {loading ? (
         <div className="glass-card rounded-xl p-12 text-center">
-          <Zap className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">No Signals Found</h3>
-          <p className="text-muted-foreground">No signals match your current filters.</p>
+          <RefreshCw className="h-8 w-8 mx-auto mb-4 text-muted-foreground animate-spin" />
+          <p className="text-muted-foreground">Loading signals...</p>
         </div>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredSignals.map((signal) => (
+              <div key={signal.id} className="relative">
+                {openTradeSymbols.has(signal.symbol) && (
+                  <div className="absolute -top-2 -right-2 z-10">
+                    <Badge className="bg-primary text-primary-foreground shadow-lg">
+                      TRADE OPEN
+                    </Badge>
+                  </div>
+                )}
+                <SignalCard
+                  signal={signal}
+                  onTrade={handleTrade}
+                  isTrading={tradingSymbol === signal.symbol}
+                />
+              </div>
+            ))}
+          </div>
+
+          {filteredSignals.length === 0 && (
+            <div className="glass-card rounded-xl p-12 text-center">
+              <Zap className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No Signals Found</h3>
+              <p className="text-muted-foreground">
+                {allSignals.length === 0
+                  ? "No active signals right now. Check back once the signal engine generates new ones."
+                  : "No signals match your current filters."}
+              </p>
+            </div>
+          )}
+        </>
       )}
     </MainLayout>
   );

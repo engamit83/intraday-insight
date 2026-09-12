@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MarketTicker } from "@/components/dashboard/MarketTicker";
 import { StatsCard } from "@/components/dashboard/StatsCard";
@@ -7,6 +8,7 @@ import { ActiveSignals } from "@/components/dashboard/ActiveSignals";
 import { SimulatorStats } from "@/components/dashboard/SimulatorStats";
 import { SimulatedTrades } from "@/components/dashboard/SimulatedTrades";
 import { useSimulatorStatus } from "@/hooks/useSimulatorStatus";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   TrendingUp, 
   Zap, 
@@ -16,11 +18,23 @@ import {
 
 export default function Dashboard() {
   const { status } = useSimulatorStatus();
-  
-  // Use simulator data when available
-  const todayPnl = status?.simulatorEnabled ? status.todayPnl : 5800;
-  const winRate = status?.simulatorEnabled ? status.winRate : 73;
-  const virtualTrades = status?.simulatorEnabled ? status.todayTrades : 12;
+  const [activeSignalCount, setActiveSignalCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      const { count, error } = await supabase
+        .from("signals")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+      if (!error) setActiveSignalCount(count ?? 0);
+    };
+    fetchCount();
+  }, []);
+
+  // Only real when simulator is enabled — no fabricated fallback numbers.
+  const todayPnl = status?.simulatorEnabled ? status.todayPnl : 0;
+  const winRate = status?.simulatorEnabled ? status.winRate : 0;
+  const virtualTrades = status?.simulatorEnabled ? status.todayTrades : 0;
 
   return (
     <MainLayout>
@@ -44,7 +58,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="Active Signals"
-          value="8"
+          value={activeSignalCount === null ? "..." : activeSignalCount.toString()}
           icon={<Zap className="h-6 w-6" />}
           variant="default"
         />

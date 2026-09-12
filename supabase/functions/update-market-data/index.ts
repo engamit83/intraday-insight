@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
 
     // Get API keys from environment
     const sharekhanApiKey = Deno.env.get('SHAREKHAN_API_KEY')
-    const sharekhanSecretKey = Deno.env.get('SHAREKHAN_API_SECURE_KEY')
+    const sharekhanSecretKey = Deno.env.get('SHAREKHAN_API_SECRET')
     const alphaVantageApiKey = Deno.env.get('ALPHA_VANTAGE_API_KEY')
 
     // Get access token from request body (for Sharekhan)

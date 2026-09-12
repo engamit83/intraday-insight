@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -10,150 +9,114 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { 
   Plus, 
   TrendingUp, 
-  TrendingDown,
   Star,
   Search,
   Trash2,
-  Bell,
-  BarChart3
+  Loader2
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
+// Note: alerts, day-high/low and volume are not modeled in the current DB schema
+// (watchlist table only has symbol/company_name/user_id/added_at, stocks table only
+// has last_price). Price comes from `stocks.last_price` where available.
 interface WatchlistStock {
   id: string;
   symbol: string;
   name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: string;
-  dayHigh: number;
-  dayLow: number;
-  hasAlert: boolean;
+  price: number | null;
 }
 
-const initialWatchlist: WatchlistStock[] = [
-  {
-    id: "1",
-    symbol: "RELIANCE",
-    name: "Reliance Industries",
-    price: 2845.50,
-    change: 23.40,
-    changePercent: 0.83,
-    volume: "12.5M",
-    dayHigh: 2868.00,
-    dayLow: 2815.30,
-    hasAlert: true
-  },
-  {
-    id: "2",
-    symbol: "TCS",
-    name: "Tata Consultancy Services",
-    price: 4125.30,
-    change: -15.20,
-    changePercent: -0.37,
-    volume: "3.2M",
-    dayHigh: 4165.00,
-    dayLow: 4098.50,
-    hasAlert: false
-  },
-  {
-    id: "3",
-    symbol: "INFY",
-    name: "Infosys Ltd",
-    price: 1892.40,
-    change: 28.60,
-    changePercent: 1.53,
-    volume: "8.7M",
-    dayHigh: 1905.00,
-    dayLow: 1858.20,
-    hasAlert: true
-  },
-  {
-    id: "4",
-    symbol: "HDFCBANK",
-    name: "HDFC Bank Ltd",
-    price: 1685.75,
-    change: 12.50,
-    changePercent: 0.75,
-    volume: "15.3M",
-    dayHigh: 1698.00,
-    dayLow: 1668.40,
-    hasAlert: false
-  },
-  {
-    id: "5",
-    symbol: "TATAMOTORS",
-    name: "Tata Motors Ltd",
-    price: 985.50,
-    change: 18.90,
-    changePercent: 1.96,
-    volume: "22.1M",
-    dayHigh: 992.00,
-    dayLow: 962.30,
-    hasAlert: true
-  },
-  {
-    id: "6",
-    symbol: "SBIN",
-    name: "State Bank of India",
-    price: 825.30,
-    change: -8.70,
-    changePercent: -1.04,
-    volume: "28.9M",
-    dayHigh: 842.00,
-    dayLow: 818.50,
-    hasAlert: false
-  },
-];
-
 export default function Watchlist() {
-  const [watchlist, setWatchlist] = useState<WatchlistStock[]>(initialWatchlist);
+  const { user } = useAuth();
+  const [watchlist, setWatchlist] = useState<WatchlistStock[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newSymbol, setNewSymbol] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const fetchWatchlist = async () => {
+    if (!user) return;
+    setLoading(true);
+
+    const { data: rows, error } = await supabase
+      .from("watchlist")
+      .select("id, symbol, company_name")
+      .eq("user_id", user.id)
+      .order("added_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to load watchlist");
+      setLoading(false);
+      return;
+    }
+
+    const symbols = (rows || []).map((r) => r.symbol);
+    let priceBySymbol: Record<string, number | null> = {};
+    if (symbols.length > 0) {
+      const { data: stockRows } = await supabase
+        .from("stocks")
+        .select("symbol, last_price")
+        .in("symbol", symbols);
+      priceBySymbol = Object.fromEntries((stockRows || []).map((s) => [s.symbol, s.last_price]));
+    }
+
+    setWatchlist(
+      (rows || []).map((r) => ({
+        id: r.id,
+        symbol: r.symbol,
+        name: r.company_name || r.symbol,
+        price: priceBySymbol[r.symbol] ?? null,
+      }))
+    );
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchWatchlist();
+  }, [user]);
 
   const filteredWatchlist = watchlist.filter((stock) =>
     stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
     stock.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const gainers = watchlist.filter(s => s.changePercent > 0).length;
-  const losers = watchlist.filter(s => s.changePercent < 0).length;
+  const handleAddStock = async () => {
+    if (!newSymbol || !user) return;
+    setAdding(true);
 
-  const handleAddStock = () => {
-    if (!newSymbol) return;
-    
-    // In a real app, you'd fetch stock data here
-    const newStock: WatchlistStock = {
-      id: Date.now().toString(),
-      symbol: newSymbol.toUpperCase(),
-      name: `${newSymbol.toUpperCase()} Ltd`,
-      price: Math.random() * 5000 + 100,
-      change: (Math.random() - 0.5) * 100,
-      changePercent: (Math.random() - 0.5) * 5,
-      volume: `${(Math.random() * 20 + 1).toFixed(1)}M`,
-      dayHigh: Math.random() * 5000 + 100,
-      dayLow: Math.random() * 5000 + 100,
-      hasAlert: false
-    };
+    const symbol = newSymbol.toUpperCase().trim();
+    const { error } = await supabase.from("watchlist").insert({
+      user_id: user.id,
+      symbol,
+    });
 
-    setWatchlist([newStock, ...watchlist]);
+    setAdding(false);
+    if (error) {
+      console.error(error);
+      toast.error(error.code === "23505" ? "Already in your watchlist" : "Failed to add stock");
+      return;
+    }
+
     setNewSymbol("");
     setIsDialogOpen(false);
+    fetchWatchlist();
   };
 
-  const handleRemoveStock = (id: string) => {
-    setWatchlist(watchlist.filter(s => s.id !== id));
-  };
-
-  const toggleAlert = (id: string) => {
-    setWatchlist(watchlist.map(s => 
-      s.id === id ? { ...s, hasAlert: !s.hasAlert } : s
-    ));
+  const handleRemoveStock = async (id: string) => {
+    const { error } = await supabase.from("watchlist").delete().eq("id", id);
+    if (error) {
+      console.error(error);
+      toast.error("Failed to remove stock");
+      return;
+    }
+    setWatchlist(watchlist.filter((s) => s.id !== id));
   };
 
   return (
@@ -182,8 +145,8 @@ export default function Watchlist() {
                 onChange={(e) => setNewSymbol(e.target.value)}
                 className="bg-secondary/50"
               />
-              <Button className="w-full" onClick={handleAddStock}>
-                Add to Watchlist
+              <Button className="w-full" onClick={handleAddStock} disabled={adding || !newSymbol}>
+                {adding ? "Adding..." : "Add to Watchlist"}
               </Button>
             </div>
           </DialogContent>
@@ -196,13 +159,11 @@ export default function Watchlist() {
           <p className="text-sm text-muted-foreground mb-1">Total Stocks</p>
           <p className="text-2xl font-bold font-mono text-foreground">{watchlist.length}</p>
         </div>
-        <div className="glass-card rounded-xl p-4">
-          <p className="text-sm text-muted-foreground mb-1">Gainers</p>
-          <p className="text-2xl font-bold font-mono text-bullish">{gainers}</p>
-        </div>
-        <div className="glass-card rounded-xl p-4">
-          <p className="text-sm text-muted-foreground mb-1">Losers</p>
-          <p className="text-2xl font-bold font-mono text-bearish">{losers}</p>
+        <div className="glass-card rounded-xl p-4 md:col-span-2">
+          <p className="text-sm text-muted-foreground">
+            Day change, volume and alerts aren't tracked yet — the current database schema
+            only stores symbol and last price. Ask me to add those columns if you want them.
+          </p>
         </div>
       </div>
 
@@ -225,29 +186,25 @@ export default function Watchlist() {
           <thead className="bg-secondary/50">
             <tr>
               <th className="text-left p-4 text-sm font-medium text-muted-foreground">Stock</th>
-              <th className="text-right p-4 text-sm font-medium text-muted-foreground">Price</th>
-              <th className="text-right p-4 text-sm font-medium text-muted-foreground">Change</th>
-              <th className="text-right p-4 text-sm font-medium text-muted-foreground hidden md:table-cell">Volume</th>
-              <th className="text-right p-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Day Range</th>
+              <th className="text-right p-4 text-sm font-medium text-muted-foreground">Last Price</th>
               <th className="text-center p-4 text-sm font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredWatchlist.map((stock) => {
-              const isPositive = stock.changePercent >= 0;
-              return (
+            {loading ? (
+              <tr>
+                <td colSpan={3} className="p-8 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 mx-auto mb-2 animate-spin" />
+                  Loading watchlist...
+                </td>
+              </tr>
+            ) : (
+              filteredWatchlist.map((stock) => (
                 <tr key={stock.id} className="border-t border-border/50 hover:bg-secondary/30 transition-colors">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-lg",
-                        isPositive ? "bg-bullish/10" : "bg-bearish/10"
-                      )}>
-                        {isPositive ? (
-                          <TrendingUp className="h-5 w-5 text-bullish" />
-                        ) : (
-                          <TrendingDown className="h-5 w-5 text-bearish" />
-                        )}
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <TrendingUp className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <p className="font-semibold text-foreground">{stock.symbol}</p>
@@ -256,54 +213,15 @@ export default function Watchlist() {
                     </div>
                   </td>
                   <td className="p-4 text-right font-mono font-semibold text-foreground">
-                    ₹{stock.price.toFixed(2)}
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className={cn(
-                      "font-mono",
-                      isPositive ? "text-bullish" : "text-bearish"
-                    )}>
-                      <p className="font-semibold">
-                        {isPositive ? "+" : ""}₹{stock.change.toFixed(2)}
-                      </p>
-                      <p className="text-sm">
-                        ({isPositive ? "+" : ""}{stock.changePercent.toFixed(2)}%)
-                      </p>
-                    </div>
-                  </td>
-                  <td className="p-4 text-right font-mono text-muted-foreground hidden md:table-cell">
-                    {stock.volume}
-                  </td>
-                  <td className="p-4 text-right hidden lg:table-cell">
-                    <div className="flex items-center justify-end gap-2">
-                      <span className="text-xs text-bearish">L: ₹{stock.dayLow.toFixed(0)}</span>
-                      <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary"
-                          style={{ 
-                            width: `${((stock.price - stock.dayLow) / (stock.dayHigh - stock.dayLow)) * 100}%` 
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs text-bullish">H: ₹{stock.dayHigh.toFixed(0)}</span>
-                    </div>
+                    {stock.price != null ? `₹${stock.price.toFixed(2)}` : (
+                      <span className="text-muted-foreground text-sm">No price data yet</span>
+                    )}
                   </td>
                   <td className="p-4">
                     <div className="flex items-center justify-center gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className={cn("h-8 w-8", stock.hasAlert && "text-warning")}
-                        onClick={() => toggleAlert(stock.id)}
-                      >
-                        <Bell className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <BarChart3 className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 text-bearish hover:text-bearish"
                         onClick={() => handleRemoveStock(stock.id)}
                       >
@@ -312,12 +230,12 @@ export default function Watchlist() {
                     </div>
                   </td>
                 </tr>
-              );
-            })}
+              ))
+            )}
           </tbody>
         </table>
 
-        {filteredWatchlist.length === 0 && (
+        {!loading && filteredWatchlist.length === 0 && (
           <div className="p-12 text-center">
             <Star className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No Stocks Found</h3>
