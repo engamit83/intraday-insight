@@ -308,19 +308,28 @@ Deno.serve(async (req) => {
   }
   
   try {
-    // Require authentication
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.userId) {
-      return new Response(
-        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Service-role callers (internal jobs) may supply OHLCV data directly.
+    // Regular users must be authenticated and may only compute from cached data,
+    // so client-supplied data can never poison the shared indicator cache.
+    const authHeader = req.headers.get('authorization') ?? ''
+    const bearerToken = authHeader.replace('Bearer ', '')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const isServiceRole = bearerToken.length > 0 && bearerToken === serviceRoleKey
+
+    let userId = 'service-role'
+    if (!isServiceRole) {
+      const authResult = await verifyAuth(req)
+      if (!authResult.authenticated || !authResult.userId) {
+        return new Response(
+          JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      userId = authResult.userId
     }
-    
-    const userId = authResult.userId
-    
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseKey = serviceRoleKey
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     const { symbol: rawSymbol, data: rawData, timeframe = '5min' } = await req.json()
@@ -352,8 +361,17 @@ Deno.serve(async (req) => {
     
     console.log(`[Indicators] User ${userId} requesting indicators for ${symbol}`)
     
-    let ohlcvData: OHLCVData[] = rawData
-    
+    // Reject client-supplied OHLCV data from non-service callers:
+    // it would let anyone overwrite the shared indicator cache with fake data.
+    if (!isServiceRole && Array.isArray(rawData) && rawData.length > 0) {
+      return new Response(
+        JSON.stringify({ error: 'Submitting market data is not allowed. Indicators are computed from trusted cached data only.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    let ohlcvData: OHLCVData[] = isServiceRole ? rawData : undefined
+
     // If no data provided, fetch from cache
     if (!ohlcvData || ohlcvData.length === 0) {
       const { data: cachedData } = await supabase

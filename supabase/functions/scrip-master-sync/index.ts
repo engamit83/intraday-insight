@@ -48,14 +48,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(req);
-    if (!authResult.authenticated || !authResult.userId) {
+    // Admin-only function: syncing the master list rewrites the shared scripcodes
+    // table and triggers expensive broker API calls, so only internal
+    // (service-role) callers may invoke it.
+    const authHeader = req.headers.get('authorization') ?? ''
+    const bearerToken = authHeader.replace('Bearer ', '')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const isServiceRole = bearerToken.length > 0 && bearerToken === serviceRoleKey
+
+    if (!isServiceRole) {
       return new Response(
-        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Forbidden: this action is restricted to internal jobs' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
     
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
