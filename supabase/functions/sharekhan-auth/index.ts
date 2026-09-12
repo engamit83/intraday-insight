@@ -65,6 +65,32 @@ async function getUserIdFromAuth(req: Request): Promise<string | null> {
   return data?.user?.id ?? null;
 }
 
+// ========= SIGNED OAUTH STATE =========
+// The state parameter round-trips through the browser and the broker, so it
+// cannot be trusted to carry a raw user_id. Sign it with HMAC and a short
+// expiry so a forged or tampered state can never attribute tokens to another user.
+const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function signState(userId: string): string {
+  const payload = `${userId}.${Date.now() + STATE_TTL_MS}`;
+  const signature = CryptoJS.HmacSHA256(payload, AUTH_ENCRYPTION_KEY).toString();
+  return `${payload}.${signature}`;
+}
+
+function verifyState(state: string | null): string | null {
+  if (!state) return null;
+  const parts = state.split(".");
+  if (parts.length !== 3) return null;
+
+  const [userId, expiry, signature] = parts;
+  const payload = `${userId}.${expiry}`;
+  const expected = CryptoJS.HmacSHA256(payload, AUTH_ENCRYPTION_KEY).toString();
+
+  if (signature !== expected) return null;
+  if (Number(expiry) < Date.now()) return null;
+  return userId;
+}
+
 // ========= TOKEN EXCHANGE =========
 async function exchangeToken(requestToken: string) {
   const checksumSource = requestToken + SHAREKHAN_API_SECRET;
@@ -151,9 +177,9 @@ serve(async (req) => {
     // ===== OAUTH CALLBACK =====
     if (req.method === "GET" && url.searchParams.get("request_token")) {
       const requestToken = url.searchParams.get("request_token")!;
-      const userId = url.searchParams.get("state");
+      const userId = verifyState(url.searchParams.get("state"));
 
-      if (!userId) throw new Error("Missing state (user_id)");
+      if (!userId) throw new Error("Invalid or expired OAuth state");
 
       const { accessToken, refreshToken } =
         await exchangeToken(requestToken);
@@ -208,7 +234,7 @@ serve(async (req) => {
       const params = new URLSearchParams({
         api_key: SHAREKHAN_API_KEY,
         redirect_uri: SHAREKHAN_REDIRECT_URI,
-        state: userId,
+        state: signState(userId),
       });
 
       const loginUrl = `${SHAREKHAN_LOGIN_URL}?${params.toString()}`;

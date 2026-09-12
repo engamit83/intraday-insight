@@ -196,19 +196,27 @@ Deno.serve(async (req) => {
   }
   
   try {
+    // Service-role callers (internal jobs) may run admin actions.
+    const authHeader = req.headers.get('authorization') ?? ''
+    const bearerToken = authHeader.replace('Bearer ', '')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const isServiceRole = bearerToken.length > 0 && bearerToken === serviceRoleKey
+
     // Require authentication for all learning engine operations
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.userId) {
-      return new Response(
-        JSON.stringify({ error: authResult.error || 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    let userId = 'service-role'
+    if (!isServiceRole) {
+      const authResult = await verifyAuth(req)
+      if (!authResult.authenticated || !authResult.userId) {
+        return new Response(
+          JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      userId = authResult.userId
     }
-    
-    const userId = authResult.userId
-    
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseKey = serviceRoleKey
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     const { action, applyAdjustments } = await req.json()
@@ -297,6 +305,13 @@ Deno.serve(async (req) => {
     }
     
     if (action === 'apply_adjustments' && applyAdjustments) {
+      // Admin-only: applying adjustments changes global trading rules for every user.
+      if (!isServiceRole) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: this action is restricted to internal jobs' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       // Fetch current rules
       const { data: rules } = await supabase
         .from('trading_rules')
