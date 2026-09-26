@@ -1,5 +1,21 @@
 // supabase/functions/sharekhan-auth/index.ts
 // FINAL – Fail-safe Sharekhan OAuth backend (Single Source of Truth)
+//
+// IMPORTANT ARCHITECTURE NOTE (fixed after live testing):
+// Sharekhan's OAuth callback only ever returns `request_token` in the query
+// string. It does NOT echo back a `state` parameter, no matter what you send
+// in the login URL. The previous version of this file relied on `state` to
+// identify which app user was completing the login — that never worked and
+// always threw "Invalid or expired OAuth state", confirmed via real browser
+// testing and system_logs entries.
+//
+// Fix: the frontend's own callback page (src/pages/SharekhanCallback.tsx)
+// receives Sharekhan's redirect while the user is logged into the app, then
+// calls this function's `complete_login` action using their real Supabase
+// session. That gives us a reliable authenticated userId, without needing
+// Sharekhan to round-trip anything. This function still does 100% of the
+// actual token exchange and encryption — the frontend never touches
+// Sharekhan's API directly.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -20,8 +36,11 @@ const SHAREKHAN_API_SECRET = Deno.env.get("SHAREKHAN_API_SECRET")!;
 const AUTH_ENCRYPTION_KEY = Deno.env.get("AUTH_ENCRYPTION_KEY")!;
 
 // ========= CONSTANTS =========
-const SHAREKHAN_REDIRECT_URI =
-  "https://emxhhxvtbjsjtjacbike.supabase.co/functions/v1/sharekhan-auth";
+// This URL is NOT sent to Sharekhan (they reject unknown params like
+// redirect_uri). It must instead be manually registered as the callback URL
+// in Sharekhan's own developer portal for this API key.
+const APP_CALLBACK_URL_FOR_REFERENCE =
+  "https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app/sharekhan-callback";
 
 const SHAREKHAN_LOGIN_URL =
   "https://api.sharekhan.com/skapi/auth/login.html";
@@ -63,32 +82,6 @@ async function getUserIdFromAuth(req: Request): Promise<string | null> {
   const token = auth.replace("Bearer ", "");
   const { data } = await supabaseAdmin().auth.getUser(token);
   return data?.user?.id ?? null;
-}
-
-// ========= SIGNED OAUTH STATE =========
-// The state parameter round-trips through the browser and the broker, so it
-// cannot be trusted to carry a raw user_id. Sign it with HMAC and a short
-// expiry so a forged or tampered state can never attribute tokens to another user.
-const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-function signState(userId: string): string {
-  const payload = `${userId}.${Date.now() + STATE_TTL_MS}`;
-  const signature = CryptoJS.HmacSHA256(payload, AUTH_ENCRYPTION_KEY).toString();
-  return `${payload}.${signature}`;
-}
-
-function verifyState(state: string | null): string | null {
-  if (!state) return null;
-  const parts = state.split(".");
-  if (parts.length !== 3) return null;
-
-  const [userId, expiry, signature] = parts;
-  const payload = `${userId}.${expiry}`;
-  const expected = CryptoJS.HmacSHA256(payload, AUTH_ENCRYPTION_KEY).toString();
-
-  if (signature !== expected) return null;
-  if (Number(expiry) < Date.now()) return null;
-  return userId;
 }
 
 // ========= TOKEN EXCHANGE =========
@@ -171,33 +164,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const url = new URL(req.url);
-
   try {
-    // ===== OAUTH CALLBACK =====
-    if (req.method === "GET" && url.searchParams.get("request_token")) {
-      const requestToken = url.searchParams.get("request_token")!;
-      const userId = verifyState(url.searchParams.get("state"));
-
-      if (!userId) throw new Error("Invalid or expired OAuth state");
-
-      const { accessToken, refreshToken } =
-        await exchangeToken(requestToken);
-
-      await storeTokens(userId, accessToken, refreshToken);
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          ...corsHeaders,
-          Location: `${url.origin}/settings?sharekhan_connected=true`,
-        },
-      });
-    }
-
-    // ===== LOGIN URL =====
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}));
+
+      // ===== HEALTH CHECK =====
       if (body?.action === "health") {
         const userId = await getUserIdFromAuth(req);
         if (!userId) {
@@ -223,6 +194,42 @@ serve(async (req) => {
         );
       }
 
+      // ===== COMPLETE LOGIN (called by SharekhanCallback.tsx) =====
+      // Replaces the old GET callback + state verification, which never
+      // worked since Sharekhan doesn't echo `state` back. The user's real
+      // Supabase auth token (attached automatically by supabase.functions.invoke)
+      // is now the source of truth for identity.
+      if (body?.action === "complete_login") {
+        const userId = await getUserIdFromAuth(req);
+        if (!userId) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const requestToken = body?.requestToken;
+        if (!requestToken || typeof requestToken !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Missing requestToken" }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        const { accessToken, refreshToken } = await exchangeToken(requestToken);
+        await storeTokens(userId, accessToken, refreshToken);
+
+        await log("sharekhan-auth", "login-completed", { userId });
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ===== LOGIN URL =====
       const userId = await getUserIdFromAuth(req);
       if (!userId) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -231,9 +238,12 @@ serve(async (req) => {
         });
       }
 
+      // Only api_key is sent — Sharekhan's documented customer-login flow
+      // doesn't use redirect_uri or state as query parameters. The callback
+      // destination (APP_CALLBACK_URL_FOR_REFERENCE) is configured on
+      // Sharekhan's developer portal instead, not passed here.
       const params = new URLSearchParams({
         api_key: SHAREKHAN_API_KEY,
-        state: signState(userId),
       });
 
       const loginUrl = `${SHAREKHAN_LOGIN_URL}?${params.toString()}`;

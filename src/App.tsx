@@ -11,6 +11,7 @@ import ManualTrades from "./pages/ManualTrades";
 import Watchlist from "./pages/Watchlist";
 import Performance from "./pages/Performance";
 import Settings from "./pages/Settings";
+import SharekhanCallback from "./pages/SharekhanCallback";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { useSharekhanCallback } from "./hooks/useSharekhanCallback";
@@ -30,6 +31,7 @@ const AppContent = () => {
       <Route path="/watchlist" element={<AuthGuard><Watchlist /></AuthGuard>} />
       <Route path="/performance" element={<AuthGuard><Performance /></AuthGuard>} />
       <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
+      <Route path="/sharekhan-callback" element={<AuthGuard><SharekhanCallback /></AuthGuard>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
