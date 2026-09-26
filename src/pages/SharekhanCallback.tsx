@@ -1,21 +1,21 @@
 // src/pages/SharekhanCallback.tsx
 //
-// Why this page exists: Sharekhan's OAuth callback only ever sends back
-// `request_token` — it does NOT echo back a `state` parameter, despite the
-// original backend code assuming it would (confirmed by testing: the real
-// callback URL only ever contains `?request_token=...`, nothing else).
-// So the backend has no reliable way to know *which app user* just logged
-// in from a plain server-side redirect alone.
+// Two real bugs fixed here, both confirmed via live testing:
 //
-// The fix: Sharekhan redirects here, into the actual running app, where the
-// user is already logged in (their Supabase session lives in this browser).
-// We read `request_token` from the URL and hand it to the backend via
-// supabase.functions.invoke, which automatically attaches the user's real
-// auth token. The backend still does 100% of the actual token exchange and
-// encryption — this page never touches Sharekhan's API directly.
+// 1. Sharekhan's OAuth callback only ever returns `request_token` — it never
+//    echoes back a `state` parameter. So identity can't come from the URL;
+//    it comes from this page running inside the user's own logged-in
+//    session, which calls the backend with their real Supabase auth token.
+//
+// 2. request_token values contain literal, non-percent-encoded '+'
+//    characters. Reading them via useSearchParams/URLSearchParams silently
+//    converts '+' to a space (per the application/x-www-form-urlencoded
+//    spec those APIs follow), corrupting the token before it's ever used.
+//    Extracted manually here instead, matching how Sharekhan's own
+//    reference SDK (Python's urllib.parse.unquote) leaves '+' untouched.
 
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -23,7 +23,6 @@ import { toast } from "sonner";
 type Status = "processing" | "success" | "error";
 
 export default function SharekhanCallback() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const hasRun = useRef(false);
   const [status, setStatus] = useState<Status>("processing");
@@ -33,7 +32,8 @@ export default function SharekhanCallback() {
     if (hasRun.current) return;
     hasRun.current = true;
 
-    const requestToken = searchParams.get("request_token");
+    const rawMatch = window.location.search.match(/[?&]request_token=([^&]+)/);
+    const requestToken = rawMatch ? decodeURIComponent(rawMatch[1]) : null;
 
     if (!requestToken) {
       setStatus("error");
@@ -59,7 +59,7 @@ export default function SharekhanCallback() {
     };
 
     completeLogin();
-  }, [searchParams, navigate]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -80,7 +80,7 @@ export default function SharekhanCallback() {
           <>
             <XCircle className="h-10 w-10 mx-auto text-bearish" />
             <p className="text-foreground font-medium">Connection failed</p>
-            <p className="text-sm text-muted-foreground">{errorMessage}</p>
+            <p className="text-sm text-muted-foreground break-words">{errorMessage}</p>
             <button
               className="text-sm text-primary underline"
               onClick={() => navigate("/settings", { replace: true })}

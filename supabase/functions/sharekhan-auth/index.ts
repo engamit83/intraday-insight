@@ -1,21 +1,30 @@
 // supabase/functions/sharekhan-auth/index.ts
-// FINAL – Fail-safe Sharekhan OAuth backend (Single Source of Truth)
 //
-// IMPORTANT ARCHITECTURE NOTE (fixed after live testing):
-// Sharekhan's OAuth callback only ever returns `request_token` in the query
-// string. It does NOT echo back a `state` parameter, no matter what you send
-// in the login URL. The previous version of this file relied on `state` to
-// identify which app user was completing the login — that never worked and
-// always threw "Invalid or expired OAuth state", confirmed via real browser
-// testing and system_logs entries.
+// REWRITTEN based on Sharekhan's own official Python client library
+// (https://github.com/Sharekhan-API/shareconnectpython), read directly from
+// source. Two separate real bugs were found and fixed here, confirmed by
+// live testing and system_logs entries:
 //
-// Fix: the frontend's own callback page (src/pages/SharekhanCallback.tsx)
-// receives Sharekhan's redirect while the user is logged into the app, then
-// calls this function's `complete_login` action using their real Supabase
-// session. That gives us a reliable authenticated userId, without needing
-// Sharekhan to round-trip anything. This function still does 100% of the
-// actual token exchange and encryption — the frontend never touches
-// Sharekhan's API directly.
+// BUG A: The old code POSTed to "https://api.sharekhan.com/skapi/auth/access-token"
+// using a SHA256(requestToken + secret) checksum, form-urlencoded. That is
+// Zerodha Kite Connect's protocol, not Sharekhan's — Sharekhan's server
+// returned a real 404 "No endpoint POST /skapi/auth/access-token" for this.
+// The real endpoint is "https://api.sharekhan.com/skapi/services/access/token",
+// and the real request format is a JSON body with camelCase fields
+// (apiKey, requestToken, state) — no checksum involved at all.
+//
+// BUG B: Sharekhan's request_token must be decrypted, its two pipe-separated
+// parts swapped, and the result re-encrypted with AES-256-GCM using your API
+// secret as the raw key (fixed 16-zero-byte IV, no AAD) before it can be sent
+// to the access-token endpoint. The old code sent the raw token untouched.
+//
+// Also fixed: identifying which app-user is completing the OAuth login.
+// Sharekhan's callback only ever returns `request_token` — it never echoes
+// back a `state` parameter, no matter what's sent in the login URL. So this
+// function no longer tries to verify identity from the callback itself.
+// Instead, the frontend (src/pages/SharekhanCallback.tsx) calls this
+// function's "complete_login" action using the user's real logged-in
+// Supabase session, which reliably identifies them.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -36,17 +45,20 @@ const SHAREKHAN_API_SECRET = Deno.env.get("SHAREKHAN_API_SECRET")!;
 const AUTH_ENCRYPTION_KEY = Deno.env.get("AUTH_ENCRYPTION_KEY")!;
 
 // ========= CONSTANTS =========
-// This URL is NOT sent to Sharekhan (they reject unknown params like
-// redirect_uri). It must instead be manually registered as the callback URL
-// in Sharekhan's own developer portal for this API key.
+// Registered manually on Sharekhan's developer portal (Modify App > Redirect URL),
+// NOT sent as a query parameter — Sharekhan rejects unrecognized params.
 const APP_CALLBACK_URL_FOR_REFERENCE =
   "https://id-preview--0b7f6ea9-fd3b-48da-b4ea-ee41af1cab07.lovable.app/sharekhan-callback";
 
-const SHAREKHAN_LOGIN_URL =
-  "https://api.sharekhan.com/skapi/auth/login.html";
+const SHAREKHAN_ROOT_URL = "https://api.sharekhan.com";
+const SHAREKHAN_LOGIN_URL = `${SHAREKHAN_ROOT_URL}/skapi/auth/login.html`;
+const SHAREKHAN_ACCESS_TOKEN_URL = `${SHAREKHAN_ROOT_URL}/skapi/services/access/token`;
 
-const SHAREKHAN_TOKEN_URL =
-  "https://api.sharekhan.com/skapi/auth/access-token";
+// Sharekhan's own reference SDK sends a fixed literal "12345" as state and
+// never validates it against anything on the callback — it's a required
+// field on the request, not a real identity mechanism. Real user identity
+// comes from the Supabase auth token instead (see complete_login below).
+const SHAREKHAN_STATE = "12345";
 
 // ========= HELPERS =========
 function supabaseAdmin() {
@@ -84,27 +96,98 @@ async function getUserIdFromAuth(req: Request): Promise<string | null> {
   return data?.user?.id ?? null;
 }
 
+// ========= BASE64URL (no padding) HELPERS =========
+function base64UrlDecode(input: string): Uint8Array {
+  // Accept both standard (+/) and urlsafe (-_) alphabets, with or without
+  // padding — matches Python's base64.urlsafe_b64decode tolerance.
+  let normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  while (normalized.length % 4 !== 0) normalized += "=";
+  const binary = atob(normalized);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function base64UrlEncodeNoPad(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// ========= AES-256-GCM (matches Sharekhan's reference implementation) =========
+// Fixed 16-zero-byte IV, no AAD, 128-bit (16-byte) auth tag appended to
+// ciphertext — exactly as Sharekhan's own Python SDK does it.
+const ZERO_IV = new Uint8Array(16);
+
+async function importAesKey(secret: string): Promise<CryptoKey> {
+  const keyBytes = new TextEncoder().encode(secret);
+  if (keyBytes.length !== 32) {
+    throw new Error(
+      `SHAREKHAN_API_SECRET must be exactly 32 bytes for AES-256-GCM, got ${keyBytes.length}`
+    );
+  }
+  return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [
+    "decrypt",
+    "encrypt",
+  ]);
+}
+
+async function aesGcmDecrypt(secret: string, base64Ciphertext: string): Promise<string> {
+  const key = await importAesKey(secret);
+  const data = base64UrlDecode(base64Ciphertext);
+  const plainBuf = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: ZERO_IV, tagLength: 128 },
+    key,
+    data
+  );
+  return new TextDecoder().decode(plainBuf);
+}
+
+async function aesGcmEncrypt(secret: string, plaintext: string): Promise<string> {
+  const key = await importAesKey(secret);
+  const plainBytes = new TextEncoder().encode(plaintext);
+  const cipherBuf = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: ZERO_IV, tagLength: 128 },
+    key,
+    plainBytes
+  );
+  return base64UrlEncodeNoPad(new Uint8Array(cipherBuf));
+}
+
+// ========= SHAREKHAN'S generate_session() EQUIVALENT =========
+// Decrypt the raw request_token, swap its two pipe-separated parts, then
+// re-encrypt — this exact transformed value (not the original token) is
+// what Sharekhan's access-token endpoint expects.
+async function generateSession(requestToken: string): Promise<string> {
+  const decrypted = await aesGcmDecrypt(SHAREKHAN_API_SECRET, requestToken);
+  const parts = decrypted.split("|");
+  if (parts.length !== 2) {
+    throw new Error(`Unexpected decrypted request_token format: ${parts.length} parts`);
+  }
+  const swapped = `${parts[1]}|${parts[0]}`;
+  return aesGcmEncrypt(SHAREKHAN_API_SECRET, swapped);
+}
+
 // ========= TOKEN EXCHANGE =========
 async function exchangeToken(requestToken: string) {
-  const checksumSource = requestToken + SHAREKHAN_API_SECRET;
-  const checksum = CryptoJS.SHA256(checksumSource).toString();
+  const encStr = await generateSession(requestToken);
 
-  const body = new URLSearchParams({
-    api_key: SHAREKHAN_API_KEY,
-    request_token: requestToken,
-    checksum,
-  });
+  const payload = {
+    apiKey: SHAREKHAN_API_KEY,
+    requestToken: encStr,
+    state: SHAREKHAN_STATE,
+  };
 
   await log("sharekhan-auth", "token-exchange-request", {
-    endpoint: SHAREKHAN_TOKEN_URL,
+    endpoint: SHAREKHAN_ACCESS_TOKEN_URL,
   });
 
-  const resp = await fetch(SHAREKHAN_TOKEN_URL, {
+  const resp = await fetch(SHAREKHAN_ACCESS_TOKEN_URL, {
     method: "POST",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+      "Content-Type": "application/json",
     },
-    body,
+    body: JSON.stringify(payload),
   });
 
   const text = await resp.text();
@@ -115,18 +198,21 @@ async function exchangeToken(requestToken: string) {
   });
 
   if (!resp.ok) {
-    throw new Error(`Sharekhan token exchange failed (${resp.status})`);
+    throw new Error(`Sharekhan token exchange failed (${resp.status}): ${text.slice(0, 200)}`);
   }
 
   const data = JSON.parse(text);
 
-  if (!data.access_token) {
-    throw new Error("No access_token in Sharekhan response");
+  // Sharekhan's response shape can vary by account/version; check the
+  // documented common field names defensively.
+  const accessToken = data.accessToken || data.access_token || data.sessionToken;
+  if (!accessToken) {
+    throw new Error(`No access token in Sharekhan response: ${text.slice(0, 200)}`);
   }
 
   return {
-    accessToken: data.access_token as string,
-    refreshToken: (data.refresh_token as string | undefined) ?? null,
+    accessToken: accessToken as string,
+    refreshToken: (data.refreshToken || data.refresh_token || null) as string | null,
   };
 }
 
@@ -195,10 +281,6 @@ serve(async (req) => {
       }
 
       // ===== COMPLETE LOGIN (called by SharekhanCallback.tsx) =====
-      // Replaces the old GET callback + state verification, which never
-      // worked since Sharekhan doesn't echo `state` back. The user's real
-      // Supabase auth token (attached automatically by supabase.functions.invoke)
-      // is now the source of truth for identity.
       if (body?.action === "complete_login") {
         const userId = await getUserIdFromAuth(req);
         if (!userId) {
@@ -219,14 +301,28 @@ serve(async (req) => {
           );
         }
 
-        const { accessToken, refreshToken } = await exchangeToken(requestToken);
-        await storeTokens(userId, accessToken, refreshToken);
+        try {
+          const { accessToken, refreshToken } = await exchangeToken(requestToken);
+          await storeTokens(userId, accessToken, refreshToken);
+          await log("sharekhan-auth", "login-completed", { userId });
 
-        await log("sharekhan-auth", "login-completed", { userId });
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } catch (err) {
+          await log("sharekhan-auth", "complete-login-failed", {
+            userId,
+            message: String(err),
+          }, "ERROR");
 
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+          return new Response(
+            JSON.stringify({ error: String(err) }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
       }
 
       // ===== LOGIN URL =====
@@ -238,12 +334,9 @@ serve(async (req) => {
         });
       }
 
-      // Only api_key is sent — Sharekhan's documented customer-login flow
-      // doesn't use redirect_uri or state as query parameters. The callback
-      // destination (APP_CALLBACK_URL_FOR_REFERENCE) is configured on
-      // Sharekhan's developer portal instead, not passed here.
       const params = new URLSearchParams({
         api_key: SHAREKHAN_API_KEY,
+        state: SHAREKHAN_STATE,
       });
 
       const loginUrl = `${SHAREKHAN_LOGIN_URL}?${params.toString()}`;
