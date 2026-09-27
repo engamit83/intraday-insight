@@ -111,7 +111,11 @@ function base64UrlDecode(input: string): Uint8Array {
 function base64UrlEncodeNoPad(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  // EXPERIMENT: decrypt is confirmed correct (clean GCM tag verification,
+  // sensible part lengths), but Sharekhan still rejects the final token.
+  // Trying WITH padding kept this time, since Python's rstrip('=') may not
+  // match what the server actually expects on the way back in.
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 // ========= AES-256-GCM (matches Sharekhan's reference implementation) =========
