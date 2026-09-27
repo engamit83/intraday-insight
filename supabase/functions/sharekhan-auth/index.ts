@@ -159,13 +159,44 @@ async function aesGcmEncrypt(secret: string, plaintext: string): Promise<string>
 // re-encrypt — this exact transformed value (not the original token) is
 // what Sharekhan's access-token endpoint expects.
 async function generateSession(requestToken: string): Promise<string> {
-  const decrypted = await aesGcmDecrypt(SHAREKHAN_API_SECRET, requestToken);
+  await log("sharekhan-auth", "debug-generate-session-start", {
+    requestTokenLength: requestToken.length,
+    requestTokenSample: requestToken.slice(0, 10) + "..." + requestToken.slice(-6),
+    secretLength: SHAREKHAN_API_SECRET.length,
+  });
+
+  let decrypted: string;
+  try {
+    decrypted = await aesGcmDecrypt(SHAREKHAN_API_SECRET, requestToken);
+  } catch (err) {
+    await log("sharekhan-auth", "debug-decrypt-failed", { message: String(err) }, "ERROR");
+    throw err;
+  }
+
+  await log("sharekhan-auth", "debug-decrypt-success", {
+    decryptedLength: decrypted.length,
+    pipeCount: (decrypted.match(/\|/g) || []).length,
+  });
+
   const parts = decrypted.split("|");
   if (parts.length !== 2) {
+    await log("sharekhan-auth", "debug-unexpected-parts", {
+      partsCount: parts.length,
+      partLengths: parts.map((p) => p.length),
+    }, "ERROR");
     throw new Error(`Unexpected decrypted request_token format: ${parts.length} parts`);
   }
+
   const swapped = `${parts[1]}|${parts[0]}`;
-  return aesGcmEncrypt(SHAREKHAN_API_SECRET, swapped);
+  const encStr = await aesGcmEncrypt(SHAREKHAN_API_SECRET, swapped);
+
+  await log("sharekhan-auth", "debug-encrypt-success", {
+    encStrLength: encStr.length,
+    part0Length: parts[0].length,
+    part1Length: parts[1].length,
+  });
+
+  return encStr;
 }
 
 // ========= TOKEN EXCHANGE =========
@@ -186,6 +217,7 @@ async function exchangeToken(requestToken: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "api-key": SHAREKHAN_API_KEY,
     },
     body: JSON.stringify(payload),
   });
