@@ -111,11 +111,7 @@ function base64UrlDecode(input: string): Uint8Array {
 function base64UrlEncodeNoPad(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  // EXPERIMENT: decrypt is confirmed correct (clean GCM tag verification,
-  // sensible part lengths), but Sharekhan still rejects the final token.
-  // Trying WITH padding kept this time, since Python's rstrip('=') may not
-  // match what the server actually expects on the way back in.
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 // ========= AES-256-GCM (matches Sharekhan's reference implementation) =========
@@ -191,7 +187,12 @@ async function generateSession(requestToken: string): Promise<string> {
     throw new Error(`Unexpected decrypted request_token format: ${parts.length} parts`);
   }
 
-  const swapped = `${parts[1]}|${parts[0]}`;
+  // EXPERIMENT 2: padding-kept vs stripped made zero difference (ruled out).
+  // Trying WITHOUT the swap this time — keep original decrypted order
+  // (part0|part1) instead of Sharekhan reference's documented (part1|part0),
+  // since decrypt itself is confirmed correct but the final exchange still
+  // fails identically either way.
+  const swapped = `${parts[0]}|${parts[1]}`;
   const encStr = await aesGcmEncrypt(SHAREKHAN_API_SECRET, swapped);
 
   await log("sharekhan-auth", "debug-encrypt-success", {
