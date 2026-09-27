@@ -97,13 +97,14 @@ async function getUserIdFromAuth(req: Request): Promise<string | null> {
 }
 
 // ========= BASE64URL (no padding) HELPERS =========
-function base64UrlDecode(input: string): Uint8Array {
+function base64UrlDecode(input: string): Uint8Array<ArrayBuffer> {
   // Accept both standard (+/) and urlsafe (-_) alphabets, with or without
   // padding — matches Python's base64.urlsafe_b64decode tolerance.
   let normalized = input.replace(/-/g, "+").replace(/_/g, "/");
   while (normalized.length % 4 !== 0) normalized += "=";
   const binary = atob(normalized);
-  const bytes = new Uint8Array(binary.length);
+  const buffer = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(buffer);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
