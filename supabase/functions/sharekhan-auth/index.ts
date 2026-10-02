@@ -244,16 +244,26 @@ async function exchangeToken(requestToken: string) {
 
   const data = JSON.parse(text);
 
-  // Sharekhan's response shape can vary by account/version; check the
-  // documented common field names defensively.
-  const accessToken = data.accessToken || data.access_token || data.sessionToken;
+  // CONFIRMED real Sharekhan response shape (from live testing):
+  // { "status": 200, "message": "access_token", "timestamp": "...",
+  //   "data": { "state": "...", "fullName": "...", "customerId": "...", "token": "..." } }
+  // The actual token is nested under data.data.token, not top-level.
+  const accessToken =
+    data?.data?.token || data.accessToken || data.access_token || data.sessionToken;
   if (!accessToken) {
     throw new Error(`No access token in Sharekhan response: ${text.slice(0, 200)}`);
   }
 
+  await log("sharekhan-auth", "token-exchange-account-info", {
+    customerId: data?.data?.customerId,
+    fullName: data?.data?.fullName,
+  });
+
   return {
     accessToken: accessToken as string,
-    refreshToken: (data.refreshToken || data.refresh_token || null) as string | null,
+    refreshToken: (data?.data?.refreshToken || data.refreshToken || data.refresh_token || null) as
+      | string
+      | null,
   };
 }
 
