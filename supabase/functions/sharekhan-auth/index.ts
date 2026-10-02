@@ -97,7 +97,7 @@ async function getUserIdFromAuth(req: Request): Promise<string | null> {
 }
 
 // ========= BASE64URL (no padding) HELPERS =========
-function base64UrlDecode(input: string): Uint8Array {
+function base64UrlDecode(input: string): Uint8Array<ArrayBuffer> {
   // Accept both standard (+/) and urlsafe (-_) alphabets, with or without
   // padding — matches Python's base64.urlsafe_b64decode tolerance.
   let normalized = input.replace(/-/g, "+").replace(/_/g, "/");
