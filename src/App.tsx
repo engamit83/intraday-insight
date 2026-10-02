@@ -14,13 +14,10 @@ import Settings from "./pages/Settings";
 import SharekhanCallback from "./pages/SharekhanCallback";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-import { useSharekhanCallback } from "./hooks/useSharekhanCallback";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  useSharekhanCallback();
-  
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

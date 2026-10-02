@@ -1,5 +1,6 @@
 // TASK 5: Scheduler Job - Update Prices and Indicators
-// Uses Sharekhan as primary data source with Alpha Vantage fallback
+// Uses Sharekhan exclusively as the data source (Alpha Vantage fallback
+// removed per request — this app only wants Sharekhan-sourced data).
 // This function is designed to be called on a schedule (every 5 minutes via pg_cron)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -107,43 +108,6 @@ async function fetchFromSharekhan(
   }
 }
 
-// Fallback to Alpha Vantage
-async function fetchFromAlphaVantage(
-  symbol: string,
-  apiKey: string
-): Promise<{ data: OHLCVData[] | null; error: string | null }> {
-  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=5min&outputsize=compact&apikey=${apiKey}`
-
-  try {
-    const response = await fetch(url)
-    const data = await response.json()
-
-    if (data.Note || data['Error Message']) {
-      return { data: null, error: data.Note || data['Error Message'] }
-    }
-
-    const timeSeries = data['Time Series (5min)']
-    if (!timeSeries) {
-      return { data: null, error: 'No time series data' }
-    }
-
-    const ohlcvData: OHLCVData[] = Object.entries(timeSeries).map(([ts, v]: [string, any]) => ({
-      timestamp: ts,
-      open: parseFloat(v['1. open']),
-      high: parseFloat(v['2. high']),
-      low: parseFloat(v['3. low']),
-      close: parseFloat(v['4. close']),
-      volume: parseInt(v['5. volume'], 10)
-    }))
-
-    ohlcvData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    return { data: ohlcvData, error: null }
-
-  } catch (error) {
-    return { data: null, error: error instanceof Error ? error.message : 'Alpha Vantage failed' }
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -180,14 +144,13 @@ Deno.serve(async (req) => {
     // Get API keys from environment
     const sharekhanApiKey = Deno.env.get('SHAREKHAN_API_KEY')
     const sharekhanSecretKey = Deno.env.get('SHAREKHAN_API_SECRET')
-    const alphaVantageApiKey = Deno.env.get('ALPHA_VANTAGE_API_KEY')
 
     // Get access token from request body (for Sharekhan)
     const body = await req.json().catch(() => ({}))
     const accessToken = body.accessToken || body.sharekhanAccessToken
 
     console.log('[Scheduler] Starting market data update job')
-    console.log(`[Scheduler] Data sources: Sharekhan=${!!sharekhanApiKey && !!accessToken}, AlphaVantage=${!!alphaVantageApiKey}`)
+    console.log(`[Scheduler] Sharekhan configured: ${!!sharekhanApiKey && !!accessToken}`)
 
     // Get all unique symbols from watchlist and active signals
     const { data: watchlistItems } = await supabase.from('watchlist').select('symbol')
@@ -210,7 +173,7 @@ Deno.serve(async (req) => {
       let source = 'none'
       let error: string | null = null
 
-      // Try Sharekhan first (primary source)
+      // Sharekhan only — no fallback data source
       if (sharekhanApiKey && accessToken) {
         const sharekhanResult = await fetchFromSharekhan(symbol, sharekhanApiKey, accessToken)
         if (sharekhanResult.data) {
@@ -221,21 +184,8 @@ Deno.serve(async (req) => {
           console.log(`[Scheduler] ${symbol}: Sharekhan failed - ${sharekhanResult.error}`)
           error = sharekhanResult.error
         }
-      }
-
-      // Fallback to Alpha Vantage if Sharekhan failed
-      if (!ohlcvData && alphaVantageApiKey) {
-        // For Alpha Vantage, we need exchange suffix
-        const avSymbol = `${symbol}.NS`
-        const avResult = await fetchFromAlphaVantage(avSymbol, alphaVantageApiKey)
-        if (avResult.data) {
-          ohlcvData = avResult.data
-          source = 'alpha_vantage'
-          console.log(`[Scheduler] ${symbol}: Got ${ohlcvData.length} candles from Alpha Vantage (fallback)`)
-        } else {
-          console.log(`[Scheduler] ${symbol}: Alpha Vantage fallback failed - ${avResult.error}`)
-          error = avResult.error || error
-        }
+      } else {
+        error = 'Sharekhan not configured or not connected'
       }
 
       if (ohlcvData && ohlcvData.length > 0) {
@@ -294,14 +244,13 @@ Deno.serve(async (req) => {
     const duration = Date.now() - startTime
     const successCount = results.filter(r => r.success).length
     const sharekhanCount = results.filter(r => r.source === 'sharekhan').length
-    const alphaCount = results.filter(r => r.source === 'alpha_vantage').length
 
     // Log job completion
     await supabase.from('system_logs').insert({
       level: 'INFO',
       source: 'update-market-data',
-      message: `Job completed: ${successCount}/${symbols.length} symbols (Sharekhan: ${sharekhanCount}, AlphaVantage: ${alphaCount})`,
-      metadata: { duration, totalSymbols: symbols.length, successCount, sharekhanCount, alphaCount }
+      message: `Job completed: ${successCount}/${symbols.length} symbols (Sharekhan: ${sharekhanCount})`,
+      metadata: { duration, totalSymbols: symbols.length, successCount, sharekhanCount }
     })
 
     console.log(`[Scheduler] Job completed: ${successCount}/${symbols.length} symbols in ${duration}ms`)
@@ -311,7 +260,7 @@ Deno.serve(async (req) => {
         success: true,
         processed: symbols.length,
         successful: successCount,
-        sources: { sharekhan: sharekhanCount, alpha_vantage: alphaCount },
+        sources: { sharekhan: sharekhanCount },
         duration: `${duration}ms`,
         results
       }),
