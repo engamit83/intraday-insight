@@ -97,14 +97,13 @@ async function getUserIdFromAuth(req: Request): Promise<string | null> {
 }
 
 // ========= BASE64URL (no padding) HELPERS =========
-function base64UrlDecode(input: string): Uint8Array<ArrayBuffer> {
+function base64UrlDecode(input: string): Uint8Array {
   // Accept both standard (+/) and urlsafe (-_) alphabets, with or without
   // padding — matches Python's base64.urlsafe_b64decode tolerance.
   let normalized = input.replace(/-/g, "+").replace(/_/g, "/");
   while (normalized.length % 4 !== 0) normalized += "=";
   const binary = atob(normalized);
-  const buffer = new ArrayBuffer(binary.length);
-  const bytes = new Uint8Array(buffer);
+  const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
@@ -112,7 +111,14 @@ function base64UrlDecode(input: string): Uint8Array<ArrayBuffer> {
 function base64UrlEncodeNoPad(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  // IMPORTANT: Sharekhan's own Java SDK documentation states that WITHOUT a
+  // versionId (our exact setup — we never send one), the requestToken must
+  // be encoded using Java's standard Base64.getEncoder() — i.e. the STANDARD
+  // alphabet (+/  with padding), NOT the URL-safe alphabet (-_  no padding)
+  // this function previously produced. Only requests that include a
+  // versionId appear to use the URL-safe variant (matching the Python SDK,
+  // which is the vendor-oriented flow). Switching to standard base64 here.
+  return btoa(binary);
 }
 
 // ========= AES-256-GCM (matches Sharekhan's reference implementation) =========
@@ -188,12 +194,9 @@ async function generateSession(requestToken: string): Promise<string> {
     throw new Error(`Unexpected decrypted request_token format: ${parts.length} parts`);
   }
 
-  // EXPERIMENT 2: padding-kept vs stripped made zero difference (ruled out).
-  // Trying WITHOUT the swap this time — keep original decrypted order
-  // (part0|part1) instead of Sharekhan reference's documented (part1|part0),
-  // since decrypt itself is confirmed correct but the final exchange still
-  // fails identically either way.
-  const swapped = `${parts[0]}|${parts[1]}`;
+  // Sharekhan's documented order: swap so it becomes CustomerId|RequestId
+  // (or vice versa, per their reference implementation).
+  const swapped = `${parts[1]}|${parts[0]}`;
   const encStr = await aesGcmEncrypt(SHAREKHAN_API_SECRET, swapped);
 
   await log("sharekhan-auth", "debug-encrypt-success", {
