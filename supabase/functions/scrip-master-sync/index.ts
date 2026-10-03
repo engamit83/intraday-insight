@@ -55,7 +55,16 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('authorization') ?? ''
     const bearerToken = authHeader.replace('Bearer ', '')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const isServiceRole = bearerToken.length > 0 && bearerToken === serviceRoleKey
+    let isServiceRole = bearerToken.length > 0 && bearerToken === serviceRoleKey
+
+    // Scheduled database jobs prove trust with a private token stored in
+    // internal_job_tokens (readable only by the backend).
+    const jobToken = req.headers.get('x-job-token') ?? ''
+    if (!isServiceRole && jobToken.length >= 32) {
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
+      const { data } = await admin.from('internal_job_tokens').select('token').eq('name', 'cron').maybeSingle()
+      if (data?.token && data.token === jobToken) isServiceRole = true
+    }
 
     if (!isServiceRole) {
       return new Response(
