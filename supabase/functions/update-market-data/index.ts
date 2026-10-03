@@ -13,7 +13,7 @@
 //    candles, MACD is actually computed).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { verifyAuth, corsHeaders, isServiceRoleRequest } from '../_shared/auth.ts'
+import { verifyAuth, corsHeaders, isTrustedInternalRequest } from '../_shared/auth.ts'
 import { computeIndicators } from '../_shared/indicators.ts'
 import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay } from '../_shared/sharekhan.ts'
 
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   }
 
   // Service role (scheduled job) OR a signed-in user.
-  if (!isServiceRoleRequest(req)) {
+  if (!(await isTrustedInternalRequest(req))) {
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated) {
       return new Response(

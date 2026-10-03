@@ -11,7 +11,7 @@
 //      stale ones.
 //
 // Callers:
-//   - Scheduled job with the SERVICE ROLE key  -> may write signals.
+//   - Trusted internal caller (service-role key, or a scheduled job's x-job-token) -> may write signals.
 //   - Any other authenticated user             -> forced to dryRun (read-only).
 //
 // Body (all optional):
@@ -30,7 +30,7 @@
 // NOTE: rule-based v1, not back-tested. Candidates, not proven trades.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { verifyAuth, corsHeaders, isServiceRoleRequest, isValidSymbol, sanitizeSymbol } from '../_shared/auth.ts'
+import { verifyAuth, corsHeaders, isTrustedInternalRequest, isValidSymbol, sanitizeSymbol } from '../_shared/auth.ts'
 import { computeIndicators, type Candle } from '../_shared/indicators.ts'
 import {
   calculateRawScore, decideDirection, buildLevels, describeAnalysis,
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   // ---- auth ----
-  const isService = isServiceRoleRequest(req)
+  const isService = await isTrustedInternalRequest(req)
   if (!isService) {
     const auth = await verifyAuth(req)
     if (!auth.authenticated) {

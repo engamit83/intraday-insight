@@ -45,7 +45,7 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 **Phase A — Finish and verify the data pipeline** ⬜
 1. Dry-run scan of 5 stocks; check prices match the Sharekhan app and the indicators look sane.
 2. First real (non-dry) run when the market opens; inspect `signals`.
-3. Schedule the scout every 1 minute during market hours (function also self-gates to 09:15–15:30 IST, Mon–Fri).
+3. Schedule the scout every 1 minute during market hours (function also self-gates to 09:15–15:30 IST, Mon–Fri). The job authenticates with the `x-job-token` header (project convention in AGENTS.md); `scout-signals` and `update-market-data` now accept it via `isTrustedInternalRequest`.
 4. Token expiry handling: confirm real token lifetime, add a "Sharekhan disconnected" alert/banner so scheduled jobs don't silently fail; explore refresh if Sharekhan supports it.
 5. Schedule `market-conditions` (nothing calls it today, so the market multiplier is always "UNKNOWN").
 6. Validate the starter universe (stale/renamed tickers show up as "unresolved"); filter the 7,551 master rows to ordinary equities.
@@ -68,6 +68,7 @@ Trailing stop-loss · reversal-based exit (the same indicators that triggered en
 
 **Phase E — Live tick-by-tick data at scale** ⬜
 Always-on server (~$5–10/month, e.g. Fly.io/Render — Lovable edge functions cannot hold a persistent connection) holding Sharekhan's WebSocket (up to 1,000 symbols per connection) → writes prices to the database → scale the universe (e.g. Nifty 500) → tick-driven exits. Needs reconnect logic and monitoring. *Only after Phase B shows an edge.*
+*Verified from Sharekhan's official Python SDK source (read 2026-10-03), for when we build this:* connect to `wss://stream.sharekhan.com/skstream/api/stream?ACCESS_TOKEN=<token>`; send the text `ping` as a heartbeat; subscribe with `{"action":"subscribe","key":["feed"],"value":[""]}`, then request prices with `{"action":"feed","key":["ltp"],"value":["NC22,NC2885,..."]}` (instrument id = exchange code + scrip code, comma-separated; `unsubscribe` uses the same shape); the SDK re-subscribes after a reconnect. Cautions: the SDK turns TLS certificate checking OFF — do not copy that; the token travels in the URL, so the server must never log the connection URL. Only the `ltp` (last price) key appears in the example; richer feeds are not yet seen.
 
 **Phase F — Smarter decisions (ML + news)** ⬜
 News/sentiment source (new cost and integration) · ML model trained on the collected paper/real outcomes (needs hundreds to thousands of trades; walk-forward validation to avoid overfitting) · scheduled retraining and monitoring for drift · post-trade analysis of losing trades. "Learning from mistakes" means statistically refitting on results — it will never reach zero mistakes.
@@ -292,6 +293,10 @@ Paper-trade outcomes double as the training data ML needs.
 - Verified offline with mocked data in the exact live shape (10 checks): timestamps, D/M/YYYY, volume, ordering, latest-close, session-anchored VWAP, relative volume, full indicator set, loud failure on missing timestamps. Strict TypeScript check passes.
 - Known limitation: the 5-min series spans ~9 sessions, so ATR / trend strength in the first ~50 minutes of a session include the overnight gap. Acceptable for v1; revisit if signals near the open look odd.
 **Next:** push `_shared/sharekhan.ts`; deploy `scout-signals`, `update-market-data`, `scrip-master-sync` (all bundle that file); dry-run scan of 3 stocks from the console (free); read the real scores; then first real run when the market opens Mon.
+
+**Update 2026-10-03 (repo snapshot reviewed):** The user uploaded a GitHub zip of the repo. Findings: (1) every file I sent landed (parser fix, probe mode, auth helper, PROGRESS.md). (2) Lovable's own edits since: `sharekhan-auth` typing fix (`Uint8Array<ArrayBuffer>`, harmless); `scrip-master-sync` now also trusts a private `x-job-token` header matched against table `internal_job_tokens` (row `cron`); migration `20261003123623_…sql` creates that table with RLS on and ALL access REVOKED from `anon`/`authenticated` — verified safe; `AGENTS.md` records the convention (service-role key isn't available to SQL). (3) The cron job definition and the token row were created outside migrations, so how the job passes the token isn't visible in the repo. Optional safe check in the SQL editor (masks long secrets): `select jobid, schedule, active, regexp_replace(command, '[A-Za-z0-9_-]{32,}', '***', 'g') as command from cron.job;`
+**Change made:** added `isTrustedInternalRequest` to `_shared/auth.ts` (service-role key OR `x-job-token`, both constant-time compares) and switched `scout-signals` and `update-market-data` to it, so the scout can be scheduled the same way. Tested (11 auth checks incl. the anon-key prefix hole, wrong/short/missing token, empty table), strict TypeScript check passes, earlier suites still pass (18/6/10).
+**Deploy now needs only:** `scout-signals` and `update-market-data` (already-deployed `scrip-master-sync` is unchanged). Dry-run console test is unchanged.
 
 ## 📌 Rule for this file going forward
 
