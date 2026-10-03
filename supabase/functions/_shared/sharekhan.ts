@@ -18,6 +18,13 @@ import type { Candle } from './indicators.ts'
 const SHAREKHAN_BASE_URL = 'https://api.sharekhan.com'
 const NSE_CASH = 'NC'
 
+// UNVERIFIED: Sharekhan's historical endpoint rejected "5" with
+// "Invalid Chart Period". Its official SDK samples use word labels (e.g.
+// "daily"). "5minute" is the most likely label for 5-minute candles but is
+// NOT confirmed — run scout-signals with {"probe":true} to discover which
+// labels Sharekhan actually accepts, then set the confirmed value here.
+export const DEFAULT_INTERVAL = '5minute'
+
 export interface StoredToken {
   accessToken: string
   userId: string
@@ -96,7 +103,7 @@ export async function fetchCandles(
   scripCode: number,
   apiKey: string,
   accessToken: string,
-  interval = '5',
+  interval: string = DEFAULT_INTERVAL,
 ): Promise<CandleFetchResult> {
   const url = `${SHAREKHAN_BASE_URL}/skapi/services/historical/${NSE_CASH}/${scripCode}/${interval}`
 

@@ -21,6 +21,9 @@
 //   symbols    string[] explicit symbols instead of the rotating batch (max 40)
 //   batchSize  number   symbols per run (default 25, max 40)
 //   batchIndex number   which batch of the universe (default: rotates by minute)
+//   interval   string   candle interval label (default: see DEFAULT_INTERVAL)
+//   probe      boolean  try many interval labels on ONE symbol and report which
+//                       Sharekhan accepts (read-only; use to discover the right label)
 //   minScore   number   minimum final score to become a signal (default 60)
 //   maxActive  number   max simultaneously active signals (default 10)
 //
@@ -33,7 +36,7 @@ import {
   calculateRawScore, decideDirection, buildLevels, describeAnalysis,
   getTimeMultiplier, getMarketMultiplier, isMarketOpenIST,
 } from '../_shared/scoring.ts'
-import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay } from '../_shared/sharekhan.ts'
+import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay, DEFAULT_INTERVAL } from '../_shared/sharekhan.ts'
 import { STARTER_UNIVERSE } from '../_shared/universe.ts'
 
 const DEFAULT_BATCH_SIZE = 25
@@ -43,6 +46,15 @@ const DEFAULT_MAX_ACTIVE = 10
 const SIGNAL_TTL_MINUTES = 30
 const CALL_DELAY_MS = 400          // ~2 requests/second, deliberately conservative
 const MAX_RUNTIME_MS = 110_000     // stop gracefully before the platform limit
+
+// Candidate interval labels for probe mode. "daily" is the one label seen in
+// Sharekhan's official SDK samples, so it doubles as a control: if it works,
+// auth, endpoint and parsing are all confirmed correct.
+const PROBE_INTERVALS = [
+  'daily', '5minute', '5min', '5m', '5Minute', '5MIN', '05min',
+  '1minute', '1min', '1m', '3minute', '15minute', '15min', '30minute', '30min',
+  '60minute', '1hour',
+]
 
 interface SymbolResult {
   symbol: string
@@ -87,10 +99,12 @@ Deno.serve(async (req) => {
   const dryRun = body.dryRun === true || !isService
   const minScore = Number.isFinite(body.minScore) ? Number(body.minScore) : DEFAULT_MIN_SCORE
   const maxActive = Number.isFinite(body.maxActive) ? Number(body.maxActive) : DEFAULT_MAX_ACTIVE
+  const interval: string =
+    typeof body.interval === 'string' && /^[A-Za-z0-9]{1,12}$/.test(body.interval) ? body.interval : DEFAULT_INTERVAL
 
   // ---- market-hours gate ----
   const marketOpen = isMarketOpenIST()
-  if (!marketOpen && !force) {
+  if (!marketOpen && !force && body.probe !== true) {
     return json({ skipped: 'market_closed', note: 'Runs Mon-Fri 09:15-15:30 IST. Pass {"force":true,"dryRun":true} to test outside hours.' })
   }
 
@@ -131,6 +145,34 @@ Deno.serve(async (req) => {
     }, 409)
   }
 
+  // ---- probe mode: discover which interval label Sharekhan accepts ----
+  if (body.probe === true) {
+    const probeSymbol = symbols[0]
+    const probeCode = codes[probeSymbol]
+    if (!probeCode) return json({ error: `No scrip code for ${probeSymbol}` }, 400)
+
+    const probeResults: Record<string, unknown>[] = []
+    let probeAbort: string | null = null
+    for (const label of PROBE_INTERVALS) {
+      const r = await fetchCandles(probeCode, apiKey, token.accessToken, label)
+      const message = String(r.sample ?? r.error ?? '').slice(0, 220)
+      probeResults.push({
+        interval: label,
+        httpStatus: r.status,
+        candles: r.candles ? r.candles.length : 0,
+        firstCandleTime: r.candles ? r.candles[0].timestamp : null,
+        message,
+      })
+      if (r.status === 401 || r.status === 403) { probeAbort = `auth_rejected_http_${r.status}`; break }
+      if (r.status === 429) { probeAbort = 'rate_limited_http_429'; break }
+      await delay(CALL_DELAY_MS)
+    }
+    const likelyValid = probeResults
+      .filter((x) => !/Invalid Chart Period/i.test(String(x.message)) && x.httpStatus !== 0)
+      .map((x) => x.interval)
+    return json({ probe: true, symbol: probeSymbol, probeAbort, likelyValid, results: probeResults })
+  }
+
   // ---- market condition (latest row, if fresh) ----
   const { data: mc } = await supabase
     .from('market_conditions').select('condition, created_at, expires_at')
@@ -152,7 +194,7 @@ Deno.serve(async (req) => {
     const code = codes[symbol]
     if (!code) { results.push({ symbol, status: 'skipped', reason: 'unresolved scrip code' }); continue }
 
-    const fetched = await fetchCandles(code, apiKey, token.accessToken)
+    const fetched = await fetchCandles(code, apiKey, token.accessToken, interval)
     if (fetched.status === 401 || fetched.status === 403) {
       abortReason = `auth_rejected_http_${fetched.status}: reconnect Sharekhan in Settings`
       results.push({ symbol, status: 'error', reason: fetched.error ?? 'auth', httpStatus: fetched.status, sample: fetched.sample })
@@ -270,7 +312,7 @@ Deno.serve(async (req) => {
     const { data: allActive } = await supabase.from('signals')
       .select('id, final_score').eq('is_active', true).order('final_score', { ascending: false })
     if (allActive && allActive.length > maxActive) {
-      const drop = allActive.slice(maxActive).map((s) => s.id)
+      const drop = allActive.slice(maxActive).map((s: { id: string }) => s.id)
       await supabase.from('signals').update({ is_active: false, rejection_reason: 'outranked' }).in('id', drop)
       written.capped = drop.length
     }
@@ -284,6 +326,7 @@ Deno.serve(async (req) => {
     marketCondition,
     multipliers: { market: marketMult, time: timeMult },
     batch: batchInfo,
+    interval,
     scanned: symbols.length,
     scored: scored.length,
     errors: results.filter((r) => r.status === 'error').length,
