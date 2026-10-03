@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
   let symbols: string[]
   let batchInfo: Record<string, unknown>
   if (Array.isArray(body.symbols) && body.symbols.length > 0) {
-    symbols = [...new Set(body.symbols.map((s: unknown) => String(s)).filter(isValidSymbol).map(sanitizeSymbol))].slice(0, MAX_BATCH_SIZE)
+    symbols = [...new Set<string>((body.symbols as unknown[]).map((s) => String(s)).filter(isValidSymbol).map(sanitizeSymbol))].slice(0, MAX_BATCH_SIZE)
     batchInfo = { mode: 'explicit' }
   } else {
     const size = Math.min(MAX_BATCH_SIZE, Math.max(1, Number.isFinite(body.batchSize) ? Number(body.batchSize) : DEFAULT_BATCH_SIZE))
