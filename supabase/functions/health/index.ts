@@ -2,6 +2,7 @@
 // Only accessible by internal services, not public
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isServiceRoleRequest } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +20,7 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
     // Check if request is using service role key
-    if (!authHeader || !authHeader.includes(serviceRoleKey.substring(0, 20))) {
+    if (!isServiceRoleRequest(req)) {
       // For non-service requests, verify JWT authentication
       if (!authHeader?.startsWith('Bearer ')) {
         return new Response(

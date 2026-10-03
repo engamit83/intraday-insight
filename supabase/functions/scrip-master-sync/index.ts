@@ -2,6 +2,7 @@
 // Syncs Sharekhan master list to scripcodes table
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { loadStoredSharekhanToken } from '../_shared/sharekhan.ts'
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,7 +72,9 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}))
     const action = body.action
-    const accessToken = body.accessToken
+    // Use the token passed in, otherwise the stored (decrypted) one, so this can run
+    // without anyone pasting a token.
+    const accessToken = body.accessToken || (await loadStoredSharekhanToken(supabase))?.accessToken
     const apiKey = Deno.env.get("SHAREKHAN_API_KEY")
 
     // Validate action

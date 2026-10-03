@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.simulate-trade]
 verify_jwt = false
+
+[functions.scout-signals]
+verify_jwt = false

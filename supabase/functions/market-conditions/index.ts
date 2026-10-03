@@ -2,7 +2,7 @@
 // Classifies market into: TRENDING, RANGE, HIGH_VOLATILITY, NO_TRADE
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { verifyAuth, corsHeaders } from '../_shared/auth.ts'
+import { verifyAuth, corsHeaders, isServiceRoleRequest } from '../_shared/auth.ts'
 
 type MarketCondition = 'TRENDING' | 'RANGE' | 'HIGH_VOLATILITY' | 'NO_TRADE'
 
@@ -19,7 +19,7 @@ interface MarketAnalysis {
 // Get current time of day classification (IST for Indian markets)
 function getTimeOfDay(): { period: string; isOptimal: boolean } {
   const now = new Date()
-  const istHour = (now.getUTCHours() + 5.5) % 24
+  const istHour = (now.getUTCHours() + now.getUTCMinutes() / 60 + 5.5) % 24
   
   if (istHour < 9.25 || istHour >= 15.5) {
     return { period: 'MARKET_CLOSED', isOptimal: false }
@@ -186,9 +186,9 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   
   // Check if this is a service role request (cron job)
-  const isServiceRoleRequest = authHeader?.includes(serviceRoleKey.substring(0, 30))
+  const isServiceRole = isServiceRoleRequest(req)
   
-  if (!isServiceRoleRequest) {
+  if (!isServiceRole) {
     // If not service role, require JWT authentication
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated) {

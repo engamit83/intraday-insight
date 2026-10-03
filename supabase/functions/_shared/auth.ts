@@ -91,3 +91,29 @@ export function sanitizeSymbol(symbol: string): string {
 export function isValidAction(action: string, allowedActions: string[]): boolean {
   return allowedActions.includes(action)
 }
+
+/**
+ * Exact-match check that the request carries the SERVICE ROLE key as its
+ * Bearer token (i.e. it comes from a trusted internal job, not a browser).
+ *
+ * SECURITY FIX: several functions previously used
+ *   authHeader.includes(serviceRoleKey.substring(0, 30))
+ * The first 30 characters of every Supabase HS256 JWT are the same standard
+ * header, and the public anon key (shipped in the frontend) starts with exactly
+ * those characters — so that check passed for anyone holding the anon key.
+ * This compares the whole token, in constant time.
+ */
+export function isServiceRoleRequest(req: Request): boolean {
+  const authHeader = req.headers.get('authorization') ?? ''
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!serviceRoleKey || !authHeader.startsWith('Bearer ')) return false
+
+  const token = authHeader.slice(7).trim()
+  if (token.length !== serviceRoleKey.length) return false
+
+  let diff = 0
+  for (let i = 0; i < token.length; i++) {
+    diff |= token.charCodeAt(i) ^ serviceRoleKey.charCodeAt(i)
+  }
+  return diff === 0
+}

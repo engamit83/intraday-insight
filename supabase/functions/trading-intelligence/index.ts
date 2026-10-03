@@ -154,7 +154,7 @@ function calculateRawScore(indicators: any): number {
 // Get time-based multiplier
 function getTimeMultiplier(): number {
   const now = new Date()
-  const istHour = (now.getUTCHours() + 5.5) % 24
+  const istHour = (now.getUTCHours() + now.getUTCMinutes() / 60 + 5.5) % 24
   
   if (istHour < 9.25 || istHour >= 15.5) {
     return 0 // Market closed

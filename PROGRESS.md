@@ -117,12 +117,96 @@ Multiple rounds were wasted because pushing to GitHub does NOT auto-redeploy Lov
 
 ## 🔜 Phase 4 — What's Next (not started yet)
 
-With Sharekhan now connected, the remaining gap back to the original bigger goal:
+### ⚠️ Important clarification of intent (changes the architecture plan)
+The app's real goal is NOT just refreshing a small personal watchlist — it's meant to **scan across many/all NSE stocks and have the scoring algorithm pick the best opportunities**. This rules out REST-based polling entirely, regardless of interval: scanning 1,500+ stocks one-by-one via REST would take 25+ minutes per pass even at a generous rate limit, making it useless for intraday decisions.
 
-1. **No scheduler exists yet** for the signal-generation pipeline (`scrip-master-sync`, `update-market-data`, `indicators`, `market-conditions`, `trading-intelligence`) — confirmed earlier that Lovable Cloud's "Jobs" page was empty. Without this, the Signals page will stay empty even with a working broker connection, since nothing automatically calls these functions.
+**Confirmed via Sharekhan's own documentation:** their WebSocket feed is explicitly built for multi-symbol monitoring — feed requests include a "Count" field for multiple scrips, and up to 1,000 symbols are supported per single WebSocket connection (vs. their "Market Watch" UI feature capping at 500). This means the WebSocket approach (previously discussed as an optional future upgrade) is actually the **necessary, correct architecture** given the real intent — not a luxury.
+
+**Revised Phase 4 plan:**
+1. Build a small always-on service (separate hosting, ~$5-10/month — Fly.io/Render, outside Lovable's serverless model since Edge Functions can't hold a persistent connection open) that maintains one WebSocket connection to Sharekhan
+2. Subscribe to a realistic symbol universe (up to 1,000 at once; if full NSE exceeds that, start with a curated list like Nifty 500)
+3. Continuously write incoming price ticks into the `stocks` table
+4. The rest of the already-built pipeline (indicators, market-conditions, trading-intelligence, signals) consumes this real-time data exactly as designed — no changes needed there
+
+### Original scheduler note (superseded by the above for price data, still relevant for other jobs)
+1. **No scheduler exists yet** for the signal-generation pipeline (`scrip-master-sync`, `update-market-data`, `indicators`, `market-conditions`, `trading-intelligence`) — confirmed earlier that Lovable Cloud's "Jobs" page was empty. The scoring/indicator functions can likely still run on a periodic Job (e.g., every 1 minute) since they process already-stored data rather than hitting Sharekhan directly — only the raw price feed needs to move to WebSocket.
 2. **Debug logging cleanup** — the `debug-*` log statements added to `sharekhan-auth/index.ts` during troubleshooting are harmless but no longer necessary; can be removed for tidiness (optional, low priority).
 3. **Multi-user support** — user's stated long-term goal is to let other people connect their own broker accounts. Current Sharekhan flow is "Self App" (single customer per API key) — supporting multiple different users' Sharekhan accounts, or other brokers entirely, will need further architecture work (likely a "vendor" API key from Sharekhan, or per-user API key storage, rather than one fixed `SHAREKHAN_API_KEY`/`SHAREKHAN_API_SECRET` pair for everyone).
 4. **Preview URL dependency** — the app is still running on a temporary Lovable preview URL, not a published permanent one. The Sharekhan redirect URL registered on their portal currently points to this temporary URL and will break if it changes. Publish when ready for more permanent stability.
+
+## 🔍 Phase 4 Findings — What the code actually does vs. what the app needs (2026-10-03)
+
+**Verified by reading the code (not assumed):**
+- Scoring "brain" is REAL: base 50 + trend/RSI/VWAP/volume/candle/MACD points, multiplied by time-of-day, market-condition and risk-state factors; tradable if final score ≥ 60 and safety checks pass. It is **rule-based, hand-weighted — not AI/ML** (code comment says so).
+- `learning-engine` retunes multipliers from last-7-day win rates (rule-based, not ML).
+- **GAP 1 — No "scout":** nothing scans the market to discover candidates. `update-market-data` only processes the user's watchlist, existing active signals, or a hardcoded fallback of 5 stocks (RELIANCE, TCS, INFY, HDFCBANK, ICICIBANK).
+- **GAP 2 — `scripcodes` (full exchange list) is written by `scrip-master-sync` but never read by anything.**
+- **GAP 3 — Nothing ever INSERTs into the `signals` table.** `trading-intelligence` only returns a score; no code turns a good score into a signal row.
+- Alpha Vantage fallback and dead `useSharekhanCallback` hook were removed (cleanup done; needs deploy of `update-market-data` — Lovable confirmed deployed).
+
+**Realistic expectations agreed:**
+- "No loss / no mistakes" is impossible for any trading system. Not a financial advisor; automated trading carries real loss risk.
+- Achievable and valuable: faster loss-cutting and profit-locking — trailing stop-loss, reversal-based exits, tied to a fast live feed (builds on existing `exit-monitor`).
+- Real ML/news-sentiment is a later phase: needs hundreds+ of real trade outcomes and a news data source first. Rule-based system runs first to accumulate data.
+- True live ticks need Sharekhan WebSocket (up to 1,000 symbols/connection) on a small always-on server (~$5–10/month, e.g. Fly.io/Render). Edge Functions cannot hold persistent connections. REST polling cannot scan the whole market (1,500+ stocks).
+
+**Proposed build order:**
+1. Scout + signal writer (read `scripcodes`/curated universe e.g. Nifty 500 → score → rank → insert top signals into `signals`)
+2. Live feed service (WebSocket → `stocks` table)
+3. Trailing-stop / reversal exit logic (upgrade `exit-monitor`)
+4. Later: ML model + news sentiment once real outcome data exists
+5. Optional low-priority: upgrade stored-token encryption (will require reconnecting Sharekhan once); tighten `any` typing
+
+## 🛠 Phase 5 — The Scout (BUILT, NOT YET TESTED LIVE) — 2026-10-03
+
+**What was built:** `scout-signals` edge function + shared modules (`_shared/indicators.ts`, `scoring.ts`, `sharekhan.ts`, `universe.ts`). Each run: take a batch of the starter universe (~48 liquid large-caps, rotating by minute) → fetch 5-min candles from Sharekhan (400 ms between calls) → compute indicators → score with the existing point rules → decide BUY/SELL → ATR-based entry/stoploss/target → write the best into `signals` (first code in the project that ever inserts signals), keep top 10 active, expire after 30 min, refresh scores in place so entry/target stay stable.
+
+**Direction rule (v1, new — the old scorer had none):** needs agreement among 3 votes (trend vs SMA20, MACD *line* sign, price vs VWAP) with none opposing; skips if RSI>75 for BUY / <25 for SELL; skips choppy markets (efficiency ratio < 0.3). Levels: stop = max(1.5×ATR, 0.25% of price), target = 1.5× stop distance. **Not back-tested. No evidence of profitability. Signals are candidates to review, not proven trades.**
+
+**Bugs found in the existing pipeline and fixed along the way (all verified from code):**
+1. RSI & ATR were computed from the OLDEST candles in the window, not the latest.
+2. MACD was hardcoded null → MACD score component never fired.
+3. Trend strength scaled ~100x too small → trend score ≈ 0.
+4. Hardcoded scrip-code map had duplicates (INFY/ICICIBANK=1594, TATAMOTORS/TATACONSUM=3432) → now resolved from `scripcodes` table.
+5. **Security:** "is this a cron job?" check in `update-market-data`, `market-conditions`, `health` matched only the first 20–30 chars of the service key — identical to the public anon key's prefix, so the anon key passed. Replaced with exact constant-time match (`isServiceRoleRequest` in `_shared/auth.ts`).
+6. IST time-of-day logic ignored minutes (`trading-intelligence`, `market-conditions`) → e.g. 09:20 IST read as closed, 10:20 read as "opening". Fixed.
+7. No backend function could obtain the stored Sharekhan token (`sharekhan-market-data` calls `sharekhan-auth?action=get-token`, which doesn't exist) → added server-side `loadStoredSharekhanToken` (reads + decrypts from DB, never exposed over HTTP). `update-market-data` and `scrip-master-sync` now use it as a fallback.
+- Still broken, untouched: `sharekhan-market-data` (calls the nonexistent get-token). Nothing in the app/jobs uses it — delete or fix later.
+
+**Verified offline (synthetic data, 30+ checks pass):** indicator math incl. the old-bug regression, direction rule (trend→BUY/SELL, chop→rejected), level ordering and R:R, IST time handling, syntax of all 11 touched files.
+**NOT verified (market closed, no network from the build sandbox):** Sharekhan's real historical-candle response shape and interval parameter ("5" is assumed), real rate limits, whether `scripcodes` is populated and which symbol format it uses (`RELIANCE` vs `RELIANCE-EQ`; both are tried), whether some starter tickers are stale (reported as `unresolved`). The scout returns raw response samples on any failure so we can learn the real format on first contact.
+
+**Test plan (market reopens Mon):**
+1. Deploy: `scout-signals`, `update-market-data`, `scrip-master-sync`, `market-conditions`, `health`, `trading-intelligence`.
+2. Run `scrip-master-sync` once ({"action":"sync_master"}); check `select count(*) from scripcodes;`.
+3. Dry run (weekend OK): `scout-signals` with {"force":true,"dryRun":true,"symbols":["RELIANCE","TCS","INFY"]} — read the response; fix any format surprises.
+4. Monday after 09:15 IST: one real run; inspect `signals`.
+5. Then schedule a Job (cron `* 3-10 * * 1-5` UTC; function also self-gates to 09:15–15:30 IST).
+
+**Known limits / decisions:** universe capped (REST-per-symbol); only the service-role caller may write signals (everyone else forced to dry run); uses the most recently connected account's token as the data source (single-owner phase); per-user risk multiplier is NOT baked into global signals (apply at trade time).
+
+## 🧭 Decision — Roadmap is "prove it earns, then speed it up" (2026-10-03)
+
+**User's goal:** a real app that earns money. **Decision:** validate the strategy with paper trading (with realistic costs) BEFORE building the live WebSocket feed or ML. Faster execution of a strategy with no proven edge only loses faster.
+
+**Evidence behind this (SEBI study of individual intraday traders, equity cash, FY2022-23):**
+- 71% of individual intraday traders incurred net losses (65% in FY19, 69% in FY22 — rising).
+- 80% were loss-makers among traders with 500+ trades a year (over-trading hurts).
+- Loss-makers spent an extra 57% of their losses on trading costs; profit-makers spent 19% of profits on costs.
+- Not a financial advisor; no system can promise profit or "no loss".
+
+**Verified in code:** the simulator (`simulate-trade`) has NO brokerage/tax/slippage modelling, so simulated profits would be overstated. The automatic paper-trade loop already exists as actions `process_new_signals` + `monitor_trades` — it just isn't scheduled, and had no signals to act on until the scout.
+
+**Roadmap (in order):**
+1. Deploy + test the scout on real data (dry run now, real run Mon after 09:15 IST).
+2. Build cost model into the simulator (brokerage + STT + exchange/GST/stamp + slippage, ~0.1%+ round trip) and schedule the paper loop (`process_new_signals`, `monitor_trades`). Run 3–4+ weeks. Measure win rate, avg win/loss, expectancy NET of costs, max drawdown.
+3. Decide from data. Net-positive over enough trades → live WebSocket feed (up to 1,000 symbols/connection, ~$5–10/mo always-on server), trailing stop / reversal exits, ML + news trained on the collected outcomes. Not positive → fix the strategy first.
+4. Only then real money — an amount whose total loss would not hurt.
+Paper-trade outcomes double as the training data ML needs.
+
+**Not done yet (honest status):** tick-by-tick feed for all stocks; AI/ML decision-making; news input; trailing stop / fast reversal exits. The scout is a rule-based v1 over ~48 stocks.
+
+**Current to-do for the user:** (a) add this file + scout files to the repo, (b) push, (c) deploy 6 functions in Lovable chat, (d) run scrip-master-sync, (e) run scout dry run and send the output.
 
 ## 📌 Rule for this file going forward
 
