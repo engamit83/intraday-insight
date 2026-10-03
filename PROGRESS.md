@@ -2,7 +2,7 @@
 
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
-**Last updated:** 2026-09-27
+**Last updated:** 2026-10-03
 
 ---
 
@@ -18,6 +18,77 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 ```
 
 **Long-term intent:** support multiple users, each connecting their own broker account (not just personal use).
+
+---
+
+## 🗺 MASTER PLAN & FEATURE BACKLOG (single source of truth — read this first)
+
+**Intent (never lose sight of this):** an app that scans many stocks, decides which to BUY/SELL using technical analysis (later news and wider market context too), exits fast to cut losses and lock profit, learns from its own results, and — if the evidence supports it — earns money for the owner, and later for other users with their own brokers. **Honest limits:** no system avoids all losses; most retail intraday traders lose money (SEBI: 71% in FY23); costs matter; not a financial advisor.
+
+**How we work (rules):** one step at a time · every claim backed by evidence (logs, code, test output) · validate before scaling (paper-trade before real money, real money before ML or WebSocket) · `git pull` before editing (Lovable's AI also edits the repo) · after pushing, tell Lovable to deploy the changed edge functions · never paste secrets/tokens in chat · update this file after every step.
+
+**Status key:** ✅ done and verified live · 🟡 built, not yet verified live · ⬜ not started
+
+### What exists today
+| Capability | Status | Notes |
+|---|---|---|
+| Login, pages wired to the real database | ✅ | Signals/Watchlist/Manual Trades/Dashboard/Performance |
+| Sharekhan connection (AES-256-GCM token exchange) | ✅ | Login expires ~8h; reconnect each morning before 09:15 IST |
+| Simulator mode + Trade button → simulated trade | ✅ | Verified with a real INFY.NS trade |
+| Stock master list (7,551 rows in `scripcodes`) + daily sync job (08:45 IST weekdays) | ✅ | Sync run confirmed; scheduled job created by Lovable |
+| Sharekhan candle API access (labels, response shape) | ✅ | `5minute` etc. verified by live probe; parser fixed for `qty`, D/M/YYYY, oldest-first |
+| Scout: scan ~48 stocks → score → BUY/SELL + ATR levels → write `signals` | 🟡 | Dry run on real data is the next step |
+| Corrected indicators (RSI/ATR/MACD/trend/efficiency), IST time fix, auth hole fix | 🟡 | Verified offline; not yet seen on live data |
+| Rule-based scoring + direction rule (agreement of 3 votes, chop filter, RSI guard) | 🟡 | v1, never back-tested, no evidence of profit |
+
+### What is NOT built yet (ordered; each phase has a gate before the next)
+**Phase A — Finish and verify the data pipeline** ⬜
+1. Dry-run scan of 5 stocks; check prices match the Sharekhan app and the indicators look sane.
+2. First real (non-dry) run when the market opens; inspect `signals`.
+3. Schedule the scout every 1 minute during market hours (function also self-gates to 09:15–15:30 IST, Mon–Fri).
+4. Token expiry handling: confirm real token lifetime, add a "Sharekhan disconnected" alert/banner so scheduled jobs don't silently fail; explore refresh if Sharekhan supports it.
+5. Schedule `market-conditions` (nothing calls it today, so the market multiplier is always "UNKNOWN").
+6. Validate the starter universe (stale/renamed tickers show up as "unresolved"); filter the 7,551 master rows to ordinary equities.
+7. A monitoring view for `system_logs` (errors, last run, signals created).
+*Gate:* signals appear on their own during market hours and prices match Sharekhan.
+
+**Phase B — Prove it earns, on paper (the real test)** ⬜
+1. Cost model in the simulator: brokerage, STT, exchange charges, GST, stamp duty, slippage (currently none, so simulated profit is overstated).
+2. Schedule the automatic paper loop (`process_new_signals` + `monitor_trades`).
+3. Store a snapshot of indicators/score/market state with every signal and trade (this becomes the ML training data).
+4. Results dashboard: win rate, average win/loss, expectancy NET of costs, max drawdown, by time of day / market condition.
+5. Run 3–4+ weeks (enough trades to mean something).
+*Gate:* net-positive expectancy after costs over a meaningful number of trades. If not, fix the strategy; do not go live.
+
+**Phase C — Strategy upgrades, each tested on paper as an on/off switch** ⬜
+Daily-trend filter (e.g. above 20-day average; daily candles confirmed available back to 2000) · yesterday's high/low and support/resistance · NIFTY/sector context · no-trade filters (illiquid, circuit-limit, results days) · position sizing and risk per trade · daily trade/loss limits · time-of-day rules. Keep a change only if paper results improve.
+
+**Phase D — Exits and risk control** ⬜
+Trailing stop-loss · reversal-based exit (the same indicators that triggered entry flip) · time exit before the close (intraday positions must be squared off) · partial profit booking · daily loss limit enforcement · kill switch.
+
+**Phase E — Live tick-by-tick data at scale** ⬜
+Always-on server (~$5–10/month, e.g. Fly.io/Render — Lovable edge functions cannot hold a persistent connection) holding Sharekhan's WebSocket (up to 1,000 symbols per connection) → writes prices to the database → scale the universe (e.g. Nifty 500) → tick-driven exits. Needs reconnect logic and monitoring. *Only after Phase B shows an edge.*
+
+**Phase F — Smarter decisions (ML + news)** ⬜
+News/sentiment source (new cost and integration) · ML model trained on the collected paper/real outcomes (needs hundreds to thousands of trades; walk-forward validation to avoid overfitting) · scheduled retraining and monitoring for drift · post-trade analysis of losing trades. "Learning from mistakes" means statistically refitting on results — it will never reach zero mistakes.
+
+**Phase G — Real-money trading** ⬜
+Order placement through Sharekhan's API (order, modify, cancel, status) · rejections/partial fills/duplicate-order protection · manual-confirm mode before full auto · start with an amount whose total loss would not hurt · **check current SEBI/exchange rules for algorithmic trading through a retail broker API (e.g. registration and static-IP requirements) and Sharekhan's API terms — not yet verified.**
+
+**Phase H — Turn it into a product for other people** ⬜
+Per-user broker connection and settings · more brokers behind a common adapter · permanent published URL (then update Sharekhan's registered redirect URL) · security hardening · error alerts and backups · **legal check: giving buy/sell signals to other people may count as investment advice or research under SEBI rules and may require registration — get proper advice before sharing or charging.**
+
+### Tech debt / cleanup (do alongside, not instead)
+- `sharekhan-market-data` is broken (calls a `get-token` endpoint that doesn't exist) — delete or fix.
+- `alpha-vantage` function still deployed and in `config.toml` — remove.
+- `indicators` and `market-conditions` functions are unscheduled and duplicate logic; `trading-intelligence` has its own copy of the scoring rules — consolidate onto `_shared/`.
+- Stored-token encryption uses an older passphrase style — upgrade (requires one Sharekhan reconnect).
+- Loose `any` typing on Signals/Dashboard/Watchlist screens.
+- Lovable's two security notes (scheduling extension in the shared schema; table names visible to signed-in users) — review later.
+- Per-user risk multiplier is not applied to global signals — apply at trade time.
+
+### Decisions still needed from the owner
+Capital to trade and maximum loss per trade/day · cash segment only, and is shorting allowed? · stock universe (large-caps only, or wider?) · manual confirm vs fully automatic execution · plan for sharing with other people (legal).
 
 ---
 
@@ -212,6 +283,15 @@ Paper-trade outcomes double as the training data ML needs.
 
 **Update 2026-10-03 (first real test):** `scrip-master-sync` job scheduled (weekdays 08:45 IST) and run once: 7,551 stocks in `scripcodes` (Sharekhan sent 7,601; duplicates collapsed). Scout dry-run for RELIANCE/TCS/INFY via browser console: auth OK, token loaded, all 3 scrip codes resolved, requests reached Sharekhan — which answered **HTTP 400 "Invalid Chart Period"** for interval "5". Cause: interval format wrong. Sharekhan's official Java/R/PHP samples use word labels (e.g. "daily"); the 5-minute label is not documented in anything found. **Fix in progress:** scout now accepts an `interval` param and has a read-only `probe` mode that tries 17 candidate labels (incl. "daily" as a control that also validates auth/endpoint/parsing) and reports which Sharekhan accepts. Default is now "5minute" — UNVERIFIED until the probe confirms. Also added a strict TypeScript type-check of all touched functions (stubs for remote modules): passes. (Earlier checks were syntax-only and missed a typing error Lovable fixed at deploy.)
 **Next:** push 2 files (`_shared/sharekhan.ts`, `scout-signals/index.ts`), tell Lovable "Deploy the scout-signals edge function", run probe from the browser console (free), paste result, set the confirmed label as DEFAULT_INTERVAL.
+
+**Update 2026-10-03 (probe result — Sharekhan's real candle API, VERIFIED):**
+- Valid interval labels: `1minute`, `3minute`, `5minute`, `15minute`, `30minute`, `60minute`, `daily` (also `5Minute`). Rejected with HTTP 400 "Invalid Chart Period": `5`, `5min`, `5m`, `5MIN`, `05min`, `1min`, `1m`, `15min`, `30min`, `1hour`. `DEFAULT_INTERVAL = '5minute'` is now confirmed.
+- Auth, endpoint, token loading, scripcodes lookup all confirmed working end-to-end (live call returned HTTP 200 with data).
+- Row shape: `{open, high, low, close, qty, tradeTime:"09:19:52", tradeDate:"28/9/2026"}` — volume is **`qty`**, date is **D/M/YYYY** (unpadded), time HH:MM:SS IST, rows are **oldest-first** spanning many days (5-min: ~657 candles ≈ 9 sessions; 1-min: ~3,249; daily: ~6,652 back to year 2000).
+- **Bug found by the probe:** the parser read blank timestamps and zero volume. Because Sharekhan returns oldest-first, the indicator code would have assumed newest-first and computed everything on a REVERSED series, with relative volume = 0 — plausible-looking but wrong scores. Fixed in `_shared/sharekhan.ts` (builds an ISO IST timestamp from tradeDate+tradeTime, reads `qty`), and it now fails loudly if <90% of candles have a parseable timestamp.
+- Verified offline with mocked data in the exact live shape (10 checks): timestamps, D/M/YYYY, volume, ordering, latest-close, session-anchored VWAP, relative volume, full indicator set, loud failure on missing timestamps. Strict TypeScript check passes.
+- Known limitation: the 5-min series spans ~9 sessions, so ATR / trend strength in the first ~50 minutes of a session include the overnight gap. Acceptable for v1; revisit if signals near the open look odd.
+**Next:** push `_shared/sharekhan.ts`; deploy `scout-signals`, `update-market-data`, `scrip-master-sync` (all bundle that file); dry-run scan of 3 stocks from the console (free); read the real scores; then first real run when the market opens Mon.
 
 ## 📌 Rule for this file going forward
 

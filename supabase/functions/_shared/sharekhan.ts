@@ -18,11 +18,10 @@ import type { Candle } from './indicators.ts'
 const SHAREKHAN_BASE_URL = 'https://api.sharekhan.com'
 const NSE_CASH = 'NC'
 
-// UNVERIFIED: Sharekhan's historical endpoint rejected "5" with
-// "Invalid Chart Period". Its official SDK samples use word labels (e.g.
-// "daily"). "5minute" is the most likely label for 5-minute candles but is
-// NOT confirmed — run scout-signals with {"probe":true} to discover which
-// labels Sharekhan actually accepts, then set the confirmed value here.
+// VERIFIED 2026-10-03 by probe against the live endpoint: Sharekhan accepts the
+// word labels "1minute", "3minute", "5minute", "15minute", "30minute",
+// "60minute" and "daily" (and "5Minute"). It rejects "5", "5min", "5m",
+// "15min", "30min", "1hour" with HTTP 400 "Invalid Chart Period".
 export const DEFAULT_INTERVAL = '5minute'
 
 export interface StoredToken {
@@ -97,6 +96,34 @@ function toNumber(v: unknown): number {
   return Number.isFinite(n) ? n : NaN
 }
 
+
+// Sharekhan candle rows look like (verified from a live response):
+//   { open, high, low, close, qty, tradeTime: "09:19:52", tradeDate: "28/9/2026" }
+// Date is D/M/YYYY (not zero-padded), time is HH:MM:SS in IST, volume is `qty`,
+// and rows come back OLDEST-FIRST spanning many days. Other shapes are still
+// accepted defensively.
+function normalizeTime(t: unknown): string {
+  const m = typeof t === 'string' ? t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/) : null
+  if (!m) return '00:00:00'
+  return `${m[1].padStart(2, '0')}:${m[2]}:${m[3] ?? '00'}`
+}
+
+function buildTimestamp(r: Record<string, unknown>): string {
+  const direct = r.timestamp ?? r.datetime ?? r.time
+  if (typeof direct === 'string' && /^\d{4}-\d{2}-\d{2}/.test(direct)) return direct
+
+  const d = r.tradeDate ?? r.date
+  const t = r.tradeTime ?? r.time
+  if (typeof d === 'string') {
+    const dmy = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    if (dmy) {
+      return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}T${normalizeTime(t)}+05:30`
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(d)) return `${d.slice(0, 10)}T${normalizeTime(t)}+05:30`
+  }
+  return ''
+}
+
 // Historical candles. Response shape is parsed defensively because it has not
 // yet been verified against a live market response.
 export async function fetchCandles(
@@ -158,12 +185,12 @@ export async function fetchCandles(
       c = { timestamp: String(r[0]), open: toNumber(r[1]), high: toNumber(r[2]), low: toNumber(r[3]), close: toNumber(r[4]), volume: toNumber(r[5]) }
     } else {
       c = {
-        timestamp: String(r.time ?? r.timestamp ?? r.date ?? r.datetime ?? ''),
+        timestamp: buildTimestamp(r),
         open: toNumber(r.open),
         high: toNumber(r.high),
         low: toNumber(r.low),
         close: toNumber(r.close ?? r.ltp),
-        volume: toNumber(r.volume ?? r.vol ?? 0),
+        volume: toNumber(r.qty ?? r.volume ?? r.vol ?? r.quantity ?? 0),
       }
     }
     if (c.close > 0 && c.high > 0 && c.low > 0 && !Number.isNaN(c.open)) {
@@ -174,6 +201,13 @@ export async function fetchCandles(
 
   if (candles.length === 0) {
     return { candles: null, status: resp.status, error: 'rows present but none parsed as valid candles', sample }
+  }
+
+  // Without real timestamps we can't order candles, and indicators computed on
+  // a wrongly-ordered series look plausible but are wrong. Fail loudly instead.
+  const stamped = candles.filter((c) => c.timestamp !== '').length
+  if (stamped < candles.length * 0.9) {
+    return { candles: null, status: resp.status, error: 'could not parse candle timestamps', sample }
   }
   return { candles, status: resp.status, error: null, sample }
 }
