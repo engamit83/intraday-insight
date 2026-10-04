@@ -33,7 +33,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyAuth, corsHeaders, isTrustedInternalRequest, isValidSymbol, sanitizeSymbol } from '../_shared/auth.ts'
 import { computeIndicators, type Candle } from '../_shared/indicators.ts'
 import {
-  calculateRawScore, decideDirection, buildLevels, describeAnalysis,
+  calculateRawScore, calculateScoreUncapped, decideDirection, buildLevels, describeAnalysis, assessFreshness,
   getTimeMultiplier, getMarketMultiplier, isMarketOpenIST,
 } from '../_shared/scoring.ts'
 import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay, DEFAULT_INTERVAL } from '../_shared/sharekhan.ts'
@@ -46,6 +46,7 @@ const DEFAULT_MAX_ACTIVE = 10
 const SIGNAL_TTL_MINUTES = 30
 const CALL_DELAY_MS = 400          // ~2 requests/second, deliberately conservative
 const MAX_RUNTIME_MS = 110_000     // stop gracefully before the platform limit
+const STALE_MINUTES = 15           // newest candle older than this (or not from today) => skip
 
 // Candidate interval labels for probe mode. "daily" is the one label seen in
 // Sharekhan's official SDK samples, so it doubles as a control: if it works,
@@ -62,6 +63,9 @@ interface SymbolResult {
   price?: number
   rawScore?: number
   finalScore?: number
+  rankScore?: number
+  asOf?: string | null
+  ageMin?: number | null
   direction?: 'BUY' | 'SELL' | null
   reason?: string
   levels?: { entry: number; stoploss: number; target: number }
@@ -212,14 +216,31 @@ Deno.serve(async (req) => {
     }
 
     const candles = newestFirst(fetched.candles)
+
+    // Freshness / holiday guard. Enforced for any run that writes, or any
+    // non-forced run; a forced dry run just reports it.
+    const stamps = candles.map((c) => new Date(c.timestamp).getTime()).filter((x) => Number.isFinite(x))
+    const fresh = assessFreshness(stamps.length ? Math.max(...stamps) : null, Date.now(), STALE_MINUTES)
+    if (fresh.stale && (!force || !dryRun)) {
+      results.push({
+        symbol, status: 'skipped', asOf: fresh.asOf, ageMin: fresh.ageMin,
+        reason: `stale data (newest candle ${fresh.asOf ?? 'unknown'}, ${fresh.ageMin ?? '?'} min old, same day: ${fresh.sameDay})`,
+      })
+      await delay(CALL_DELAY_MS)
+      continue
+    }
+
     const ind = computeIndicators(candles)
     const rawScore = calculateRawScore(ind)
     const finalScore = Math.round(rawScore * marketMult * timeMult)
+    // Uncapped score x multipliers: what we actually RANK by (see scoring.ts).
+    const rankScore = Math.round(calculateScoreUncapped(ind) * marketMult * timeMult * 10) / 10
     const dir = decideDirection(ind)
     const levels = dir.direction ? buildLevels(dir.direction, ind) : null
 
     results.push({
-      symbol, status: 'scored', price: ind.lastClose ?? undefined, rawScore, finalScore,
+      symbol, status: 'scored', price: ind.lastClose ?? undefined, rawScore, finalScore, rankScore,
+      asOf: fresh.asOf, ageMin: fresh.ageMin,
       direction: dir.direction, reason: dir.reason, levels: levels ?? undefined,
       indicators: { rsi: ind.rsi, vwap: ind.vwap, atr: ind.atr, macdHistogram: ind.macdHistogram, relativeVolume: ind.relativeVolume, trendStrength: ind.trendStrength, efficiency: ind.efficiencyRatio, pattern: ind.patternDetected },
       analysis: describeAnalysis(ind),
@@ -241,7 +262,7 @@ Deno.serve(async (req) => {
   const scored = results.filter((r) => r.status === 'scored')
   const selected = scored
     .filter((r) => r.direction && r.levels && (r.finalScore ?? 0) >= minScore && marketMult > 0 && timeMult > 0)
-    .sort((a, b) => (b.finalScore ?? 0) - (a.finalScore ?? 0))
+    .sort((a, b) => (b.rankScore ?? 0) - (a.rankScore ?? 0) || (b.finalScore ?? 0) - (a.finalScore ?? 0))
 
   const written = { inserted: 0, updated: 0, deactivated: 0, expired: 0, capped: 0 }
 
@@ -264,7 +285,7 @@ Deno.serve(async (req) => {
       const existing = activeBySymbol.get(r.symbol) ?? []
       const sameDir = existing.filter((e) => e.signal_type === r.direction)
       const otherDir = existing.filter((e) => e.signal_type !== r.direction)
-      const indicatorsJson = { ...r.analysis, numeric: r.indicators, direction_reason: r.reason, source: 'scout-v1' }
+      const indicatorsJson = { ...r.analysis, numeric: r.indicators, rank_score: r.rankScore, as_of: r.asOf, direction_reason: r.reason, source: 'scout-v1' }
 
       if (otherDir.length) {
         await supabase.from('signals').update({ is_active: false, rejection_reason: 'direction flipped' }).in('id', otherDir.map((e) => e.id))
@@ -309,10 +330,13 @@ Deno.serve(async (req) => {
     written.expired = expiredRows?.length ?? 0
 
     // Keep only the top `maxActive` by score.
-    const { data: allActive } = await supabase.from('signals')
-      .select('id, final_score').eq('is_active', true).order('final_score', { ascending: false })
-    if (allActive && allActive.length > maxActive) {
-      const drop = allActive.slice(maxActive).map((s: { id: string }) => s.id)
+    const { data: allActiveRaw } = await supabase.from('signals')
+      .select('id, final_score, indicators').eq('is_active', true)
+    type ActiveRow = { id: string; final_score: number | null; indicators: { rank_score?: number } | null }
+    const allActive = ((allActiveRaw ?? []) as ActiveRow[])
+      .sort((a, b) => (b.indicators?.rank_score ?? b.final_score ?? 0) - (a.indicators?.rank_score ?? a.final_score ?? 0))
+    if (allActive.length > maxActive) {
+      const drop = allActive.slice(maxActive).map((row) => row.id)
       await supabase.from('signals').update({ is_active: false, rejection_reason: 'outranked' }).in('id', drop)
       written.capped = drop.length
     }
@@ -336,9 +360,9 @@ Deno.serve(async (req) => {
     qualified: selected.length,
     written,
     durationMs: Date.now() - started,
-    top: selected.slice(0, 10).map((r) => ({ symbol: r.symbol, direction: r.direction, finalScore: r.finalScore, ...r.levels })),
+    top: selected.slice(0, 10).map((r) => ({ symbol: r.symbol, direction: r.direction, finalScore: r.finalScore, rankScore: r.rankScore, asOf: r.asOf, ...r.levels })),
     results: results.map((r) => ({
-      symbol: r.symbol, status: r.status, direction: r.direction, rawScore: r.rawScore, finalScore: r.finalScore,
+      symbol: r.symbol, status: r.status, direction: r.direction, rawScore: r.rawScore, finalScore: r.finalScore, rankScore: r.rankScore, asOf: r.asOf, ageMin: r.ageMin,
       price: r.price, reason: r.reason, httpStatus: r.httpStatus, sample: r.status === 'error' ? r.sample : undefined,
     })),
   }

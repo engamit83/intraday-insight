@@ -59,7 +59,12 @@ export function getMarketMultiplier(marketCondition: string): number {
 }
 
 // ---------- raw score (ported point rules) ----------
-export function calculateRawScore(ind: Indicators): number {
+// Uncapped total (50 base + up to 90 from components = 50..140). The original
+// formula clipped this at 100, so most decent setups tied at 100 and the score
+// could not rank them (measured: 32 of 47 stocks scored exactly 100). Ranking
+// uses this uncapped value; the 0-100 `calculateRawScore` below is kept for
+// display and for compatibility with the rest of the app.
+export function calculateScoreUncapped(ind: Indicators): number {
   let score = 50
 
   // Trend strength (0-25)
@@ -101,7 +106,11 @@ export function calculateRawScore(ind: Indicators): number {
     score += ind.macdHistogram > 0 ? 10 : 8
   }
 
-  return Math.min(100, Math.round(score))
+  return Math.round(score)
+}
+
+export function calculateRawScore(ind: Indicators): number {
+  return Math.min(100, calculateScoreUncapped(ind))
 }
 
 // ---------- direction ----------
@@ -184,4 +193,27 @@ export function describeAnalysis(ind: Indicators) {
     trend_analysis: trendAnalysis,
     pattern_detected: ind.patternDetected ?? 'N/A',
   }
+}
+
+// ---------- data freshness ----------
+export interface Freshness {
+  asOf: string | null     // ISO time of the newest candle
+  ageMin: number | null   // minutes since that candle
+  sameDay: boolean        // newest candle is from today (IST)
+  stale: boolean          // not same-day, unparseable, or older than staleMinutes
+}
+
+const IST_MS = 5.5 * 60 * 60 * 1000
+const istDateKey = (ms: number) => new Date(ms + IST_MS).toISOString().slice(0, 10)
+
+// The market-hours gate cannot know exchange holidays, so on a weekday holiday
+// the "latest candle" is from the previous session. This catches that, and
+// also halted/illiquid stocks whose last candle is old.
+export function assessFreshness(latestMs: number | null, nowMs: number, staleMinutes = 15): Freshness {
+  if (latestMs === null || !Number.isFinite(latestMs)) {
+    return { asOf: null, ageMin: null, sameDay: false, stale: true }
+  }
+  const ageMin = Math.round((nowMs - latestMs) / 60000)
+  const sameDay = istDateKey(latestMs) === istDateKey(nowMs)
+  return { asOf: new Date(latestMs).toISOString(), ageMin, sameDay, stale: !sameDay || ageMin > staleMinutes }
 }

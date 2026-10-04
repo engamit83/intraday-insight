@@ -11,11 +11,13 @@
 // A WebSocket feed is the path to scanning more (up to 1,000 symbols per
 // connection) — planned as a later phase.
 
+// Note: Tata Motors split into two listed companies; Sharekhan's master list
+// shows them as TMPV (passenger vehicles) and TMCV (commercial vehicles).
 export const STARTER_UNIVERSE: string[] = [
   'RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'INFY', 'HINDUNILVR', 'ITC', 'SBIN',
   'BHARTIARTL', 'KOTAKBANK', 'LT', 'AXISBANK', 'ASIANPAINT', 'MARUTI', 'SUNPHARMA',
   'TITAN', 'ULTRACEMCO', 'BAJFINANCE', 'NESTLEIND', 'WIPRO', 'HCLTECH', 'ONGC',
-  'NTPC', 'POWERGRID', 'M&M', 'TATAMOTORS', 'TATASTEEL', 'JSWSTEEL', 'ADANIENT',
+  'NTPC', 'POWERGRID', 'M&M', 'TMPV', 'TMCV', 'TATASTEEL', 'JSWSTEEL', 'ADANIENT',
   'ADANIPORTS', 'COALINDIA', 'BAJAJFINSV', 'TECHM', 'INDUSINDBK', 'HINDALCO',
   'GRASIM', 'CIPLA', 'DRREDDY', 'EICHERMOT', 'APOLLOHOSP', 'DIVISLAB', 'BPCL',
   'BRITANNIA', 'HEROMOTOCO', 'SBILIFE', 'HDFCLIFE', 'TATACONSUM', 'BAJAJ-AUTO',
