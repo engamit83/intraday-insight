@@ -2,7 +2,7 @@
 
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
-**Last updated:** 2026-10-03
+**Last updated:** 2026-10-06
 
 ---
 
@@ -37,22 +37,24 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 | Simulator mode + Trade button → simulated trade | ✅ | Verified with a real INFY.NS trade |
 | Stock master list (7,551 rows in `scripcodes`) + daily sync job (08:45 IST weekdays) | ✅ | Sync run confirmed; scheduled job created by Lovable |
 | Sharekhan candle API access (labels, response shape) | ✅ | `5minute` etc. verified by live probe; parser fixed for `qty`, D/M/YYYY, oldest-first |
-| Scout: scan ~48 stocks → score → BUY/SELL + ATR levels → write `signals` | 🟡 | Dry run on real data is the next step |
-| Corrected indicators (RSI/ATR/MACD/trend/efficiency), IST time fix, auth hole fix | 🟡 | Verified offline; not yet seen on live data |
+| Scout v2: scan 49 stocks → score → rank (uncapped score) → BUY/SELL + ATR levels → write `signals` | 🟡 | Dry runs verified on Thu 1 Oct data (5 prices match the Sharekhan app exactly). Never run on live intraday data; NOT scheduled (see 2026-10-05 finding) |
+| Freshness / holiday guard (`asOf`, skips data not from today or >15 min old) | ✅ | Worked as designed on Mon 5 Oct: skipped every stock because Sharekhan's REST candles were stale |
+| Live feed: laptop program + `feed-gateway` function + `live_candles` table | 🟡 | Built and deployed; wiring check passed 6 Oct 23:12 IST. NOT yet run against Sharekhan's real stream (first test Wed 7 Oct ~09:00 IST) |
+| Corrected indicators (RSI/ATR/MACD/trend/efficiency), IST time fix, auth hole fix | 🟡 | Verified offline and on last-session candles; indicator values not cross-checked against a charting tool |
 | Rule-based scoring + direction rule (agreement of 3 votes, chop filter, RSI guard) | 🟡 | v1, never back-tested, no evidence of profit |
 
 ### What is NOT built yet (ordered; each phase has a gate before the next)
-**Phase A — Finish and verify the data pipeline** ⬜
-1. Dry-run scan of 5 stocks; check prices match the Sharekhan app and the indicators look sane.
+**Phase A — Finish and verify the data pipeline** 🔶 IN PROGRESS — blocked on live data (see 2026-10-05 / 2026-10-06 entries)
+1. ✅ DONE 2026-10-04 — Dry-run scan of 5 stocks; check prices match the Sharekhan app and the indicators look sane.
 2. First real (non-dry) run when the market opens; inspect `signals`.
-3. Schedule the scout every 1 minute during market hours (function also self-gates to 09:15–15:30 IST, Mon–Fri). The job authenticates with the `x-job-token` header (project convention in AGENTS.md); `scout-signals` and `update-market-data` now accept it via `isTrustedInternalRequest`.
+3. **BLOCKED (2026-10-05): do not schedule yet — the scout reads Sharekhan's REST candles, which are not live during the session. Needs the live feed first.** Schedule the scout every 1 minute during market hours (function also self-gates to 09:15–15:30 IST, Mon–Fri). The job authenticates with the `x-job-token` header (project convention in AGENTS.md); `scout-signals` and `update-market-data` now accept it via `isTrustedInternalRequest`.
 4. Token expiry handling: confirm real token lifetime, add a "Sharekhan disconnected" alert/banner so scheduled jobs don't silently fail; explore refresh if Sharekhan supports it.
 5. Schedule `market-conditions` (nothing calls it today, so the market multiplier is always "UNKNOWN").
-6. Validate the starter universe (stale/renamed tickers show up as "unresolved" — TATAMOTORS is unresolved today; find its current symbol in `scripcodes`); filter the 7,551 master rows to ordinary equities.
+6. ✅ DONE 2026-10-04 (TATAMOTORS → TMPV + TMCV) — Validate the starter universe (stale/renamed tickers show up as "unresolved" — TATAMOTORS is unresolved today; find its current symbol in `scripcodes`); filter the 7,551 master rows to ordinary equities.
 7. A monitoring view for `system_logs` (errors, last run, signals created).
-8. **MUST be done before scheduling the scout.** Add the latest candle's timestamp (`asOf`) to every result, and when not forced skip any stock whose latest candle is not from today or is older than ~15 min. Reason: the 09:15–15:30 gate cannot know exchange holidays, so on a weekday holiday (next: Tue 20 Oct Dussehra, Tue 10 Nov, Tue 24 Nov, Fri 25 Dec) the scout would otherwise create signals from the previous session's data.
-9. Fix score saturation (see 2026-10-04 note): rank by an uncapped score or recalibrate, so the best stocks can actually be told apart.
-*Gate:* signals appear on their own during market hours and prices match Sharekhan.
+8. ✅ DONE 2026-10-04 — **MUST be done before scheduling the scout.** Add the latest candle's timestamp (`asOf`) to every result, and when not forced skip any stock whose latest candle is not from today or is older than ~15 min. Reason: the 09:15–15:30 gate cannot know exchange holidays, so on a weekday holiday (next: Tue 20 Oct Dussehra, Tue 10 Nov, Tue 24 Nov, Fri 25 Dec) the scout would otherwise create signals from the previous session's data.
+9. ✅ DONE 2026-10-04 — Fix score saturation (see 2026-10-04 note): rank by an uncapped score or recalibrate, so the best stocks can actually be told apart.
+*Gate:* signals appear on their own during market hours and prices match Sharekhan. *Status 2026-10-06: prices match (verified on last-session data); signals during market hours need the live feed.*
 
 **Phase B — Prove it earns, on paper (the real test)** ⬜
 1. Cost model in the simulator: brokerage, STT, exchange charges, GST, stamp duty, slippage (currently none, so simulated profit is overstated).
@@ -69,8 +71,8 @@ Concentration limits (max signals per direction / per sector — the 48-stock sc
 **Phase D — Exits and risk control** ⬜
 Trailing stop-loss · reversal-based exit (the same indicators that triggered entry flip) · time exit before the close (intraday positions must be squared off) · partial profit booking · daily loss limit enforcement · kill switch.
 
-**Phase E — Live tick-by-tick data at scale** ⬜
-Always-on server (~$5–10/month, e.g. Fly.io/Render — Lovable edge functions cannot hold a persistent connection) holding Sharekhan's WebSocket (up to 1,000 symbols per connection) → writes prices to the database → scale the universe (e.g. Nifty 500) → tick-driven exits. Needs reconnect logic and monitoring. *Only after Phase B shows an edge.*
+**Phase E — Live tick-by-tick data at scale** 🔶 PULLED FORWARD (now required for Phase A). Laptop version built 2026-10-06; not yet run against the real stream
+Always-on server (~$5–10/month, e.g. Fly.io/Render — Lovable edge functions cannot hold a persistent connection) holding Sharekhan's WebSocket (up to 1,000 symbols per connection) → writes prices to the database → scale the universe (e.g. Nifty 500) → tick-driven exits. Needs reconnect logic and monitoring. *(Superseded 2026-10-05: REST candles are not live during the session, so no live signal can exist without a live feed. Scaling the universe and tick-driven exits remain gated on Phase B.)*
 *Verified from Sharekhan's official Python SDK source (read 2026-10-03), for when we build this:* connect to `wss://stream.sharekhan.com/skstream/api/stream?ACCESS_TOKEN=<token>`; send the text `ping` as a heartbeat; subscribe with `{"action":"subscribe","key":["feed"],"value":[""]}`, then request prices with `{"action":"feed","key":["ltp"],"value":["NC22,NC2885,..."]}` (instrument id = exchange code + scrip code, comma-separated; `unsubscribe` uses the same shape); the SDK re-subscribes after a reconnect. Cautions: the SDK turns TLS certificate checking OFF — do not copy that; the token travels in the URL, so the server must never log the connection URL. Only the `ltp` (last price) key appears in the example; richer feeds are not yet seen.
 
 **Phase F — Smarter decisions (ML + news)** ⬜
@@ -83,6 +85,9 @@ Order placement through Sharekhan's API (order, modify, cancel, status) · rejec
 Per-user broker connection and settings · more brokers behind a common adapter · permanent published URL (then update Sharekhan's registered redirect URL) · security hardening · error alerts and backups · **legal check: giving buy/sell signals to other people may count as investment advice or research under SEBI rules and may require registration — get proper advice before sharing or charging.**
 
 ### Tech debt / cleanup (do alongside, not instead)
+- `live_candles` grows every day (49 stocks ≈ 37k rows/day; 1,000 stocks ≈ 400k) — add a scheduled clean-up of rows older than N days.
+- Live feed restart mid-day: the candle being built at that moment is rebuilt from the restart only and can overwrite a fuller row (upsert). Fix by merging (max high / min low) or reloading today's rows at start.
+- `feed-gateway` allowlist comes from `_shared/universe.ts`; growing the universe means editing that file and redeploying the gateway and scout.
 - `sharekhan-market-data` is broken (calls a `get-token` endpoint that doesn't exist) — delete or fix.
 - `alpha-vantage` function still deployed and in `config.toml` — remove.
 - `indicators` and `market-conditions` functions are unscheduled and duplicate logic; `trading-intelligence` has its own copy of the scoring rules — consolidate onto `_shared/`.
@@ -327,6 +332,47 @@ Paper-trade outcomes double as the training data ML needs.
 3. If fresh and sensible, ONE Lovable message: "Create a scheduled job that calls the scout-signals edge function every minute on weekdays, cron `* 3-10 * * 1-5` (UTC; the function itself ignores times outside 09:15–15:30 IST). Send the x-job-token header exactly like the stock-list sync job does, with body {}. Run it once now and show me the function's JSON response plus the job definition with the token hidden."
 4. Watch the Signals page (max 10 active, 30-min expiry) and `system_logs` (source `scout-signals`).
 5. Nothing trades automatically yet — signals are only displayed; paper trading is Phase B.
+
+## 📡 2026-10-05 / 06 — Live-data finding and the live-feed build
+
+**Finding (Mon 5 Oct ~10:35 IST, owner-run scan of 49 stocks, NOT forced):** `marketOpen` = true, but every stock was skipped as stale. Newest candle = Thu 1 Oct 15:29 IST (age ≈ 5,465 min). *Conclusion (inference from this result plus Sharekhan's FAQ and broker comparisons — not confirmed by Sharekhan):* the REST historical-candle endpoint does not return the current session's candles while the market is open. Live signals therefore need the WebSocket feed. The every-minute scout job is on hold. The freshness guard did its job: it refused to trade on old data.
+
+**Probe + scan, Tue 6 Oct 21:46 IST (RELIANCE, after hours):** every valid label returned data. Candle counts: daily 6,653 · 5minute 365 · 1minute 1,805 · 3minute 605 · 15minute 125 · 30minute 299 · 60minute 161. Scan of RELIANCE/TCS/INFY: newest candle = Mon 5 Oct 15:29 IST (age ≈ 1,815 min).
+- (a) Monday's full session is available after hours.
+- (b) **UNRESOLVED:** nothing from Tue 6 Oct at 21:46 IST. Tue 6 Oct is not in the holiday list above, so either Sharekhan publishes the day's candles later, or it was a holiday. The owner has not confirmed. Re-check on Wed morning.
+- (c) **UNEXPLAINED:** the counts and first-candle dates do not fit a simple "last N sessions ending Mon 5 Oct, oldest-first" picture (e.g. 5minute: 365 candles yet the first is already Mon 5 Oct 09:19; 1minute: 1,805 candles, first Mon 5 Oct 09:15; while the 30/60-minute series start on Thu 1 Oct). The earlier probe (Sat 3 Oct) had 657 five-minute candles starting 28 Sep, oldest-first. **Before using this API for back-testing, pull one series and tabulate candles per date and check the order.** My earlier remark that "about 5 days of 1-min and 5-min data" are available was an inference, not verified.
+
+**Decision (owner, 6 Oct):** the intent is live signals during market hours, so the live feed comes first. Start on the owner's Windows laptop (free); move the same program to a small always-on server later. A phone cannot be the server (it pauses background programs).
+
+**Built 2026-10-06** (pack `live-feed-pack.zip`):
+- `D:\intraday\live-feed\` (deliberately OUTSIDE the repo because it holds `.env`):
+  - `feed.mjs` — gets today's token + stock list from the gateway, connects to `wss://stream.sharekhan.com/skstream/api/stream`, sends the same two messages as Sharekhan's sample (`subscribe`, then `feed` with `ltp` and `NC<scripcode>` ids), builds candles, saves every 5 s, pings every 30 s, reconnects with back-off, stops at 15:35 IST.
+  - `candles.mjs` — 1-min and 5-min candles from ticks. Only ticks 09:15:00–15:29:59 IST count. Candle time = start of its window. 5-min candles are built from the 1-min ones. Volume = per-tick quantity, or the difference of a running total.
+  - `parse.mjs` — reads price messages. **This is a GUESS:** Sharekhan's SDK shows how to connect and subscribe, but its message parser is an empty stub, so the real tick layout is unknown.
+  - `check-gateway.mjs`, `test-offline.mjs`, `test-e2e.mjs`. First 400 raw messages are saved to `raw_ticks.log` (token scrubbed) so the parser can be fixed from real data.
+- Edge function `feed-gateway` (in repo, `verify_jwt = false`): auth = header `x-job-token` equal to `internal_job_tokens` row named `feed`. Actions: `token` (returns today's decrypted Sharekhan token + the 49 scrip codes) and `candles` (validates, then upserts into `live_candles`; symbols must be in the universe; max 600 rows per call). The laptop never holds the service-role key or the encryption key — only the revocable feed token.
+- Table `live_candles` (symbol, timeframe `1min`/`5min`, bucket_start, OHLC, volume, tick_count; primary key symbol+timeframe+bucket_start; RLS: signed-in users read, service role writes). Created, with the feed token, by `setup.sql`. Re-running `setup.sql` makes a new FEED_TOKEN and kills the old one.
+- Security notes: the Sharekhan token travels in the WebSocket URL, so the program never prints it (errors are scrubbed). TLS verification stays ON (Sharekhan's SDK turns it off — not copied). `.env` is git-ignored. Lovable offered to create the feed token itself and hand over a downloadable file; declined, so the secret never passes through Lovable's chat or files. Never paste FEED_TOKEN or `.env` into chat.
+
+**Verified:**
+- Offline: 20 candle/parser checks pass; whole-program test against fake servers passes; strict TypeScript check of the gateway passes.
+- Owner's laptop (Node v22.20.0, 6 Oct 23:17 IST): `npm test` → 30 of 31 checks pass. The failing one ("shut down cleanly on Ctrl+C") is expected to be a Windows limitation of the test (killing a child process with SIGINT ends it without running its handler). That is my explanation, not verified; a real Ctrl+C is to be checked on the first run.
+- Gateway deployed by Lovable; answers 401 without a token. `check-gateway.mjs` on the laptop at 23:12 IST: FEED_TOKEN accepted, Sharekhan login found (~6h27m left), 49 stocks ready.
+
+**NOT verified:** that Sharekhan's stream accepts our subscribe as written · what a tick looks like (field names, whether it is last price only, whether it carries volume and what kind) · that `stream.sharekhan.com` passes normal TLS verification · reconnect behaviour on a real drop · how many connections one login may open · the ~1,000-symbols-per-connection cap (from reading Sharekhan's docs; untested).
+
+**Not wired yet:** the scout still reads REST candles. Next, once real ticks are confirmed: add a live path to `scout-signals` that reads `live_candles`. Open design point: indicators like RSI/MACD need history, so the first ~15–20 minutes of a session are weak (plan: don't trust scores before ~09:30) and mixing in earlier REST history needs a decision.
+
+**WED 7 OCT PLAYBOOK (first live test):**
+1. Laptop plugged in, sleep set to Never, stable Wi-Fi.
+2. Before 09:00: app → Settings → **Connect Sharekhan** (tonight's login expires ~05:40 IST).
+3. ~09:00 in Git Bash: `cd /d/intraday/live-feed` then `node feed.mjs`.
+4. Watch the status line every 30 s: messages, prices used, stocks seen (N/49), candle saves.
+5. ~09:30: send a screenshot of the window and `raw_ticks.log` (never `.env` or the token).
+6. Stop with Ctrl+C and look for "Stopping - saving the last candles...".
+7. Optional: re-run the probe/scan to see whether Tue 6 Oct candles have appeared (item (b) above).
+
+**Question asked 2026-10-06: "can we feed all stocks live?"** Not all in one connection: the cap is ~1,000 (untested) and NSE has 2,000+; extra connections per login are untested. The laptop is not the limit. Illiquid stocks give noisy, untradeable signals; the best day-trading picks are almost always the most liquid few hundred. Plan: 49 (Wed test) → ~200 → up to ~1,000 ranked by traded volume, once the feed is proven.
 
 ## 📌 Rule for this file going forward
 
