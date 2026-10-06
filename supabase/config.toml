@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.scout-signals]
 verify_jwt = false
+
+[functions.feed-gateway]
+verify_jwt = false
