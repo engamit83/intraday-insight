@@ -594,6 +594,28 @@ Base = v3 incl. today's volume ≥ 1.2×. `tools/backtest/run-revisit.mjs`. New 
 5-min / 30-min net Rs: none +806 / +12,911 · ≥1.0× +1,050 / +9,076 · **≥1.2× +3,279 / +11,975** · ≥1.5× +262 / +10,141 (30-min win 58%, DD −6,244) · ≥2.0× +2,168 / +4,396 (too few trades) · ≥1.2× AND current candle ≥1.0× +2,963 / +11,529 (DD −7,773). 1.2× is the best balance on both; 1.5× is a candidate for a "stricter" mode.
 **Rule set v3 (updated):** market filter · relative strength · beyond yesterday's high/low · **today's volume ≥ 1.2× usual (mandatory)** · entries only 10:00–14:00 · top 3 per decision · one trade per stock per day · max 10/day · **stop new trades after −Rs 2,000 on the day** · stop 2×ATR, target 2R · breakeven after 1R · square-off 15:15.
 
+## 🛡 2026-10-07/08 (night) — Owner's idea: softer volume entry + manage the trade after entry
+
+**Owner's idea:** take a stock when volume is RISING or BURSTS (not only a big daily total); after entry keep watching — if price or volume weakens, tighten the stop so we exit with a small profit / no loss; if it stalls short of target and candles turn, exit early.
+**Built (28 offline checks, mutation-tested):** `volMode` soft/either; exits: trailing stop (k×ATR from best close, never loosens), profit lock (+1R → stop at entry + costs = no-loss; +1.5R → lock +0.75R), reversal exit (in profit, close back below previous candle low or VWAP → exit next open), volume-fade exit (in profit, candle against us with below-usual and falling volume → exit next open). `tools/backtest/run-manage.mjs`. Base v3 now includes entries 10:00–14:00 and the Rs 2,000 daily loss limit.
+
+| variant | 5-min (4 days) net Rs / win % / max DD | 30-min (20 days) net Rs / win % / max DD |
+|---|---|---|
+| M0 v3 | +3,652 / 37% / −3,607 | +11,061 / 53% / −7,773 |
+| M1 soft volume (rising OR burst) | +6,554 / 44% / −3,332 | +2,302 / 51% / −10,668 (inconsistent) |
+| M2 either volume (day 1.2× OR burst 2× OR rising) | +5,997 / 44% / −3,733 | +10,717 / 52% / −8,099 |
+| M3 trailing stop 1.5 ATR | +3,719 / 45% / −2,838 | +13,108 / 54% / −7,012 |
+| **M4 profit lock** | **+5,321 / 63% / −3,460** | **+12,094 / 58% / −7,481** |
+| M5 reversal exit | +102 / 57% / −2,566 | +10,487 / 56% / −5,863 |
+| M6 volume-fade exit | −42 | +2,868 (hurts) |
+| M7 all smart exits | −660 | +7,621 |
+| M11 v3 + lock + trail | +3,561 / 52% / −2,692 | +14,666 / 58% / −6,866 |
+| M12 either volume + lock | +8,448 / 67% / −3,460 | +12,003 / 57% / −7,806 |
+| **M13 either volume + lock + trail** | **+5,452 / 50% / −2,692** | **+14,232 / 56% / −7,020** |
+
+**Reading:** the owner's idea works in its simple forms: the PROFIT LOCK (move the stop to no-loss at +1R, lock profit at +1.5R) improved both data sets and raised the win rate to ~60%; a trailing stop helped; the softer "either" volume rule helped. The "exit at the first sign of weakness" rules (reversal, volume fade) exited too early — the price often dips and continues — and reduced profit, so they are OFF. M13 improved both data sets AND lowered the worst losing run in both → becomes rule set v4. Same caveats: ~24 days, many variants tried; paper-trade before real money.
+**Rule set v4:** market filter · relative strength · beyond yesterday's high/low · volume: today ≥ 1.2× usual OR a burst ≥ 2× usual in the last candle OR volume rising 3 candles in a row (with today ≥ 1.0×) · entries 10:00–14:00 · top 3 per decision · one trade per stock per day · max 10/day · stop for the day at −Rs 2,000 · stop 2×ATR, target 2R · at +1R stop moves to no-loss, at +1.5R locks +0.75R · trailing stop 1.5×ATR from the best close · square-off 15:15.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.

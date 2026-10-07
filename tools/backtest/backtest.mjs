@@ -44,7 +44,16 @@ export const DEFAULTS = {
   todRvolMin: null,        // switch: the candle that just closed traded >= X times its usual volume for that time slot
   dayRvolMin: null,        // switch: today's volume SO FAR >= X times the usual volume by this time of day
   volRising: false,        // switch: participation rising: the last candle's slot-relative volume > the one before
-  volRankWeight: null,     // switch: no filtering; rank higher-volume stocks first: rank x (1 + w x (min(dayRvol,3) - 1))
+  volRankWeight: null,
+  // Softer volume entry (owner's idea): instead of only "day volume >= X":
+  //  'soft'   = day volume >= 1.0x usual AND (slot volume rising over the last 3 candles OR this candle >= 1.5x usual)
+  //  'either' = day volume >= 1.2x usual OR this candle >= 2x usual (burst) OR (rising 3 candles AND day >= 1.0x)
+  volMode: null,
+  // Smart exits (manage the trade after entry):
+  trailAtrMult: null,      // trailing stop: stop follows the best close by k x ATR (never loosens)
+  lockProfit: false,       // at +1R move stop to entry + costs (no-loss); at +1.5R lock +0.75R
+  reversalExit: false,     // in profit and the candle turns against us (close beyond previous candle's low/high, or back across VWAP) -> exit next open
+  volFadeExit: false,      // in profit, candle against us and its volume below usual and falling -> exit next open     // switch: no filtering; rank higher-volume stocks first: rank x (1 + w x (min(dayRvol,3) - 1))
   dailyTrendDays: null,    // switch: BUY only if yesterday's close is above its N-day average of daily closes, SELL below
   maxGapPct: null,         // switch: skip a stock for the day if it opened more than X% away from yesterday's close
   openingRangeMin: null,   // switch: no entries until the first N minutes are over; BUY only above that range's high, SELL only below its low
@@ -200,6 +209,7 @@ export function runBacktest(data, options = {}) {
         dayOpen: d.list[0].open,
         prevClose: prevDayCandle ? prevDayCandle.close : null,
         prevDay: prevDayCandle ? daily[s][prevDayCandle.day] : null,
+        vwap: (() => { let pv = 0, v = 0; return d.list.map((c) => { pv += ((c.high + c.low + c.close) / 3) * c.volume; v += c.volume; return v > 0 ? pv / v : null }) })(),
         trendAvg: null,
       }
       if (o.dailyTrendDays) {
@@ -225,6 +235,11 @@ export function runBacktest(data, options = {}) {
         const j = ctx[s].byBucket.get(bucket)
         if (j === undefined) continue
         const c = ctx[s].list[j]
+        if (p.exitNext) {
+          close(p, c.open, p.exitNext, bucket, true)
+          open.delete(s); cooldownUntil.set(s, t + o.cooldownMin)
+          continue
+        }
         if (bucket >= o.squareOff) {
           close(p, c.open, 'squareoff', bucket, true)
           open.delete(s); cooldownUntil.set(s, t + o.cooldownMin)
@@ -235,16 +250,45 @@ export function runBacktest(data, options = {}) {
         if (hitStop) {
           // gap through the stop fills at the open
           const px = p.direction === 'BUY' ? Math.min(c.open, p.stop) : Math.max(c.open, p.stop)
-          close(p, px, p.atBreakeven ? 'breakeven' : 'stop', bucket, true)
+          close(p, px, p.locked ? 'lockedstop' : p.atBreakeven ? 'breakeven' : 'stop', bucket, true)
         } else if (hitTarget) {
           close(p, p.target, 'target', bucket, false)
         } else if (o.timeStopMin && t + step - toMin(p.entryTime) >= o.timeStopMin &&
           (!o.timeStopLosersOnly || (p.direction === 'BUY' ? c.close <= p.entry : c.close >= p.entry))) {
           close(p, c.close, 'timestop', bucket, true)
         } else {
+          const B = p.direction === 'BUY'
+          const better = (a, b) => (B ? Math.max(a, b) : Math.min(a, b)) // tighter stop
           if (o.breakevenAtR && !p.atBreakeven) {
-            const gain = p.direction === 'BUY' ? c.high - p.entry : p.entry - c.low
-            if (gain >= o.breakevenAtR * p.stopDist) { p.stop = p.entry; p.atBreakeven = true }
+            const gain = B ? c.high - p.entry : p.entry - c.low
+            if (gain >= o.breakevenAtR * p.stopDist) { p.stop = better(p.stop, p.entry); p.atBreakeven = true }
+          }
+          p.bestExc = Math.max(p.bestExc ?? 0, B ? c.high - p.entry : p.entry - c.low)
+          p.bestClose = p.bestClose === undefined ? c.close : B ? Math.max(p.bestClose, c.close) : Math.min(p.bestClose, c.close)
+          if (o.lockProfit) {
+            const r = p.bestExc / p.stopDist
+            const noLoss = p.entry * (costPct / 100 + 2 * o.slippagePct / 100)
+            if (r >= 1.5) { p.stop = better(p.stop, B ? p.entry + 0.75 * p.stopDist : p.entry - 0.75 * p.stopDist); p.locked = true }
+            else if (r >= 1) { p.stop = better(p.stop, B ? p.entry + noLoss : p.entry - noLoss); p.locked = true }
+          }
+          if (o.trailAtrMult && p.atr) {
+            const trail = B ? p.bestClose - o.trailAtrMult * p.atr : p.bestClose + o.trailAtrMult * p.atr
+            const before = p.stop
+            p.stop = better(p.stop, trail)
+            if (p.stop !== before && (B ? p.stop > p.entry : p.stop < p.entry)) p.locked = true
+          }
+          const inProfit = B ? c.close > p.entry : c.close < p.entry
+          if (inProfit && (o.reversalExit || o.volFadeExit)) {
+            const prev = j > 0 ? ctx[s].list[j - 1] : null
+            const against = B ? c.close < c.open : c.close > c.open
+            if (o.reversalExit && prev) {
+              const vw = ctx[s].vwap[j]
+              if ((B ? c.close < prev.low : c.close > prev.high) || (vw && (B ? c.close < vw : c.close > vw))) p.exitNext = 'reversal'
+            }
+            if (!p.exitNext && o.volFadeExit && against && prev) {
+              const vs = volStats(s, day, bucket, prev.bucket)
+              if (vs.tod !== null && vs.prevTod !== null && vs.tod < 1 && vs.tod < vs.prevTod) p.exitNext = 'volfade'
+            }
           }
           continue
         }
@@ -306,6 +350,16 @@ export function runBacktest(data, options = {}) {
         const pc = ctx[s].prevClose
         if (o.prevCloseFilter && pc && ((dir.direction === 'BUY' && ind.lastClose <= pc) || (dir.direction === 'SELL' && ind.lastClose >= pc))) continue
         let rankScore = calculateScoreUncapped(ind) * timeMult
+        if (o.volMode) {
+          const vs = volStats(s, day, bucket, j > 0 ? ctx[s].list[j - 1].bucket : null)
+          const r2 = j > 1 ? volStats(s, day, ctx[s].list[j - 1].bucket, ctx[s].list[j - 2].bucket) : null
+          const rising3 = vs.tod !== null && vs.prevTod !== null && r2 && r2.prevTod !== null && r2.prevTod < vs.prevTod && vs.prevTod < vs.tod
+          const day1 = vs.dayR !== null && vs.dayR >= 1.0
+          const ok = o.volMode === 'soft'
+            ? day1 && (rising3 || (vs.tod !== null && vs.tod >= 1.5))
+            : (vs.dayR !== null && vs.dayR >= 1.2) || (vs.tod !== null && vs.tod >= 2) || (rising3 && day1)
+          if (!ok) continue
+        }
         if (o.todRvolMin !== null || o.dayRvolMin !== null || o.volRising || o.volRankWeight !== null) {
           const vs = volStats(s, day, bucket, j > 0 ? ctx[s].list[j - 1].bucket : null)
           if (o.todRvolMin !== null && !(vs.tod !== null && vs.tod >= o.todRvolMin)) continue
@@ -332,7 +386,7 @@ export function runBacktest(data, options = {}) {
         const entry = cand.dir === 'BUY' ? nextOpen + slip : nextOpen - slip
         open.set(cand.s, {
           symbol: cand.s, day, direction: cand.dir, signalTime: bucket, entryTime: nextBucket,
-          signalPrice: cand.ind.lastClose, entry, stop: lv.stop, target: lv.target, stopDist: Math.abs(cand.ind.lastClose - lv.stop),
+          signalPrice: cand.ind.lastClose, entry, stop: lv.stop, target: lv.target, stopDist: Math.abs(cand.ind.lastClose - lv.stop), atr: cand.ind.atr,
           rankScore: Math.round(cand.rankScore * 10) / 10,
         })
       }
@@ -389,6 +443,9 @@ export function summarize(trades, o = DEFAULTS) {
       squareoff: trades.filter((t) => t.reason === 'squareoff').length,
       timestop: trades.filter((t) => t.reason === 'timestop').length,
       breakeven: trades.filter((t) => t.reason === 'breakeven').length,
+      lockedstop: trades.filter((t) => t.reason === 'lockedstop').length,
+      reversal: trades.filter((t) => t.reason === 'reversal').length,
+      volfade: trades.filter((t) => t.reason === 'volfade').length,
     },
     buy: trades.filter((t) => t.direction === 'BUY').length,
     sell: trades.filter((t) => t.direction === 'SELL').length,

@@ -256,4 +256,34 @@ check('levels "either" accepts at least as many trades as "both"', () => {
   assert.ok(either >= both && either > 0)
 })
 
+check('smart exits: profit lock never turns a locked trade into a big loss; reversal/volume-fade exits fill at the next open', () => {
+  const bucket = (ts) => ts.slice(11, 13) + ':' + String(Math.floor(Number(ts.slice(14, 16)) / 5) * 5).padStart(2, '0')
+  const r = runBacktest(trendy, { lockProfit: true, reversalExit: true, volFadeExit: true })
+  const locked = r.trades.filter((t) => t.reason === 'lockedstop')
+  const rev = r.trades.filter((t) => t.reason === 'reversal' || t.reason === 'volfade')
+  assert.ok(locked.length > 0 && rev.length > 0, `locked ${locked.length} rev ${rev.length}`)
+  // a locked stop sits at entry+costs or better; only a gap through it can lose, and then only by the gap
+  for (const t of locked) {
+    const c = trendy.results[t.symbol].candles.find((x) => x[0].startsWith(t.day) && bucket(x[0]) === t.exitTime)
+    const gapped = t.direction === 'BUY' ? c[1] < t.stop : c[1] > t.stop
+    if (!gapped) assert.ok(t.netPct > -0.01, `locked trade lost ${t.netPct}`)
+  }
+  for (const t of rev) {
+    const c = trendy.results[t.symbol].candles.find((x) => x[0].startsWith(t.day) && bucket(x[0]) === t.exitTime)
+    const exp = t.direction === 'BUY' ? c[1] * (1 - DEFAULTS.slippagePct / 100) : c[1] * (1 + DEFAULTS.slippagePct / 100)
+    assert.ok(Math.abs(t.exit - exp) < 1e-9)
+  }
+})
+check('trailing stop locks gains on trending data; volume modes produce trades', () => {
+  const r = runBacktest(trendy, { trailAtrMult: 1 })
+  assert.ok(r.trades.some((t) => t.reason === 'lockedstop'))
+  for (const t of r.trades.filter((t) => t.reason === 'lockedstop')) assert.ok(t.grossPct > -0.2)
+  for (const m of ['soft', 'either']) assert.ok(runBacktest(trendy, { volMode: m }).trades.length > 0, m)
+})
+
+check('a very loose trailing stop never loosens the original stop (same result as no trailing)', () => {
+  const key = (r) => r.trades.map((t) => t.symbol + t.day + t.exitTime + t.reason).join()
+  assert.equal(key(runBacktest(trendy, { trailAtrMult: 100 })), key(runBacktest(trendy)))
+})
+
 console.log(`\nAll ${passed} checks passed.`)
