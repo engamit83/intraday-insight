@@ -38,6 +38,12 @@ export const DEFAULTS = {
   onePerStockPerDay: false,// switch: each stock traded at most once a day
   relStrength: false,      // switch: BUY only if the stock is up MORE than the average stock today, SELL only if down more
   minRelVolume: null,      // switch: require relative volume >= this (e.g. 1.2)
+  dailyTrendDays: null,    // switch: BUY only if yesterday's close is above its N-day average of daily closes, SELL below
+  maxGapPct: null,         // switch: skip a stock for the day if it opened more than X% away from yesterday's close
+  openingRangeMin: null,   // switch: no entries until the first N minutes are over; BUY only above that range's high, SELL only below its low
+  prevDayLevels: false,    // switch: BUY only above yesterday's high, SELL only below yesterday's low
+  breakevenAtR: null,      // switch: once the trade gains R x the stop distance, move the stop to the entry price
+  timeStopMin: null,       // switch: exit at the candle close if neither stop nor target is hit within N minutes
   dailyLossLimitRs: null,  // switch: no new entries once the day's closed trades lost this many rupees (e.g. 5000)
   stopAtrMult: 1.5,        // live: STOP_ATR_MULT
   minStopPct: 0.25,        // live: MIN_STOP_PCT
@@ -127,6 +133,16 @@ export function runBacktest(data, options = {}) {
     })
   }
 
+  // daily bars per stock (from the intraday candles) for the daily-trend and previous-day rules
+  const daily = {}
+  for (const s of symbols) {
+    daily[s] = {}
+    for (const [d, v] of Object.entries(byDay[s])) {
+      daily[s][d] = { high: Math.max(...v.list.map((c) => c.high)), low: Math.min(...v.list.map((c) => c.low)), close: v.list[v.list.length - 1].close }
+    }
+  }
+  const dayIndex = new Map(days.map((d, i) => [d, i]))
+
   for (const day of days) {
     const open = new Map()       // symbol -> position
     const cooldownUntil = new Map()
@@ -147,6 +163,20 @@ export function runBacktest(data, options = {}) {
         first: d.first,
         dayOpen: d.list[0].open,
         prevClose: prevDayCandle ? prevDayCandle.close : null,
+        prevDay: prevDayCandle ? daily[s][prevDayCandle.day] : null,
+        trendAvg: null,
+      }
+      if (o.dailyTrendDays) {
+        const past = days.slice(0, dayIndex.get(day)).map((d) => daily[s][d]?.close).filter((x) => x !== undefined)
+        if (past.length >= o.dailyTrendDays) ctx[s].trendAvg = past.slice(-o.dailyTrendDays).reduce((a, b) => a + b, 0) / o.dailyTrendDays
+      }
+      if (o.maxGapPct !== null && ctx[s].prevClose && Math.abs(ctx[s].dayOpen / ctx[s].prevClose - 1) * 100 > o.maxGapPct) { delete ctx[s]; continue }
+      if (o.openingRangeMin) {
+        const orEnd = fromMin(OPEN_MIN + o.openingRangeMin)
+        const orC = d.list.filter((c) => c.bucket < orEnd)
+        ctx[s].orEnd = orEnd
+        ctx[s].orHigh = Math.max(...orC.map((c) => c.high))
+        ctx[s].orLow = Math.min(...orC.map((c) => c.low))
       }
       anyTradable = true
     }
@@ -169,10 +199,18 @@ export function runBacktest(data, options = {}) {
         if (hitStop) {
           // gap through the stop fills at the open
           const px = p.direction === 'BUY' ? Math.min(c.open, p.stop) : Math.max(c.open, p.stop)
-          close(p, px, 'stop', bucket, true)
+          close(p, px, p.atBreakeven ? 'breakeven' : 'stop', bucket, true)
         } else if (hitTarget) {
           close(p, p.target, 'target', bucket, false)
-        } else continue
+        } else if (o.timeStopMin && t + step - toMin(p.entryTime) >= o.timeStopMin) {
+          close(p, c.close, 'timestop', bucket, true)
+        } else {
+          if (o.breakevenAtR && !p.atBreakeven) {
+            const gain = p.direction === 'BUY' ? c.high - p.entry : p.entry - c.low
+            if (gain >= o.breakevenAtR * p.stopDist) { p.stop = p.entry; p.atBreakeven = true }
+          }
+          continue
+        }
         open.delete(s); cooldownUntil.set(s, t + step + o.cooldownMin)
       }
 
@@ -217,6 +255,14 @@ export function runBacktest(data, options = {}) {
           const chg = (ind.lastClose / ctx[s].dayOpen - 1) * 100
           if ((dir.direction === 'BUY' && chg <= breadth) || (dir.direction === 'SELL' && chg >= breadth)) continue
         }
+        const B = dir.direction === 'BUY'
+        if (o.dailyTrendDays && ctx[s].trendAvg !== null && ctx[s].prevClose !== null &&
+          (B ? ctx[s].prevClose <= ctx[s].trendAvg : ctx[s].prevClose >= ctx[s].trendAvg)) continue
+        if (o.openingRangeMin) {
+          if (nextBucket < ctx[s].orEnd) continue
+          if (B ? ind.lastClose <= ctx[s].orHigh : ind.lastClose >= ctx[s].orLow) continue
+        }
+        if (o.prevDayLevels && ctx[s].prevDay && (B ? ind.lastClose <= ctx[s].prevDay.high : ind.lastClose >= ctx[s].prevDay.low)) continue
         const pc = ctx[s].prevClose
         if (o.prevCloseFilter && pc && ((dir.direction === 'BUY' && ind.lastClose <= pc) || (dir.direction === 'SELL' && ind.lastClose >= pc))) continue
         const rankScore = calculateScoreUncapped(ind) * timeMult
@@ -239,7 +285,7 @@ export function runBacktest(data, options = {}) {
         const entry = cand.dir === 'BUY' ? nextOpen + slip : nextOpen - slip
         open.set(cand.s, {
           symbol: cand.s, day, direction: cand.dir, signalTime: bucket, entryTime: nextBucket,
-          signalPrice: cand.ind.lastClose, entry, stop: lv.stop, target: lv.target,
+          signalPrice: cand.ind.lastClose, entry, stop: lv.stop, target: lv.target, stopDist: Math.abs(cand.ind.lastClose - lv.stop),
           rankScore: Math.round(cand.rankScore * 10) / 10,
         })
       }
@@ -294,6 +340,8 @@ export function summarize(trades, o = DEFAULTS) {
       target: trades.filter((t) => t.reason === 'target').length,
       stop: trades.filter((t) => t.reason === 'stop').length,
       squareoff: trades.filter((t) => t.reason === 'squareoff').length,
+      timestop: trades.filter((t) => t.reason === 'timestop').length,
+      breakeven: trades.filter((t) => t.reason === 'breakeven').length,
     },
     buy: trades.filter((t) => t.direction === 'BUY').length,
     sell: trades.filter((t) => t.direction === 'SELL').length,

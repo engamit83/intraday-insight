@@ -517,6 +517,24 @@ New back-test switches (all tested, 18 offline checks, mutation-tested): top-N p
 
 **Reading:** combining the rules works much better than any single rule: losses shrink about 90% and the 30-minute test turns slightly positive (#9: +Rs 6,934 over 20 days, max drawdown −Rs 10,238). BUT: +0.035% per trade on 197 trades is well inside noise; 12 variants were tried (some will look good by luck); #8/#9 lost in the FIRST half of both data sets and gained in the second. Verdict: a promising direction worth building into the scout and paper-trading, NOT evidence of profit. Real money stays off.
 
+## 🧪 2026-10-07 (late night) — Batch 2: items 4, 7, 12, 16 tested (base = #9)
+
+New switches (21 offline checks, mutation-tested): daily trend (N-day average of daily closes), skip gap opens, opening-range breakout, beyond yesterday's high/low, breakeven after R, time stop.
+
+| variant | 5-min (5 days) net Rs | 30-min (20 days) net Rs | 30-min NET exp % | 30-min max DD Rs | 30-min 1st / 2nd half Rs |
+|---|---|---|---|---|---|
+| 9 fewer-but-better + wider (base) | −3,303 | +6,934 | +0.035 | −10,238 | −598 / +7,533 |
+| 12 + daily trend (5-day) | −4,929 | −9,234 | −0.050 | −15,422 | −1,461 / −7,773 |
+| 13 + skip gap opens > 1.5% | −2,927 | +259 | +0.001 | −13,174 | −1,638 / +1,898 |
+| 14 + opening-range breakout | −6,301 | +11,400 | +0.058 | −10,412 | −2,610 / +14,010 |
+| **15 + beyond yesterday high/low** | **−2,541** | **+12,627** | **+0.068** | **−7,030** | −4,191 / +16,818 |
+| 16 + breakeven after 1R | −2,290 | +6,890 | +0.035 | −10,301 | −1,449 / +8,339 |
+| 17 + time stop 90 min | −5,657 | −25,636 | −0.130 | −28,018 | −9,146 / −16,490 |
+
+**Reading:** only #15 (trade only beyond yesterday's high/low) improved on BOTH data sets and lowered drawdown in both; #16 (breakeven) helped slightly on 5-min, neutral on 30-min. Daily trend and time stop hurt; gap filter neutral; opening range helped on 30-min but hurt on 5-min (inconsistent → off). 18 variants have now been tried on the same ~25 days, so the best ones are flattered by luck; the first half of every good variant is still negative.
+**Candidate rule set "scout v3" (to build as switches, then paper-trade, NOT real money):** market filter + relative strength + no entries before 10:00 + top 3 per decision + one trade per stock per day + max 10 trades/day + stop 2×ATR / target 2R + only beyond yesterday's high/low (+ optional breakeven after 1R for the paper exits).
+**Not testable on history:** spread check (no past bid/offer), alerts, exposure in rupees (needs capital), special days (too few in sample).
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.

@@ -9,6 +9,7 @@ const file = process.argv[2]
 const arg = (name) => { const a = process.argv.find((x) => x.startsWith(`--${name}=`)); return a ? Number(a.split('=')[1]) : undefined }
 const data = JSON.parse(readFileSync(file, 'utf8'))
 const common = { costs: { brokeragePct: arg('brokerage') ?? 0.03 }, marketFilter: true }
+const wide = { stopAtrMult: 2, rewardRisk: 2 }
 const fewer = { relStrength: true, onePerStockPerDay: true, maxTradesPerDay: 10, topN: 3, noEntryBefore: '10:00' }
 
 const variants = [
@@ -24,6 +25,13 @@ const variants = [
   ['9 = 8 + wider levels (2xATR, 2R)', { ...fewer, stopAtrMult: 2, rewardRisk: 2 }],
   ['10 = 8 + volume >= 1.2x', { ...fewer, minRelVolume: 1.2 }],
   ['11 = 8 + daily loss limit Rs 5,000', { ...fewer, dailyLossLimitRs: 5000 }],
+  // second batch (added after batch 1; base = #9). Fixed before running batch 2.
+  ['12 = 9 + daily trend (5-day average)', { ...fewer, ...wide, dailyTrendDays: 5 }],
+  ['13 = 9 + skip gap opens > 1.5%', { ...fewer, ...wide, maxGapPct: 1.5 }],
+  ['14 = 9 + opening-range breakout (30 min)', { ...fewer, ...wide, openingRangeMin: 30 }],
+  ['15 = 9 + beyond yesterday high/low', { ...fewer, ...wide, prevDayLevels: true }],
+  ['16 = 9 + breakeven after 1R', { ...fewer, ...wide, breakevenAtR: 1 }],
+  ['17 = 9 + time stop 90 min', { ...fewer, ...wide, timeStopMin: 90 }],
 ]
 
 const first = runBacktest(data, { ...common, ...variants[0][1] })

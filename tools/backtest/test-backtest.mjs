@@ -188,4 +188,34 @@ check('relative-strength and volume switches only remove trades', () => {
   assert.ok(rv.trades.length < base)
 })
 
+check('daily trend, gap, opening range and previous-day filters only remove trades and obey their rule', () => {
+  const noisy = makeData({ days: 14, seed: 11, drift: (d, k) => (d % 3 === 0 ? 0.0004 : -0.0002) * (k % 2 ? 1 : -1) })
+  const base = runBacktest(noisy).trades.length
+  for (const opts of [{ dailyTrendDays: 3 }, { maxGapPct: 0.01 }, { openingRangeMin: 30 }, { prevDayLevels: true }]) {
+    const r = runBacktest(noisy, opts)
+    assert.ok(r.trades.length < base, JSON.stringify(opts) + ' removed nothing')
+  }
+  const orr = runBacktest(trendy, { openingRangeMin: 30 }).trades
+  assert.ok(orr.length > 0 && orr.every((t) => t.entryTime >= '09:45'))
+  // opening-range rule: BUY signal price above the 09:15-09:45 high
+  for (const t of orr) {
+    const day = trendy.results[t.symbol].candles.filter((c) => c[0].startsWith(t.day) && c[0].slice(11, 16) < '09:45')
+    const hi = Math.max(...day.map((c) => c[2])), lo = Math.min(...day.map((c) => c[3]))
+    assert.ok(t.direction === 'BUY' ? t.signalPrice > hi : t.signalPrice < lo)
+  }
+})
+check('time stop: no trade is held longer than the limit (plus one candle)', () => {
+  const min = (s) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5))
+  const r = runBacktest(trendy, { timeStopMin: 30 }).trades
+  assert.ok(r.some((t) => t.reason === 'timestop'))
+  for (const t of r) assert.ok(min(t.exitTime) - min(t.entryTime) <= 25, `${t.entryTime}->${t.exitTime}`) // exit at the close of the candle starting 25 min after entry
+  for (const t of r.filter((x) => x.reason === 'timestop')) assert.equal(min(t.exitTime) - min(t.entryTime), 25)
+})
+check('breakeven: after the move, a stop-out exits at the entry price (minus slippage), never at the original stop', () => {
+  const r = runBacktest(trendy, { breakevenAtR: 0.5 }).trades
+  const be = r.filter((t) => t.reason === 'breakeven')
+  assert.ok(be.length > 0)
+  for (const t of be) assert.ok(Math.abs(t.grossPct) < 0.2 + 2 * DEFAULTS.slippagePct, `${t.grossPct}`)
+})
+
 console.log(`\nAll ${passed} checks passed.`)
