@@ -158,6 +158,45 @@ export type Database = {
         }
         Relationships: []
       }
+      live_candles: {
+        Row: {
+          bucket_start: string
+          close: number
+          high: number
+          low: number
+          open: number
+          symbol: string
+          tick_count: number
+          timeframe: string
+          updated_at: string
+          volume: number
+        }
+        Insert: {
+          bucket_start: string
+          close: number
+          high: number
+          low: number
+          open: number
+          symbol: string
+          tick_count?: number
+          timeframe: string
+          updated_at?: string
+          volume?: number
+        }
+        Update: {
+          bucket_start?: string
+          close?: number
+          high?: number
+          low?: number
+          open?: number
+          symbol?: string
+          tick_count?: number
+          timeframe?: string
+          updated_at?: string
+          volume?: number
+        }
+        Relationships: []
+      }
       market_conditions: {
         Row: {
           condition: string
