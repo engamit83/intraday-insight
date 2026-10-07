@@ -42,6 +42,104 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 
 ---
 
+## 📘 RULEBOOK — every trading rule we decided, by implementation stage (2026-10-08)
+
+This is the single list of rules. Evidence for each tested rule is in the dated back-test sections further down. Earlier lists (the 19-item "strengthening plan", the phase backlog) are folded in here. Status: ✅ IN (tested, kept) · ❌ OUT (tested, dropped) · 🔜 TO BUILD/TEST (stage shown) · 👁 LIVE-ONLY (cannot be back-tested; judge on paper).
+
+### A. Rule set v4 — tested, goes live in Stage 1 (watch/paper only)
+Back-test v4 vs the original rules: 5-min (4 days) +Rs 5,452 vs −Rs 47,771 baseline · 30-min (20 days) +Rs 14,232 vs −Rs 43,366. Small sample, many variants tried → paper first.
+
+| # | Rule | Exact setting | Status |
+|---|---|---|---|
+| A1 | Timeframe | 5-minute candles, scout re-runs every minute (includes the forming candle) | ✅ |
+| A2 | Market filter | BUY only when the market (average of scanned stocks, later Nifty) is up on the day; SELL only when down | ✅ best single rule |
+| A3 | Relative strength | BUY only if the stock is up more than the market; SELL only if down more | ✅ |
+| A4 | Key level | BUY only above yesterday's high; SELL only below yesterday's low | ✅ |
+| A5 | Volume (mandatory, any one) | today's volume so far ≥ 1.2× its usual by this time of day (5-day average) OR the last candle ≥ 2× usual for its slot (burst) OR slot volume rising 3 candles in a row with today ≥ 1.0× | ✅ |
+| A6 | Direction votes | trend + MACD line + VWAP, ≥ 2 agree, none against; chop filter (efficiency ≥ 0.3); RSI guard (no BUY > 75, no SELL < 25) | ✅ kept for now — **weak on its own (zero edge before costs); replaced by setups in Stage 3** |
+| A7 | Entry time | new entries only 10:00–14:00 | ✅ |
+| A8 | How many | top 3 per decision · one trade per stock per day · max 10 trades per day · max 10 open | ✅ |
+| A9 | Daily loss stop | no new trades after the day's closed trades lose Rs 2,000 | ✅ safety |
+| A10 | Entry price | next candle's open (no chasing the signal candle) | ✅ |
+| A11 | Initial stop / target | stop = max(2×ATR, 0.25%) ; target = 2× the stop distance | ✅ |
+| A12 | Profit lock | at +1× stop distance → stop to entry + costs (no-loss); at +1.5× → lock +0.75× | ✅ owner's idea, raised win rate to ~60% |
+| A13 | Trailing stop | stop follows the best close by 1.5×ATR, never loosens | ✅ |
+| A14 | Square-off | everything closed at 15:15 | ✅ |
+| A15 | Costs in every test | brokerage 0.03%/side (to confirm), STT, exchange, SEBI, stamp, GST, slippage 0.02%/side | ✅ |
+
+### B. Tested and dropped (can be revisited with more data)
+| Rule | Why out |
+|---|---|
+| Old volume rule (last 2 candles vs previous 20 of the same day) | measured time of day, not interest → replaced by A5 |
+| "Volume rising candle-to-candle" alone; ranking by volume | hurt / no effect |
+| Time stop (all, 90/180 min; losers-only 60/120 min) | always worse — trades need time to reach target |
+| Exit at first weakness (reversal candle / below VWAP; volume fade) | exited too early, price usually continues → replaced by A12 profit lock |
+| Daily trend from a 5-day average | worse — too crude; **re-test with real daily candles in Stage 3** |
+| Gap filter (skip >1.5% gaps) / trade only if gap holds | no effect |
+| Opening-range breakout (as filter or as alternative level) | inconsistent between data sets → off |
+| Yesterday's-close filter | inconsistent → replaced by A4 |
+| Entry window starting 09:30 | no help; 10:00 start is better |
+
+### C. To build / test, by stage
+**Stage 1 (Thu 8 – Fri 9 Oct)** — put section A into `scout-signals` as switches (same logic as the back-tester); every-minute job; feed starts SAVING: total buy qty / total sell qty, best bid / offer, and index prices (Nifty 50, Bank Nifty, sector indices, India VIX — codes to verify). 👁 Alerts on the Signals page when the feed stops or the Sharekhan login expires.
+
+**Stage 2 (weekend 10–11 Oct) — whole-market funnel**
+| # | Rule |
+|---|---|
+| C1 | Scan ALL NSE stocks every morning; keep tradeable ones: average daily turnover ≥ Rs 20–50 crore, price ≥ Rs 50 |
+| C2 | Exclude ASM/GSM lists, trade-to-trade series, F&O ban list, stocks Sharekhan does not allow for intraday (data sources to confirm) → ~300–600 stocks |
+| C3 | Feed on the whole tradeable list (test the ~1,000-per-connection cap); history download (30-min + daily) for back-tests; stock → sector map |
+
+**Stage 3 (week of 12 Oct) — strategy v5 (back-test against v4; keep only what wins on both data sets and both halves)**
+| # | Rule |
+|---|---|
+| C4 | **Stocks in play first:** shortlist 20–40 stocks with unusual volume + gap / news / new high-low + strength vs market and sector; full analysis only on these, trade the top 3 |
+| C5 | **Setup 1 — Momentum breakout:** stock in play breaks a key level (yesterday's high/low, opening range, VWAP reclaim) with volume, in the market's and sector's direction |
+| C6 | **Setup 2 — VWAP pullback:** trending stock dips to VWAP on falling volume, bounces on rising volume |
+| C7 | **Setup 3 — Range trading (owner's idea):** stock looping between X and Y (≥ 2 touches each side, flat VWAP, low efficiency). BUY near X on a rejection candle with selling volume drying up → exit just below Y; at Y, only on a rejection candle, SHORT → cover just above X. Max 2 round trips per stock per day; after one stop-out stop that stock for the day; stop just outside the range; range ≥ ~0.8–1% to beat costs; short side only if market not strongly up (long side only if not strongly down); shortable stocks only; if the range breaks with volume → switch to Setup 1 in that direction. "One trade per stock per day" does not apply |
+| C8 | **Day type:** detect trend day vs range day (first hour range + how many stocks rise vs fall). Trend day → setups 1–2; range day → setup 3; unclear → trade less |
+| C9 | **Ranking by setup quality:** unusual volume × relative strength × closeness of the logical stop (replaces the RSI/MACD points score A6) |
+| C10 | **Thesis stops:** stop where the idea is proven wrong (back below the breakout level / VWAP / range edge, or the market turns); dips that hold the level are ignored |
+| C11 | **Let winners run:** book half at 1.5–2× the stop distance, stop to no-loss, trail the rest to the structure break or 15:15 |
+| C12 | **Position size by risk:** same rupee risk per trade (0.5–1% of capital — owner to decide); tight stop = more shares |
+| C13 | **Sector rotation:** BUY the strongest stock in the strongest sector, SELL the weakest in the weakest; max 2 open trades per sector |
+| C14 | **Higher timeframe:** trade 5-min setups only in the direction of the hourly and daily trend (re-test daily trend with real daily candles, 20-day average) |
+| C15 | **Avoid times:** first 5–15 minutes, lunch chop (~12:30–13:30, to test), results/news minutes for that stock |
+| C16 | **Over-fitting guard:** tune on earlier days, judge on later unseen days (walk-forward); keep only rules that win in both halves |
+
+**Stage 4 (week of 12–19 Oct) — paper trading + journal**
+| # | Rule |
+|---|---|
+| C17 | Paper fills at the next real price + slippage + full costs |
+| C18 | Journal: every signal and trade with its reasons and an indicator snapshot (training data for ML later) |
+| C19 | Results screen: win rate, average win/loss, net per trade, worst losing run, by setup / hour / sector / day type |
+| C20 | 👁 Pre-market plan 09:00–09:15: Gift Nifty, global cues, pre-open data → watchlist before the bell (data source to confirm) |
+| C21 | 👁 News / results / announcements feed for "in play" (NSE announcements — source to confirm) |
+
+**Stage 5 (2–4 weeks of paper) — prove it**
+| # | Rule |
+|---|---|
+| C22 | 👁 Order-book pressure: buyers ≫ sellers + rising volume as confirmation (from data saved since Stage 1) |
+| C23 | 👁 Real index context: Nifty / sector index / India VIX instead of the 49-stock average |
+| C24 | 👁 Spread check: skip stocks whose bid-offer gap is wide |
+| C25 | 👁 Special days: expiry, budget/policy days, big gap days → smaller size or no trade |
+| C26 | Weekly re-test of every rule on the growing data; pass mark: positive net after costs over 100+ trades |
+
+**Stage 6 (after Stage 5 passes) — real money, small**
+| # | Rule |
+|---|---|
+| C27 | Orders via Sharekhan with manual confirm; limit orders near the price, not market orders |
+| C28 | Smallest size; daily AND weekly loss limits; overall exposure cap (max open trades and max total money at risk) |
+| C29 | Intraday margin/leverage only after real-money results match paper |
+| C30 | Check SEBI / Sharekhan rules for API trading before going live |
+
+**Stage 7 (later) — scale:** feed on an always-on server · ML model trained on the journal · bigger size for A+ setups · size up slowly (compounding) · multi-user only after a legal check.
+
+### D. Process rules (always)
+1. No rule goes live unless it improved BOTH back-test data sets and both halves. 2. The owner approves every change to live rules. 3. Re-test weekly. 4. One trading feed only. 5. Never paste tokens in chat. 6. Update this rulebook whenever a rule changes status.
+
+---
+
 ## 🗺 MASTER PLAN & FEATURE BACKLOG (single source of truth — read this first)
 
 **Intent (never lose sight of this):** an app that scans many stocks, decides which to BUY/SELL using technical analysis (later news and wider market context too), exits fast to cut losses and lock profit, learns from its own results, and — if the evidence supports it — earns money for the owner, and later for other users with their own brokers. **Loss avoidance (added 2026-10-07):** it comes mainly from risk rules, market context and tested filters, NOT from piling on more indicators. Every strengthening step below is added one at a time, as an on/off switch, and kept only if net-of-cost paper results improve.
@@ -422,7 +520,7 @@ Paper-trade outcomes double as the training data ML needs.
 4. Thu 8 Oct ~09:30 IST: dry run WITHOUT `force`; if fresh and sensible, ONE Lovable message to create the every-minute job (cron `* 3-10 * * 1-5` UTC, `x-job-token`, body `{}`). Reconnect Sharekhan first; start exactly one feed ~09:00.
 5. Then Phase B (paper trading with costs).
 
-## 🧱 2026-10-07 — Expert review: what makes the app stronger (added to the plan)
+## 🧱 2026-10-07 — Expert review: what makes the app stronger (SUPERSEDED by the RULEBOOK at the top; kept for history)
 
 **Verdict on the current rules:** a fair first version for finding *clear trends*, not strong enough to build money on. Honest limit: no factor set gives "max profit, almost no loss"; the realistic aim is small controlled losses and a small edge that survives costs.
 
@@ -572,26 +670,6 @@ New switches (21 offline checks, mutation-tested): daily trend (N-day average of
 
 **Decision:** add "today's volume so far ≥ 1.2× its usual by this time" to v3 — better profit per trade on BOTH data sets with ~30% fewer trades (lower cost and risk). Slot volume ≥ 1.5× was best on 5-min but weak on 30-min (inconsistent → not used). "Volume rising" hurts. Same caveats: few days, many variants tried.
 **Rule set v3 (final candidate):** market filter · relative strength · beyond yesterday's high/low · today's volume ≥ 1.2× usual · no entries before 10:00 · top 3 per decision · one trade per stock per day · max 10/day · stop 2×ATR, target 2R · breakeven after 1R.
-
-## 🔁 2026-10-07 (late night) — Second look at the ruled-out rules (base = v3 incl. volume)
-
-Reframed the way a trader uses them (new switches: time stop for LOSERS only, above/below today's open, either-level breakout; 25 offline checks, mutation-tested). Compared on days with volume history (5-min: 30 Sep–6 Oct; 30-min: 7 Sep–6 Oct).
-
-| variant | 5-min net Rs / exp % | 30-min net Rs / exp % / max DD |
-|---|---|---|
-| v3 | +3,279 / +0.102 | +11,975 / +0.094 / −8,812 |
-| time stop, losers only, 60 min | +660 | −1,723 |
-| time stop, losers only, 120 min | +1,122 | +1,946 |
-| time stop, all, 180 min | +1,569 | +1,503 |
-| above/below today's open | identical to v3 (already implied) | identical |
-| no entries after 14:30 | +3,745 / +0.121 | +11,543 / +0.093 / −8,496 |
-| **no entries after 14:00** | **+3,652 / +0.122** | **+11,899 / +0.101 / −7,773** |
-| either level (yesterday OR opening range) | −910 | +15,222 (inconsistent) |
-| opening range as well | −2,262 | +8,680 |
-| **daily loss limit Rs 2,000** | +3,279 (never hit) | **+12,176 / −7,773** |
-
-**Verdicts:** every form of time stop hurts (trades need time to reach a 2R target; breakeven + 15:15 square-off already protect) → off for good. Opening range: inconsistent in every form → off. "Gap held" adds nothing. Two safety rules join v3 because they cost nothing and cut the worst run: no new entries after 14:00 (not enough time left for a 2R target) and a daily loss limit (Rs 2,000 at Rs 1 lakh per trade; scale to capital later). Daily trend is NOT ruled out yet: the earlier test used a noisy 5-day average from 24 days; it needs the 20-day average from DAILY candles (download pending).
-**Rule set v3 (updated):** market filter · relative strength · beyond yesterday's high/low · today's volume ≥ 1.2× usual · entries 10:00–14:00 · top 3 per decision · one trade per stock per day · max 10/day · daily loss limit · stop 2×ATR, target 2R · breakeven after 1R · square-off 15:15.
 
 ## 🔁 2026-10-07 (late night) — Second look at the ruled-out rules (reframed like a trader would use them)
 
