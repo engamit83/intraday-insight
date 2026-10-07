@@ -237,4 +237,23 @@ check('volume rank weight changes the order but never filters', () => {
   assert.notEqual(ka, kb, 'a large volume weight should change which stock is picked at least once')
 })
 
+check('time stop for losers only never cuts a winning trade early; above-day-open filter obeys its rule', () => {
+  const min = (x) => Number(x.slice(0, 2)) * 60 + Number(x.slice(3, 5))
+  const r = runBacktest(trendy, { timeStopMin: 30, timeStopLosersOnly: true }).trades
+  const ts = r.filter((x) => x.reason === 'timestop')
+  assert.ok(ts.length > 0)
+  for (const x of ts) assert.ok(x.grossPct <= 2 * DEFAULTS.slippagePct + 1e-9, `time-stopped a winner: ${x.grossPct}`)
+  const a = runBacktest(trendy, { aboveDayOpen: true }).trades
+  assert.ok(a.length > 0)
+  for (const x of a) {
+    const first = trendy.results[x.symbol].candles.find((c) => c[0].startsWith(x.day))
+    assert.ok(x.direction === 'BUY' ? x.signalPrice > first[1] : x.signalPrice < first[1])
+  }
+})
+check('levels "either" accepts at least as many trades as "both"', () => {
+  const both = runBacktest(trendy, { openingRangeMin: 30, prevDayLevels: true }).trades.length
+  const either = runBacktest(trendy, { openingRangeMin: 30, prevDayLevels: true, levelsEither: true }).trades.length
+  assert.ok(either >= both && either > 0)
+})
+
 console.log(`\nAll ${passed} checks passed.`)

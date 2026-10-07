@@ -552,6 +552,26 @@ New switches (21 offline checks, mutation-tested): daily trend (N-day average of
 **Decision:** add "today's volume so far ≥ 1.2× its usual by this time" to v3 — better profit per trade on BOTH data sets with ~30% fewer trades (lower cost and risk). Slot volume ≥ 1.5× was best on 5-min but weak on 30-min (inconsistent → not used). "Volume rising" hurts. Same caveats: few days, many variants tried.
 **Rule set v3 (final candidate):** market filter · relative strength · beyond yesterday's high/low · today's volume ≥ 1.2× usual · no entries before 10:00 · top 3 per decision · one trade per stock per day · max 10/day · stop 2×ATR, target 2R · breakeven after 1R.
 
+## 🔁 2026-10-07 (late night) — Second look at the ruled-out rules (base = v3 incl. volume)
+
+Reframed the way a trader uses them (new switches: time stop for LOSERS only, above/below today's open, either-level breakout; 25 offline checks, mutation-tested). Compared on days with volume history (5-min: 30 Sep–6 Oct; 30-min: 7 Sep–6 Oct).
+
+| variant | 5-min net Rs / exp % | 30-min net Rs / exp % / max DD |
+|---|---|---|
+| v3 | +3,279 / +0.102 | +11,975 / +0.094 / −8,812 |
+| time stop, losers only, 60 min | +660 | −1,723 |
+| time stop, losers only, 120 min | +1,122 | +1,946 |
+| time stop, all, 180 min | +1,569 | +1,503 |
+| above/below today's open | identical to v3 (already implied) | identical |
+| no entries after 14:30 | +3,745 / +0.121 | +11,543 / +0.093 / −8,496 |
+| **no entries after 14:00** | **+3,652 / +0.122** | **+11,899 / +0.101 / −7,773** |
+| either level (yesterday OR opening range) | −910 | +15,222 (inconsistent) |
+| opening range as well | −2,262 | +8,680 |
+| **daily loss limit Rs 2,000** | +3,279 (never hit) | **+12,176 / −7,773** |
+
+**Verdicts:** every form of time stop hurts (trades need time to reach a 2R target; breakeven + 15:15 square-off already protect) → off for good. Opening range: inconsistent in every form → off. "Gap held" adds nothing. Two safety rules join v3 because they cost nothing and cut the worst run: no new entries after 14:00 (not enough time left for a 2R target) and a daily loss limit (Rs 2,000 at Rs 1 lakh per trade; scale to capital later). Daily trend is NOT ruled out yet: the earlier test used a noisy 5-day average from 24 days; it needs the 20-day average from DAILY candles (download pending).
+**Rule set v3 (updated):** market filter · relative strength · beyond yesterday's high/low · today's volume ≥ 1.2× usual · entries 10:00–14:00 · top 3 per decision · one trade per stock per day · max 10/day · daily loss limit · stop 2×ATR, target 2R · breakeven after 1R · square-off 15:15.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.

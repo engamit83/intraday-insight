@@ -50,7 +50,10 @@ export const DEFAULTS = {
   openingRangeMin: null,   // switch: no entries until the first N minutes are over; BUY only above that range's high, SELL only below its low
   prevDayLevels: false,    // switch: BUY only above yesterday's high, SELL only below yesterday's low
   breakevenAtR: null,      // switch: once the trade gains R x the stop distance, move the stop to the entry price
-  timeStopMin: null,       // switch: exit at the candle close if neither stop nor target is hit within N minutes
+  timeStopMin: null,
+  timeStopLosersOnly: false, // with timeStopMin: only exit trades that are not in profit at that time
+  aboveDayOpen: false,     // switch: BUY only above today's opening price, SELL only below (intraday strength / gap held)
+  levelsEither: false,     // with openingRangeMin + prevDayLevels: accept a break of EITHER level instead of requiring both       // switch: exit at the candle close if neither stop nor target is hit within N minutes
   dailyLossLimitRs: null,  // switch: no new entries once the day's closed trades lost this many rupees (e.g. 5000)
   stopAtrMult: 1.5,        // live: STOP_ATR_MULT
   minStopPct: 0.25,        // live: MIN_STOP_PCT
@@ -235,7 +238,8 @@ export function runBacktest(data, options = {}) {
           close(p, px, p.atBreakeven ? 'breakeven' : 'stop', bucket, true)
         } else if (hitTarget) {
           close(p, p.target, 'target', bucket, false)
-        } else if (o.timeStopMin && t + step - toMin(p.entryTime) >= o.timeStopMin) {
+        } else if (o.timeStopMin && t + step - toMin(p.entryTime) >= o.timeStopMin &&
+          (!o.timeStopLosersOnly || (p.direction === 'BUY' ? c.close <= p.entry : c.close >= p.entry))) {
           close(p, c.close, 'timestop', bucket, true)
         } else {
           if (o.breakevenAtR && !p.atBreakeven) {
@@ -291,11 +295,14 @@ export function runBacktest(data, options = {}) {
         const B = dir.direction === 'BUY'
         if (o.dailyTrendDays && ctx[s].trendAvg !== null && ctx[s].prevClose !== null &&
           (B ? ctx[s].prevClose <= ctx[s].trendAvg : ctx[s].prevClose >= ctx[s].trendAvg)) continue
-        if (o.openingRangeMin) {
-          if (nextBucket < ctx[s].orEnd) continue
-          if (B ? ind.lastClose <= ctx[s].orHigh : ind.lastClose >= ctx[s].orLow) continue
+        if (o.aboveDayOpen && (B ? ind.lastClose <= ctx[s].dayOpen : ind.lastClose >= ctx[s].dayOpen)) continue
+        const beyondOR = o.openingRangeMin ? nextBucket >= ctx[s].orEnd && (B ? ind.lastClose > ctx[s].orHigh : ind.lastClose < ctx[s].orLow) : true
+        const beyondPrev = o.prevDayLevels && ctx[s].prevDay ? (B ? ind.lastClose > ctx[s].prevDay.high : ind.lastClose < ctx[s].prevDay.low) : true
+        if (o.levelsEither && o.openingRangeMin && o.prevDayLevels) {
+          if (!((nextBucket >= ctx[s].orEnd && beyondOR) || (ctx[s].prevDay && beyondPrev))) continue
+        } else {
+          if (!beyondOR || !beyondPrev) continue
         }
-        if (o.prevDayLevels && ctx[s].prevDay && (B ? ind.lastClose <= ctx[s].prevDay.high : ind.lastClose >= ctx[s].prevDay.low)) continue
         const pc = ctx[s].prevClose
         if (o.prevCloseFilter && pc && ((dir.direction === 'BUY' && ind.lastClose <= pc) || (dir.direction === 'SELL' && ind.lastClose >= pc))) continue
         let rankScore = calculateScoreUncapped(ind) * timeMult
