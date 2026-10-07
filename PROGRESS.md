@@ -143,6 +143,15 @@ Back-test v4 vs the original rules: 5-min (4 days) +Rs 5,452 vs −Rs 47,771 bas
 - **Follow the exits mechanically:** initial stop, profit lock, trailing, 15:15 square-off. Never widen a stop, never average down a loser, never re-enter in anger after a stop ("revenge trade"), never hold intraday positions overnight.
 - **Journal + weekly review:** every trade's reason and result; change rules only through the back-test + owner approval.
 
+### F. Learning loop — how the app learns from mistakes (agreed 8 Oct)
+1. **Record:** every signal and trade with its reasons (which rules fired, setup, grade, market/sector state, volume, time) and its outcome.
+2. **Classify every loss by cause** (weekly): fake breakout · against the market/sector · low volume · bad time of day · stop too tight · news shock · range day traded as trend day · rule bug.
+3. **Find patterns:** a cause that repeats across many trades (not one bad day) becomes a candidate fix.
+4. **Test the fix** in the back-tester on old AND new data (walk-forward); keep it only if it helps both.
+5. **Owner approves → deploy → keep measuring.**
+6. **Later (stage 7): ML** trained on the journal suggests weights/filters; same test-and-approve gate.
+Guardrails: never change a rule because of 1–2 losses; minimum ~30 trades of a pattern before acting; the app never rewrites its own live rules without the test + approval (self-changing systems over-fit and blow up).
+
 ### D. Process rules (always)
 0. **Owner's request (8 Oct): every task Claude gives the owner states its PURPOSE — what it does and what we achieve by it.** 1. No rule goes live unless it improved BOTH back-test data sets and both halves. 2. The owner approves every change to live rules. 3. Re-test weekly. 4. One trading feed only. 5. Never paste tokens in chat. 6. Update this rulebook whenever a rule changes status.
 
