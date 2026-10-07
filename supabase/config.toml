@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.feed-gateway]
 verify_jwt = false
+
+[functions.history-export]
+verify_jwt = false

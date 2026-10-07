@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# back-test data and output
+history-*.json
+backtest-trades.csv
