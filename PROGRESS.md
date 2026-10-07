@@ -479,6 +479,23 @@ Paper-trade outcomes double as the training data ML needs.
 **Reading:** the current rules have NO edge before costs (gross ≈ 0) and lose after costs on every day tested. They also over-trade (~73 trades/day), so costs dominate. Filters and wider levels cut the loss but nothing is profitable. 5 days is far too few to pick a winner; this only says "do not trade the baseline with real money".
 **Next:** 30-minute back-test over 24 days; add a max-trades-per-day / fewer-but-better selection (e.g. top 3 only, one entry per stock per day); keep collecting live days.
 
+## 📊 2026-10-07 (night) — Back-test on 30-minute candles, 24 days
+
+Same rules applied to 30-minute candles (1 Sep–6 Oct; first 4 days used to warm up indicators → 20 days tested; 1 duplicate-slot candle in INDUSINDBK on 18 Sep, negligible). NOTE: the live scout uses 5-minute candles; this tests the same rules on a slower timeframe over a longer period.
+
+| variant | trades | win % | gross exp % | NET exp % | net Rs | max DD Rs | green days | 1st half Rs | 2nd half Rs |
+|---|---|---|---|---|---|---|---|---|---|
+| A baseline | 382 | 42.4 | −0.007 | −0.114 | −43,366 | −48,980 | 7/20 | −21,105 | −22,261 |
+| B entry window (no effect: first 30-min entry is 09:45 anyway) | 382 | 42.4 | −0.007 | −0.114 | −43,366 | −48,980 | 7/20 | | |
+| C market filter | 360 | 47.8 | +0.053 | −0.053 | −19,059 | −23,347 | 10/20 | −14,497 | −4,563 |
+| D yesterday-close filter | 382 | 40.6 | −0.024 | −0.130 | −49,636 | −53,472 | 8/20 | | |
+| E wider levels | 280 | 40.4 | −0.024 | −0.131 | −36,617 | −46,548 | 8/20 | | |
+| F = B+C+D | 357 | 45.7 | +0.035 | −0.072 | −25,592 | −33,075 | 11/20 | | |
+| G = F + wider | 272 | 46.3 | +0.057 | −0.049 | −13,361 | −20,019 | 11/20 | −8,912 | −4,449 |
+
+**Reading:** confirms the 5-minute result — baseline has no edge (gross ≈ 0) and loses after costs. The **market filter is the one change that helped in both tests and in both halves** (here: gross turns positive, loss cut by more than half). Half of all baseline trades (190 of 382) are entered at the first decision of the day (09:45) and those lose most (−Rs 29,347). The yesterday-close filter helped on 5-min but hurt on 30-min → not reliable. Nothing is profitable after costs yet.
+**Next (proposed):** test "fewer but better" (top 2–3 only, one trade per stock per day, skip the first decision), market filter on by default; re-test as live days accumulate.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
