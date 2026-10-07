@@ -23,7 +23,9 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 
 ## 🗺 MASTER PLAN & FEATURE BACKLOG (single source of truth — read this first)
 
-**Intent (never lose sight of this):** an app that scans many stocks, decides which to BUY/SELL using technical analysis (later news and wider market context too), exits fast to cut losses and lock profit, learns from its own results, and — if the evidence supports it — earns money for the owner, and later for other users with their own brokers. **Honest limits:** no system avoids all losses; most retail intraday traders lose money (SEBI: 71% in FY23); costs matter; not a financial advisor.
+**Intent (never lose sight of this):** an app that scans many stocks, decides which to BUY/SELL using technical analysis (later news and wider market context too), exits fast to cut losses and lock profit, learns from its own results, and — if the evidence supports it — earns money for the owner, and later for other users with their own brokers. **Loss avoidance (added 2026-10-07):** it comes mainly from risk rules, market context and tested filters, NOT from piling on more indicators. Every strengthening step below is added one at a time, as an on/off switch, and kept only if net-of-cost paper results improve.
+
+**Honest limits:** no system avoids all losses; most retail intraday traders lose money (SEBI: 71% in FY23); costs matter; not a financial advisor.
 
 **How we work (rules):** one step at a time · every claim backed by evidence (logs, code, test output) · validate before scaling (paper-trade before real money, real money before ML or WebSocket) · `git pull` before editing (Lovable's AI also edits the repo) · after pushing, tell Lovable to deploy the changed edge functions · never paste secrets/tokens in chat · update this file after every step.
 
@@ -39,8 +41,8 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 | Sharekhan candle API access (labels, response shape) | ✅ | `5minute` etc. verified by live probe; parser fixed for `qty`, D/M/YYYY, oldest-first |
 | Scout v2: scan 49 stocks → score → rank (uncapped score) → BUY/SELL + ATR levels → write `signals` | 🟡 | Dry runs verified on Thu 1 Oct data (5 prices match the Sharekhan app exactly). Never run on live intraday data; NOT scheduled (see 2026-10-05 finding) |
 | Freshness / holiday guard (`asOf`, skips data not from today or >15 min old) | ✅ | Worked as designed on Mon 5 Oct: skipped every stock because Sharekhan's REST candles were stale |
-| Live feed: laptop program + `feed-gateway` function + `live_candles` table | ✅ | Verified live Wed 7 Oct: real ticks received for 48–49 stocks, candles saved. Run on the owner's laptop (~09:21 IST start); still to check: full-day gaps, reconnects |
-| Scout live path (`source:'live'`): REST history + today's `live_candles` → score → top 10 | 🟡 | Built 7 Oct, offline-tested (19 checks on the real function with fake DB/REST). NOT deployed, NOT yet run on real data, NOT scheduled |
+| Live feed: laptop program + `feed-gateway` function + `live_candles` table | ✅ | Full day verified Wed 7 Oct: 49 stocks, 09:40–15:29, 3,429 five-min and 16,940 one-min rows (about 1% of minutes empty, spread evenly; one 5-min window missing for BAJAJFINSV). Volume bug fixed. Still to check: saved prices vs the Sharekhan app 5-min chart (owner could not read it from the daily chart); reconnects |
+| Scout live path (`source:'live'`): REST history + today's `live_candles` → score → top 10 | 🟡 | Built 7 Oct, offline-tested (19 checks). **Deployed 7 Oct evening** (checked: refuses unauthenticated calls). NOT yet run on real data, NOT scheduled |
 | Corrected indicators (RSI/ATR/MACD/trend/efficiency), IST time fix, auth hole fix | 🟡 | Verified offline and on last-session candles; indicator values not cross-checked against a charting tool |
 | Rule-based scoring + direction rule (agreement of 3 votes, chop filter, RSI guard) | 🟡 | v1, never back-tested, no evidence of profit |
 
@@ -392,11 +394,59 @@ Paper-trade outcomes double as the training data ML needs.
 **Known limits:** a feed restart mid-session leaves the in-progress 5-min bucket partial (upsert overwrites it); the feed ignores pre-open and post-3:29 ticks; candle volume loses the first tick's delta per stock per session.
 
 **NEXT (in order):**
-1. Push the 2 scout files, tell Lovable "Deploy the scout-signals edge function".
+1. ✅ DONE 2026-10-07 evening — pushed the scout files; Lovable deployed `scout-signals`.
 2. After the feed ends (15:35 IST) run a forced dry run from the console (snippet in the hand-off note) and read: price vs the Sharekhan app, `liveCandles`/`historyCandles` counts, directions, rank spread, any `error`.
-3. Check the day's `live_candles` for gaps: candles per stock should be ~75 (5-min) / ~375 (1-min) for a full session.
+3. ✅ DONE 2026-10-07 — full-day gap check (see table above).
 4. Thu 8 Oct ~09:30 IST: dry run WITHOUT `force`; if fresh and sensible, ONE Lovable message to create the every-minute job (cron `* 3-10 * * 1-5` UTC, `x-job-token`, body `{}`). Reconnect Sharekhan first; start exactly one feed ~09:00.
 5. Then Phase B (paper trading with costs).
+
+## 🧱 2026-10-07 — Expert review: what makes the app stronger (added to the plan)
+
+**Verdict on the current rules:** a fair first version for finding *clear trends*, not strong enough to build money on. Honest limit: no factor set gives "max profit, almost no loss"; the realistic aim is small controlled losses and a small edge that survives costs.
+
+**Weaknesses found in the current scout:**
+1. It ignores the market (can show a BUY while the index falls).
+2. The three direction votes (trend, MACD, VWAP) and the score's RSI/trend parts all come from the same price data, so they are correlated, not independent evidence.
+3. No price levels (opening range, previous-day high/low, support/resistance); entry is at the last close, so it chases moves.
+4. Volume only adds score points; it is not a requirement for an entry.
+5. Costs (brokerage, STT, charges, slippage) are not modelled.
+6. No risk layer: no position sizing, daily loss limit, trade-count limit, entry time windows or square-off rule.
+
+**Decision on timeframe (2026-10-07):** the scout keeps 5-minute candles (standard intraday timeframe, less noisy than 1-minute, matches the history). It is re-run every minute and always includes the still-forming candle, so signals refresh each minute. 1-min and 15-min are compared later by replaying saved days (see step 10). Both 1-min and 5-min candles are already stored.
+
+**What gets added, how, when (all on/off switches; each one starts only after the one before has a result):**
+
+| # | Addition | How | When / stage | Phase |
+|---|---|---|---|---|
+| 0 | **Baseline** | No code change. Thu 8 Oct dry run, then the every-minute schedule if sensible. Record what the current rules pick. | Thu 8 Oct | A |
+| 1 | **Paper trading with costs** | Cost model in the simulator, automatic paper loop, store indicators/score/market state with each signal and trade, results screen (win rate, average win/loss, net expectancy, max drawdown). | First build after the baseline works | B1–B4 |
+| 2 | **Risk rules** | Risk about 0.5–1% of capital per trade; daily loss limit (stop at about −2%); max trades per day; no entries in the first 10–15 min or after about 14:45; square off before 15:15. Built into the paper loop first. | Same build as 1 | B / D |
+| 3 | **Market filter** | BUY only when the market is not falling, SELL only when it is not rising. Proxy = average move of our 49 stocks (no new feed); later the Nifty index or sector data. | Right after 1–2 | C |
+| 4 | **Price levels** | Opening range (first 15–30 min high/low), previous-day high/low, support/resistance; enter on a breakout or a pullback to VWAP, not at any price. Needs daily candles (available) and a few days of stored candles. | After about a week of paper data | C |
+| 5 | **Volume requirement** | Make relative volume a gate (for example at least 1.2×) for entries instead of a score bonus. | With 4 | C |
+| 6 | **Less correlated votes** | Replace or down-weight one overlapping price vote with independent evidence (market direction, sector, level breakout). | With 3–4 | C |
+| 7 | **Smarter exits** | Move the stop to breakeven after a gain of one stop-distance, trailing stop, time stop for trades that go nowhere, reversal exit, partial profit. | After 1 has 2+ weeks of trades | D |
+| 8 | **Event/no-trade calendar** | Skip results days, news days, circuit-limit and illiquid stocks; concentration limits (max signals per direction/sector). | After 3–5 | C / F |
+| 9 | **Wider stop/target test** | Test 2×/3× ATR against the current tight levels, net of costs. | After 1 | B6 |
+| 10 | **Timeframe test** | Replay the same stored days at 1-min, 5-min and 15-min and compare net expectancy. | After 1 has data | B / C |
+
+**Second check (2026-10-07, same evening) — items the first list missed, now added:**
+
+| # | Addition | How | When / stage | Phase |
+|---|---|---|---|---|
+| 11 | **Relative strength vs the market** | Prefer stocks moving more than the market in the trade's direction (stock % move minus the 49-stock average); one of the strongest intraday filters. | With 3 | C |
+| 12 | **Daily-trend filter (higher timeframe)** | BUY only when the stock is above its 20-day average (or yesterday's close), SELL the reverse. Daily candles are already available. | With 3 | C |
+| 13 | **Don't-chase / signal validity** | If the live price has already moved more than about a third of the way to the target, or past the stoploss, the signal is marked "missed", not shown as a fresh entry. A cooldown stops re-signalling the same stock right after its stop is hit. | With 1 (paper loop needs it) | B / D |
+| 14 | **Realistic paper fills** | Paper entries/exits use the NEXT live price after the signal (plus slippage), never the signal's own price; otherwise paper profit is overstated. | With 1 | B |
+| 15 | **Spread and liquidity check** | Skip a stock when the bid–offer gap is wide (the feed already sends bid/offer prices). | With 5 | C |
+| 16 | **Volatility regime and special days** | Schedule the existing `market-conditions` function (step A5) and use it; add India VIX later; flag gap-up/gap-down opens, expiry days, budget/policy days and special sessions as reduced-size or no-trade. | With 3 and 8 | A / C |
+| 17 | **Guard against over-fitting** | Tune rules on one block of days and judge them on later, unseen days (walk-forward). Never keep a change just because it looked good on the days it was tuned on. | From the first tuning onward | B / C |
+| 18 | **Overall exposure limit** | Max open positions at once and max total capital at risk, on top of per-trade risk. | With 2 | D |
+| 19 | **Feed and token alerts** | Warn on the Signals page when the feed has stopped writing or the Sharekhan login has expired, so an empty page is never mistaken for "no trades today". | Before the schedule runs unattended for long | A4 |
+
+**Rule for every addition:** write down the baseline numbers first → add ONE change as a switch → run on paper long enough to mean something (100+ trades before judging) → keep it only if net-of-cost expectancy and drawdown improve → log the result here. Anything untested stays off.
+
+**Operating notes (laptop phase):** the feed runs on the owner's laptop and needs the laptop awake, plugged in, online and not asleep (Windows Sleep set to Never; lid open) for 09:00–15:35; exactly ONE feed window. From the phone: Signals page, Sharekhan reconnect in Settings, and chatting all work; the browser-console dry run needs a desktop browser; restarting the feed needs the laptop. Moving the feed to a server (Phase E) removes this dependency. Signals-page expectation for 8 Oct: the page fills only after the every-minute schedule exists (about 10:00–10:30 if the 09:30 dry run looks right), and may show fewer than 10 on a quiet day because a signal needs a direction and a score of at least 60.
 
 ## 📌 Rule for this file going forward
 
