@@ -22,6 +22,11 @@
 //   batchSize  number   symbols per run (default 25, max 40)
 //   batchIndex number   which batch of the universe (default: rotates by minute)
 //   interval   string   candle interval label (default: see DEFAULT_INTERVAL)
+//   source     string   'live' (default): earlier sessions' history from Sharekhan REST
+//                       + TODAY's candles from the live tick feed (table live_candles,
+//                       written by the laptop feed program). Scans the whole universe per run.
+//                       'rest': the old REST-only path. REST is NOT live during the session,
+//                       so this only works after hours / for testing.
 //   probe      boolean  try many interval labels on ONE symbol and report which
 //                       Sharekhan accepts (read-only; use to discover the right label)
 //   minScore   number   minimum final score to become a signal (default 60)
@@ -38,6 +43,7 @@ import {
 } from '../_shared/scoring.ts'
 import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay, DEFAULT_INTERVAL } from '../_shared/sharekhan.ts'
 import { STARTER_UNIVERSE } from '../_shared/universe.ts'
+import { liveRowsToCandles, mergeHistoryAndLive, historyBeforeToday, istDayStartMs, istDateKey, type LiveRow } from '../_shared/livecandles.ts'
 
 const DEFAULT_BATCH_SIZE = 25
 const MAX_BATCH_SIZE = 40
@@ -47,6 +53,8 @@ const SIGNAL_TTL_MINUTES = 30
 const CALL_DELAY_MS = 400          // ~2 requests/second, deliberately conservative
 const MAX_RUNTIME_MS = 110_000     // stop gracefully before the platform limit
 const STALE_MINUTES = 15           // newest candle older than this (or not from today) => skip
+const MAX_BATCH_SIZE_LIVE = 60     // live path is cheap (history is cached), so a whole-universe scan fits
+const MAX_LIVE_ROWS_PER_SYMBOL = 200 // one session has ~75 five-minute candles
 
 // Candidate interval labels for probe mode. "daily" is the one label seen in
 // Sharekhan's official SDK samples, so it doubles as a control: if it works,
@@ -73,6 +81,39 @@ interface SymbolResult {
   analysis?: Record<string, unknown>
   httpStatus?: number
   sample?: string
+  liveCandles?: number      // today's candles from the feed
+  historyCandles?: number   // earlier-session candles joined in front of them
+}
+
+interface HistoryResult {
+  candles: Candle[] | null
+  status: number
+  error: string | null
+  sample?: string
+  fromCache: boolean
+}
+
+// Earlier-session candles per stock, kept while the function instance stays warm
+// (cuts REST calls from ~49 per run to ~49 per day). Keyed by stock + day, so it
+// can never serve yesterday's history as today's.
+const historyCache = new Map<string, Candle[]>()
+
+async function getHistory(code: number, apiKey: string, accessToken: string, interval: string, nowMs: number): Promise<HistoryResult> {
+  const key = `${code}|${interval}|${istDateKey(nowMs)}`
+  const hit = historyCache.get(key)
+  if (hit) return { candles: hit, status: 200, error: null, fromCache: true }
+
+  const r = await fetchCandles(code, apiKey, accessToken, interval)
+  if (!r.candles) return { candles: null, status: r.status, error: r.error, sample: r.sample, fromCache: false }
+
+  // REST is not live during the session: use it ONLY for days before today.
+  const past = historyBeforeToday(r.candles, nowMs)
+  if (past.length === 0) {
+    return { candles: null, status: r.status, error: 'no earlier-session history in the REST response', sample: r.sample, fromCache: false }
+  }
+  if (historyCache.size > 400) historyCache.clear()
+  historyCache.set(key, past)
+  return { candles: past, status: r.status, error: null, fromCache: false }
 }
 
 const json = (body: unknown, status = 200) =>
@@ -105,6 +146,8 @@ Deno.serve(async (req) => {
   const maxActive = Number.isFinite(body.maxActive) ? Number(body.maxActive) : DEFAULT_MAX_ACTIVE
   const interval: string =
     typeof body.interval === 'string' && /^[A-Za-z0-9]{1,12}$/.test(body.interval) ? body.interval : DEFAULT_INTERVAL
+  const source: 'live' | 'rest' = body.source === 'rest' ? 'rest' : 'live'
+  const maxBatch = source === 'live' ? MAX_BATCH_SIZE_LIVE : MAX_BATCH_SIZE
 
   // ---- market-hours gate ----
   const marketOpen = isMarketOpenIST()
@@ -129,10 +172,11 @@ Deno.serve(async (req) => {
   let symbols: string[]
   let batchInfo: Record<string, unknown>
   if (Array.isArray(body.symbols) && body.symbols.length > 0) {
-    symbols = [...new Set<string>((body.symbols as unknown[]).map((s) => String(s)).filter(isValidSymbol).map(sanitizeSymbol))].slice(0, MAX_BATCH_SIZE)
+    symbols = [...new Set<string>((body.symbols as unknown[]).map((s) => String(s)).filter(isValidSymbol).map(sanitizeSymbol))].slice(0, maxBatch)
     batchInfo = { mode: 'explicit' }
   } else {
-    const size = Math.min(MAX_BATCH_SIZE, Math.max(1, Number.isFinite(body.batchSize) ? Number(body.batchSize) : DEFAULT_BATCH_SIZE))
+    const defaultSize = source === 'live' ? STARTER_UNIVERSE.length : DEFAULT_BATCH_SIZE
+    const size = Math.min(maxBatch, Math.max(1, Number.isFinite(body.batchSize) ? Number(body.batchSize) : defaultSize))
     const numBatches = Math.ceil(STARTER_UNIVERSE.length / size)
     const idx = Number.isFinite(body.batchIndex) ? Number(body.batchIndex) % numBatches : Math.floor(Date.now() / 60000) % numBatches
     symbols = STARTER_UNIVERSE.slice(idx * size, idx * size + size)
@@ -198,7 +242,14 @@ Deno.serve(async (req) => {
     const code = codes[symbol]
     if (!code) { results.push({ symbol, status: 'skipped', reason: 'unresolved scrip code' }); continue }
 
-    const fetched = await fetchCandles(code, apiKey, token.accessToken, interval)
+    const nowMs = Date.now()
+    // 'live': earlier-session history (cached REST) + today's feed candles. 'rest': old path.
+    const fetched: { candles: Candle[] | null; status: number; error: string | null; sample?: string; fromCache?: boolean } =
+      source === 'live'
+        ? await getHistory(code, apiKey, token.accessToken, interval, nowMs)
+        : await fetchCandles(code, apiKey, token.accessToken, interval)
+    const pause = () => (fetched.fromCache === true ? Promise.resolve() : delay(CALL_DELAY_MS))
+
     if (fetched.status === 401 || fetched.status === 403) {
       abortReason = `auth_rejected_http_${fetched.status}: reconnect Sharekhan in Settings`
       results.push({ symbol, status: 'error', reason: fetched.error ?? 'auth', httpStatus: fetched.status, sample: fetched.sample })
@@ -211,22 +262,54 @@ Deno.serve(async (req) => {
     }
     if (!fetched.candles) {
       results.push({ symbol, status: 'error', reason: fetched.error ?? 'no data', httpStatus: fetched.status, sample: fetched.sample })
-      await delay(CALL_DELAY_MS)
+      await pause()
       continue
     }
 
-    const candles = newestFirst(fetched.candles)
+    let candles: Candle[]
+    let latestMs: number | null
+    let liveCount: number | undefined
+    let historyCount: number | undefined
+
+    if (source === 'live') {
+      const { data: liveRows, error: liveErr } = await supabase
+        .from('live_candles')
+        .select('bucket_start, open, high, low, close, volume, updated_at')
+        .eq('symbol', symbol).eq('timeframe', '5min')
+        .gte('bucket_start', new Date(istDayStartMs(nowMs)).toISOString())
+        .order('bucket_start', { ascending: true })
+        .limit(MAX_LIVE_ROWS_PER_SYMBOL)
+      if (liveErr) {
+        results.push({ symbol, status: 'error', reason: `live_candles read failed: ${liveErr.message}` })
+        await pause()
+        continue
+      }
+      const conv = liveRowsToCandles(liveRows as LiveRow[] | null)
+      if (conv.candles.length === 0) {
+        results.push({ symbol, status: 'skipped', reason: 'no live candles for today (is the feed program running?)' })
+        await pause()
+        continue
+      }
+      candles = newestFirst(mergeHistoryAndLive(fetched.candles, conv.candles, nowMs))
+      // Freshness = when the feed last wrote this stock's candles (not the candle's start time).
+      latestMs = conv.newestWriteMs ?? Date.parse(conv.candles[conv.candles.length - 1].timestamp)
+      liveCount = conv.candles.length
+      historyCount = candles.length - conv.candles.length
+    } else {
+      candles = newestFirst(fetched.candles)
+      const stamps = candles.map((c) => new Date(c.timestamp).getTime()).filter((x) => Number.isFinite(x))
+      latestMs = stamps.length ? Math.max(...stamps) : null
+    }
 
     // Freshness / holiday guard. Enforced for any run that writes, or any
     // non-forced run; a forced dry run just reports it.
-    const stamps = candles.map((c) => new Date(c.timestamp).getTime()).filter((x) => Number.isFinite(x))
-    const fresh = assessFreshness(stamps.length ? Math.max(...stamps) : null, Date.now(), STALE_MINUTES)
+    const fresh = assessFreshness(latestMs, Date.now(), STALE_MINUTES)
     if (fresh.stale && (!force || !dryRun)) {
       results.push({
         symbol, status: 'skipped', asOf: fresh.asOf, ageMin: fresh.ageMin,
-        reason: `stale data (newest candle ${fresh.asOf ?? 'unknown'}, ${fresh.ageMin ?? '?'} min old, same day: ${fresh.sameDay})`,
+        reason: `stale data (newest ${source === 'live' ? 'feed write' : 'candle'} ${fresh.asOf ?? 'unknown'}, ${fresh.ageMin ?? '?'} min old, same day: ${fresh.sameDay})`,
       })
-      await delay(CALL_DELAY_MS)
+      await pause()
       continue
     }
 
@@ -243,7 +326,7 @@ Deno.serve(async (req) => {
       asOf: fresh.asOf, ageMin: fresh.ageMin,
       direction: dir.direction, reason: dir.reason, levels: levels ?? undefined,
       indicators: { rsi: ind.rsi, vwap: ind.vwap, atr: ind.atr, macdHistogram: ind.macdHistogram, relativeVolume: ind.relativeVolume, trendStrength: ind.trendStrength, efficiency: ind.efficiencyRatio, pattern: ind.patternDetected },
-      analysis: describeAnalysis(ind),
+      analysis: describeAnalysis(ind), liveCandles: liveCount, historyCandles: historyCount,
     })
 
     if (!dryRun && ind.lastClose) {
@@ -255,7 +338,7 @@ Deno.serve(async (req) => {
         raw_data: candles.slice(0, 40), computed_at: new Date().toISOString(),
       }, { onConflict: 'symbol,timeframe' })
     }
-    await delay(CALL_DELAY_MS)
+    await pause()
   }
 
   // ---- choose the best ----
@@ -285,7 +368,7 @@ Deno.serve(async (req) => {
       const existing = activeBySymbol.get(r.symbol) ?? []
       const sameDir = existing.filter((e) => e.signal_type === r.direction)
       const otherDir = existing.filter((e) => e.signal_type !== r.direction)
-      const indicatorsJson = { ...r.analysis, numeric: r.indicators, rank_score: r.rankScore, as_of: r.asOf, direction_reason: r.reason, source: 'scout-v1' }
+      const indicatorsJson = { ...r.analysis, numeric: r.indicators, rank_score: r.rankScore, as_of: r.asOf, direction_reason: r.reason, source: source === 'live' ? 'scout-v2-live' : 'scout-v2-rest' }
 
       if (otherDir.length) {
         await supabase.from('signals').update({ is_active: false, rejection_reason: 'direction flipped' }).in('id', otherDir.map((e) => e.id))
@@ -351,6 +434,7 @@ Deno.serve(async (req) => {
     multipliers: { market: marketMult, time: timeMult },
     batch: batchInfo,
     interval,
+    source,
     scanned: symbols.length,
     scored: scored.length,
     errors: results.filter((r) => r.status === 'error').length,
@@ -363,7 +447,7 @@ Deno.serve(async (req) => {
     top: selected.slice(0, 10).map((r) => ({ symbol: r.symbol, direction: r.direction, finalScore: r.finalScore, rankScore: r.rankScore, asOf: r.asOf, ...r.levels })),
     results: results.map((r) => ({
       symbol: r.symbol, status: r.status, direction: r.direction, rawScore: r.rawScore, finalScore: r.finalScore, rankScore: r.rankScore, asOf: r.asOf, ageMin: r.ageMin,
-      price: r.price, reason: r.reason, httpStatus: r.httpStatus, sample: r.status === 'error' ? r.sample : undefined,
+      price: r.price, reason: r.reason, liveCandles: r.liveCandles, historyCandles: r.historyCandles, httpStatus: r.httpStatus, sample: r.status === 'error' ? r.sample : undefined,
     })),
   }
 

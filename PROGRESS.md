@@ -2,7 +2,7 @@
 
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-07
 
 ---
 
@@ -39,7 +39,8 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 | Sharekhan candle API access (labels, response shape) | ✅ | `5minute` etc. verified by live probe; parser fixed for `qty`, D/M/YYYY, oldest-first |
 | Scout v2: scan 49 stocks → score → rank (uncapped score) → BUY/SELL + ATR levels → write `signals` | 🟡 | Dry runs verified on Thu 1 Oct data (5 prices match the Sharekhan app exactly). Never run on live intraday data; NOT scheduled (see 2026-10-05 finding) |
 | Freshness / holiday guard (`asOf`, skips data not from today or >15 min old) | ✅ | Worked as designed on Mon 5 Oct: skipped every stock because Sharekhan's REST candles were stale |
-| Live feed: laptop program + `feed-gateway` function + `live_candles` table | 🟡 | Built and deployed; wiring check passed 6 Oct 23:12 IST. NOT yet run against Sharekhan's real stream (first test Wed 7 Oct ~09:00 IST) |
+| Live feed: laptop program + `feed-gateway` function + `live_candles` table | ✅ | Verified live Wed 7 Oct: real ticks received for 48–49 stocks, candles saved. Run on the owner's laptop (~09:21 IST start); still to check: full-day gaps, reconnects |
+| Scout live path (`source:'live'`): REST history + today's `live_candles` → score → top 10 | 🟡 | Built 7 Oct, offline-tested (19 checks on the real function with fake DB/REST). NOT deployed, NOT yet run on real data, NOT scheduled |
 | Corrected indicators (RSI/ATR/MACD/trend/efficiency), IST time fix, auth hole fix | 🟡 | Verified offline and on last-session candles; indicator values not cross-checked against a charting tool |
 | Rule-based scoring + direction rule (agreement of 3 votes, chop filter, RSI guard) | 🟡 | v1, never back-tested, no evidence of profit |
 
@@ -373,6 +374,29 @@ Paper-trade outcomes double as the training data ML needs.
 7. Optional: re-run the probe/scan to see whether Tue 6 Oct candles have appeared (item (b) above).
 
 **Question asked 2026-10-06: "can we feed all stocks live?"** Not all in one connection: the cap is ~1,000 (untested) and NSE has 2,000+; extra connections per login are untested. The laptop is not the limit. Illiquid stocks give noisy, untradeable signals; the best day-trading picks are almost always the most liquid few hundred. Plan: 49 (Wed test) → ~200 → up to ~1,000 ranked by traded volume, once the feed is proven.
+
+## 🟢 2026-10-07 — Live feed verified; scout live path built
+
+**Live feed (first real run, Wed 7 Oct):** the laptop program connected to Sharekhan's stream at ~09:19–09:21 IST, subscribed, and received real ticks for all 49 stocks (status at 09:23: 865 messages, 904 prices used, 49/49 seen). Candles reached `live_candles`; RELIANCE 1-min candles checked in the database (09:40–09:42): prices consistent, high ≥ low, volume realistic.
+**Real message layout (now known, from `raw_ticks.log`):** `{"status":100,"message":"feed","timestamp":…,"data":{…}}` where `data` is one object or a list; each has `exchangeCode`, `scripCode`, `ltt`, `ltp`, `qty`, `ltq`, `preltq`, `open/high/low/close` (day), `bidPrice/offPrice`, `totalBuyQty/totalSellQty`, `perChange`, circuit limits etc. Connect/subscribe replies are `{"status":100,"message":"connect"|"subscribe",…}`. About 10 messages/second across 49 stocks.
+**Bug found and fixed (volume):** `qty` is the DAY'S RUNNING TOTAL volume (never decreases); `ltq` is only the last single trade. The first parser used `ltq`, so candle volume was ~50× too low (summed ltq = 38k vs summed qty increase = 2.0M over the same ticks). Fixed in `parse.mjs` (`qty` first in the cumulative fields); candles from the 09:40:41 restart onward have correct volume; earlier rows were deleted. Regression tests added from real messages (23 offline checks).
+**Duplicate run found:** the log showed two connections (09:19:48 and 09:21:45) — two feed windows were open. Stopped with `taskkill //F //IM node.exe`. Lesson: run exactly ONE feed; check with `select max(updated_at) from live_candles` that nothing is writing before restarting.
+**Windows note:** the test "shut down cleanly on Ctrl+C" cannot pass on Windows (the test kills the child, which then never runs its handler); a real Ctrl+C is expected to work.
+
+**Scout live path (BUILT, offline-tested, NOT deployed):** `scout-signals` now takes `source` = `live` (default) or `rest`.
+- `live`: for each stock, earlier-session candles from Sharekhan REST (only days BEFORE today IST; REST is not live) + today's 5-min rows from `live_candles` (converted to IST timestamps), merged oldest-first, then the same indicators/score/direction/levels as before. Whole universe scanned per run (cap 60). History is cached per stock per IST day while the function instance is warm (≈49 REST calls per day instead of per minute).
+- Freshness for the live path = when the feed last WROTE that stock's newest candle (`updated_at`), not the candle's start time. A stock is skipped if the feed wrote nothing for >15 min, has no candles today, or isn't from today (the holiday guard stays on; forced dry runs only report it).
+- New file `_shared/livecandles.ts` (pure helpers). Signals are tagged `source: scout-v2-live`.
+- Tests (run on the real `index.ts` in Node with a fake database and fake REST, fixed clock 10:30 IST): 19 checks — uptrend → BUY, downtrend → SELL, today's REST candle excluded (history = 300), no-live-candles and stale-feed stocks skipped, only 2 signals inserted, levels ordered, history cache (no extra REST calls), market-closed gate, forced write run still refused on stale data, `source:'rest'` path unchanged, no-auth → 401. Two deliberate code breakages were caught by the tests (today's REST candles leaking in; stale feed treated as fresh). Strict TypeScript check passes.
+**NOT verified:** behaviour on real data (indicator values with history joined to live candles; the overnight gap between the last history candle and the first live one — and the first ~hour of a session still uses yesterday's candles for SMA/RSI/MACD); REST history coverage in the live-session (REST may return fewer than ~35 earlier candles for some stocks); function run time on a cold start (~49 REST calls ≈ 35 s expected); real-money relevance — none. Rank score still unproven as a predictor of profit.
+**Known limits:** a feed restart mid-session leaves the in-progress 5-min bucket partial (upsert overwrites it); the feed ignores pre-open and post-3:29 ticks; candle volume loses the first tick's delta per stock per session.
+
+**NEXT (in order):**
+1. Push the 2 scout files, tell Lovable "Deploy the scout-signals edge function".
+2. After the feed ends (15:35 IST) run a forced dry run from the console (snippet in the hand-off note) and read: price vs the Sharekhan app, `liveCandles`/`historyCandles` counts, directions, rank spread, any `error`.
+3. Check the day's `live_candles` for gaps: candles per stock should be ~75 (5-min) / ~375 (1-min) for a full session.
+4. Thu 8 Oct ~09:30 IST: dry run WITHOUT `force`; if fresh and sensible, ONE Lovable message to create the every-minute job (cron `* 3-10 * * 1-5` UTC, `x-job-token`, body `{}`). Reconnect Sharekhan first; start exactly one feed ~09:00.
+5. Then Phase B (paper trading with costs).
 
 ## 📌 Rule for this file going forward
 
