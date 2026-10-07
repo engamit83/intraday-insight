@@ -2,7 +2,7 @@
 
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-08
 
 ---
 
@@ -18,6 +18,27 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 ```
 
 **Long-term intent:** support multiple users, each connecting their own broker account (not just personal use).
+
+---
+
+## 🧭 AGREED PLAN — strategy & build order (agreed 2026-10-08, READ THIS FIRST)
+
+**Goal:** maximum money = highest profit per rupee risked, with a worst case small enough to keep trading through bad weeks. Real money only after paper trading proves it.
+**Standing rules:** (1) no rule goes live unless it improved BOTH back-test data sets and both halves; (2) the owner approves every change to live rules; (3) re-run the back-test weekly as live days accumulate; (4) every stage ends with a gate — don't start the next stage until it passes; (5) update this section when a stage finishes.
+
+| Stage | When | What gets built / done | Gate to pass |
+|---|---|---|---|
+| **0 — Plumbing check** | Thu 8 Oct, market hours | Reconnect Sharekhan before 09:00, ONE feed from ~09:00, dry run ~09:30 (current scout, no rule changes). Owner: tell Claude the real Sharekhan intraday brokerage rate | Live prices match the app; scout reads live candles without errors |
+| **1 — Rule set v4 live (watch/paper only)** | Thu 8 Oct evening – Fri 9 Oct | Build v4 into `scout-signals` as switches (same code as the back-tester): market filter, relative strength, beyond yesterday's high/low, volume (day ≥1.2× OR burst ≥2× OR rising 3), entries 10:00–14:00, top 3, 1 trade/stock/day, max 10/day, −Rs 2,000 day stop, stop 2×ATR / target 2R, profit lock (no-loss at +1R, +0.75R at +1.5R), trailing 1.5×ATR, square-off 15:15. Lovable deploys; create the every-minute job. **Feed:** start SAVING order-book fields (total buy/sell qty, best bid/offer) and index prices (Nifty 50, Bank Nifty, sector indices, India VIX — Sharekhan codes to be verified) | Signals page fills by itself; signals match what the back-tester would pick on the same candles |
+| **2 — Whole-market funnel** | Weekend 10–11 Oct | Daily "tradeable list": scan ALL NSE stocks, keep liquid ones (avg turnover ≥ Rs 20–50 cr, price ≥ Rs 50), exclude ASM/GSM, trade-to-trade, F&O ban, non-intraday stocks (data sources to confirm) → ~300–600 stocks; feed expanded to that list (test Sharekhan's ~1,000-symbol cap); history download (30-min + daily) for the wide list; stock → sector map | Feed runs a full day on the wide list without gaps; tradeable list refreshes each morning |
+| **3 — Strategy v5 rebuild (back-test)** | Week of 12 Oct | Replace the generic RSI/MACD vote with 2 explicit setups: (a) momentum breakout of stocks in play (yesterday's high/low, opening range, VWAP reclaim) and (b) VWAP pullback in a trending stock. Rank by setup quality (unusual volume × relative strength × stop distance). Thesis stops (exit when the level/VWAP/market breaks; ignore dips that hold). Book half at 1.5–2R, trail the rest. Risk-based position size (same rupee risk per trade). Sector rotation (strongest stock in strongest sector / weakest in weakest), max 2 trades per sector, day-type detection (trend vs range day), avoid first 15 min and lunch chop, daily trend from real daily candles. Walk-forward test vs v4 on the wide universe | v5 beats v4 on both data sets and both halves, with a smaller worst losing run |
+| **4 — Paper trading + journal** | Week of 12–19 Oct (parallel to 3) | Paper-trade engine: next-price fills + slippage + full costs, trade journal (every signal/trade with its reasons and indicator snapshot), results screen (win rate, avg win/loss, net per trade, drawdown, by setup/hour/sector). Pre-market plan (Gift Nifty, pre-open data) and stocks-in-play scanner (gap, unusual volume, NSE announcements/results) — data sources to confirm | Paper results tracked automatically every day |
+| **5 — Prove it** | 2–4 weeks of paper trading | Weekly re-test on the growing data; evaluate order-book pressure and index/sector/VIX context on the recorded data; keep only what helps | Positive net result after costs over 100+ paper trades, worst losing run acceptable |
+| **6 — Real money, small** | After stage 5 passes | Order placement via Sharekhan with manual confirm, smallest size, daily and weekly loss limits; check SEBI/Sharekhan rules for API trading first | Live results match paper results |
+| **7 — Scale** | Later | Move the feed to an always-on server; ML on the journal data; size up slowly; multi-user only after legal check | — |
+
+**Decisions needed from the owner:** Sharekhan intraday brokerage rate (Stage 0) · trading capital and risk per trade (Stage 3) · short selling allowed? (assumed yes, intraday) · use intraday margin/leverage? (not before Stage 6).
+**Ideas parked for later (agreed useful, not scheduled):** limit-order execution rules · weekly loss limit · bigger size for A+ setups · ML model.
 
 ---
 
