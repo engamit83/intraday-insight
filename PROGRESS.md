@@ -137,6 +137,12 @@ Back-test v4 vs the original rules: 5-min (4 days) +Rs 5,452 vs −Rs 47,771 bas
 
 **Stage 7 (later) — scale:** feed on an always-on server · ML model trained on the journal · bigger size for A+ setups · size up slowly (compounding) · multi-user only after a legal check.
 
+### E. Trading playbook — what we do once the app gives signals (agreed 8 Oct)
+- **Paper phase (stages 1–5): take EVERY signal** on paper, exactly as given. No picking favourites — honest statistics need all of them.
+- **Real money (stage 6+): NOT every signal.** Only A+ (A later, if paper shows A also earns) · max 3 open trades · max 2 per sector · same rupee risk per trade (0.5% of capital to start) · position size = rupee risk ÷ stop distance · daily loss stop, then done for the day.
+- **Follow the exits mechanically:** initial stop, profit lock, trailing, 15:15 square-off. Never widen a stop, never average down a loser, never re-enter in anger after a stop ("revenge trade"), never hold intraday positions overnight.
+- **Journal + weekly review:** every trade's reason and result; change rules only through the back-test + owner approval.
+
 ### D. Process rules (always)
 0. **Owner's request (8 Oct): every task Claude gives the owner states its PURPOSE — what it does and what we achieve by it.** 1. No rule goes live unless it improved BOTH back-test data sets and both halves. 2. The owner approves every change to live rules. 3. Re-test weekly. 4. One trading feed only. 5. Never paste tokens in chat. 6. Update this rulebook whenever a rule changes status.
 
