@@ -461,6 +461,24 @@ Paper-trade outcomes double as the training data ML needs.
 **Limits:** about one month of data is a small sample; no historical bid/offer; closed candles only (the live scout also reads the forming candle); tuning on the same days over-fits — keep a change only if it helps in BOTH halves.
 **To run it:** owner → Lovable: "Deploy the history-export edge function" → reconnect Sharekhan → paste `download-snippet.js` in the console → send the downloaded file to Claude → `node --experimental-strip-types tools/backtest/run.mjs <file>`.
 
+## 📊 2026-10-07 (night) — First back-test on REAL data (5-minute, 6 days)
+
+**History available from Sharekhan REST (checked 7 Oct, RELIANCE):** 5-min ≈ 6 days (438 candles, 28 Sep–6 Oct) · 15-min 6 days · 30-min and 60-min 24 days (1 Sep–6 Oct) · daily since 2000-01-03 (6,654 days). There is no date-range parameter (official SDK: `historicaldata(exchange, scripcode, interval)` only). Tue 6 Oct has candles → it was a trading day.
+**Result, 49 stocks, 5 back-tested days (29 Sep–6 Oct), costs 0.106% + 0.02%/side slippage, Rs 1 lakh per trade:**
+
+| variant | trades | win % | gross exp % | NET exp % | net Rs | max DD Rs |
+|---|---|---|---|---|---|---|
+| A baseline (live rules) | 365 | 40.8 | −0.025 | −0.131 | −47,771 | −47,771 |
+| B entry window 09:30–14:45 | 327 | 37.9 | −0.044 | −0.151 | −49,238 | −50,262 |
+| C market filter | 343 | 42.3 | −0.022 | −0.128 | −44,052 | −47,224 |
+| D yesterday-close filter | 355 | 43.4 | +0.006 | −0.100 | −35,502 | −35,502 |
+| E wider levels 2×ATR/2R | 188 | 39.4 | +0.004 | −0.102 | −19,261 | −21,036 |
+| F = B+C+D | 289 | 45.7 | +0.022 | −0.085 | −24,492 | −26,481 |
+| G = F + wider levels | 167 | 41.3 | +0.037 | −0.069 | −11,520 | −15,920 |
+
+**Reading:** the current rules have NO edge before costs (gross ≈ 0) and lose after costs on every day tested. They also over-trade (~73 trades/day), so costs dominate. Filters and wider levels cut the loss but nothing is profitable. 5 days is far too few to pick a winner; this only says "do not trade the baseline with real money".
+**Next:** 30-minute back-test over 24 days; add a max-trades-per-day / fewer-but-better selection (e.g. top 3 only, one entry per stock per day); keep collecting live days.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
