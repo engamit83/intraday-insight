@@ -1,4 +1,4 @@
-// backtest.mjs - replays past 5-minute candles through the SAME scout rules
+// backtest.mjs - replays past candles (5-, 15-, 30- or 60-minute) through the SAME scout rules
 // (supabase/functions/_shared/indicators.ts + scoring.ts) and simulates the trades
 // a person would take from the Signals page, with Indian intraday costs.
 //
@@ -50,13 +50,16 @@ export const DEFAULTS = {
 
 // ---------- time helpers (timestamps carry +05:30, so slices are IST) ----------
 const dayOf = (ts) => ts.slice(0, 10)
-function bucketOf(ts) {
-  const h = Number(ts.slice(11, 13)), m = Number(ts.slice(14, 16))
-  const mm = Math.floor(m / 5) * 5
-  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
-}
 const toMin = (hhmm) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
 const fromMin = (n) => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`
+const OPEN_MIN = 9 * 60 + 15
+// Candle start, counted from the 09:15 open in steps of the candle size. Works whether the
+// timestamp is the candle start or the last trade inside it (Sharekhan REST uses the latter).
+function bucketOf(ts, step) {
+  const m = Number(ts.slice(11, 13)) * 60 + Number(ts.slice(14, 16))
+  return fromMin(OPEN_MIN + Math.floor((m - OPEN_MIN) / step) * step)
+}
+export const STEP_MINUTES = { '1minute': 1, '3minute': 3, '5minute': 5, '15minute': 15, '30minute': 30, '60minute': 60 }
 const istDate = (day, hhmm) => new Date(`${day}T${hhmm}:00+05:30`)
 
 // Round-trip cost as a percent of the trade value.
@@ -70,22 +73,26 @@ export function roundTripCostPct(c) {
 
 // data: { results: { SYMBOL: { candles: [[iso, o, h, l, c, v], ...] } } }
 export function prepare(data) {
+  const step = STEP_MINUTES[data.interval ?? '5minute']
+  if (!step) throw new Error(`unsupported interval ${data.interval}`)
+  const lastStart = fromMin(OPEN_MIN + Math.floor((15 * 60 + 30 - 1 - OPEN_MIN) / step) * step)
   const stocks = {}
+  let collisions = 0
   for (const [symbol, v] of Object.entries(data.results ?? {})) {
     if (!v || !Array.isArray(v.candles)) continue
     const rows = v.candles
       .map((r) => ({ timestamp: String(r[0]), open: +r[1], high: +r[2], low: +r[3], close: +r[4], volume: +r[5] || 0 }))
       .filter((c) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(c.timestamp) && c.close > 0 && c.high >= c.low)
-      .map((c) => ({ ...c, day: dayOf(c.timestamp), bucket: bucketOf(c.timestamp) }))
-      .filter((c) => c.bucket >= '09:15' && c.bucket <= '15:25')
+      .map((c) => ({ ...c, day: dayOf(c.timestamp), bucket: bucketOf(c.timestamp, step) }))
+      .filter((c) => c.bucket >= '09:15' && c.bucket <= lastStart)
       .sort((a, b) => (a.day + a.bucket).localeCompare(b.day + b.bucket))
     // de-duplicate by day+bucket (keep the last)
     const seen = new Map()
-    for (const c of rows) seen.set(c.day + c.bucket, c)
+    for (const c of rows) { if (seen.has(c.day + c.bucket)) collisions++; seen.set(c.day + c.bucket, c) }
     stocks[symbol] = [...seen.values()]
   }
   const days = [...new Set(Object.values(stocks).flatMap((s) => s.map((c) => c.day)))].sort()
-  return { stocks, days }
+  return { stocks, days, step, lastStart, collisions }
 }
 
 function levelsFor(direction, close, atr, o) {
@@ -98,7 +105,7 @@ function levelsFor(direction, close, atr, o) {
 
 export function runBacktest(data, options = {}) {
   const o = { ...DEFAULTS, ...options, costs: { ...DEFAULTS.costs, ...(options.costs ?? {}) } }
-  const { stocks, days } = prepare(data)
+  const { stocks, days, step, lastStart, collisions } = prepare(data)
   const symbols = Object.keys(stocks)
   const costPct = roundTripCostPct(o.costs)
   const trades = []
@@ -136,7 +143,7 @@ export function runBacktest(data, options = {}) {
     }
     if (!anyTradable) { skippedDays.push(day); continue }
 
-    for (let t = toMin('09:15'); t <= toMin('15:25'); t += 5) {
+    for (let t = OPEN_MIN; t <= toMin(lastStart); t += step) {
       const bucket = fromMin(t)
       // 1) manage open positions on this candle
       for (const [s, p] of open) {
@@ -157,11 +164,11 @@ export function runBacktest(data, options = {}) {
         } else if (hitTarget) {
           close(p, p.target, 'target', bucket, false)
         } else continue
-        open.delete(s); cooldownUntil.set(s, t + 5 + o.cooldownMin)
+        open.delete(s); cooldownUntil.set(s, t + step + o.cooldownMin)
       }
 
       // 2) decide after this candle closes; entry at the next candle's open
-      const nextBucket = fromMin(t + 5)
+      const nextBucket = fromMin(t + step)
       if (nextBucket >= o.lastEntry) continue
       if (o.noEntryBefore && nextBucket < o.noEntryBefore) continue
       if (o.noEntryAfter && nextBucket > o.noEntryAfter) continue
@@ -181,7 +188,7 @@ export function runBacktest(data, options = {}) {
       if (timeMult <= 0) continue
       const candidates = []
       for (const s of Object.keys(ctx)) {
-        if (open.has(s) || (cooldownUntil.get(s) ?? -1) > t + 5) continue
+        if (open.has(s) || (cooldownUntil.get(s) ?? -1) > t + step) continue
         const j = ctx[s].byBucket.get(bucket)
         if (j === undefined) continue
         const nextJ = ctx[s].byBucket.get(nextBucket)
@@ -228,7 +235,7 @@ export function runBacktest(data, options = {}) {
     trades.push({ ...p, exit, exitTime: bucket, reason, grossPct, netPct: grossPct - costPct })
   }
 
-  return { options: o, costPct, trades, days, skippedDays, symbols: symbols.length, summary: summarize(trades, o) }
+  return { options: o, costPct, trades, days, skippedDays, step, collisions, symbols: symbols.length, summary: summarize(trades, o) }
 }
 
 export function summarize(trades, o = DEFAULTS) {

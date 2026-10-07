@@ -10,7 +10,7 @@ const check = (name, fn) => { fn(); passed++; console.log('  ok  ' + name) }
 function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32) }
 
 // Build fake Sharekhan-style data: tradeTime is the last trade inside the candle (e.g. 09:19:52).
-function makeData({ days = 12, symbols = ['AAA', 'BBB', 'CCC', 'DDD'], drift = (d, s) => 0, seed = 7 } = {}) {
+function makeData({ days = 12, symbols = ['AAA', 'BBB', 'CCC', 'DDD'], drift = (d, s) => 0, seed = 7, step = 5 } = {}) {
   const r = rng(seed)
   const results = {}
   const start = Date.UTC(2026, 8, 1)
@@ -24,13 +24,13 @@ function makeData({ days = 12, symbols = ['AAA', 'BBB', 'CCC', 'DDD'], drift = (
     let px = 100 + k * 50
     const candles = []
     dayList.forEach((day, di) => {
-      for (let m = 9 * 60 + 15; m <= 15 * 60 + 25; m += 5) {
+      for (let m = 9 * 60 + 15; m < 15 * 60 + 30; m += step) {
         const o = px * (1 + (r() - 0.5) * 0.0006)
-        const step = (r() - 0.5) * 0.004 * px + drift(di, k) * px
-        const c = Math.max(1, o + step)
+        const move = (r() - 0.5) * 0.004 * px + drift(di, k) * px
+        const c = Math.max(1, o + move)
         const h = Math.max(o, c) + r() * 0.001 * px
         const l = Math.min(o, c) - r() * 0.001 * px
-        const t = m + 4
+        const t = m + step - 1
         const ts = `${day}T${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}:52+05:30`
         candles.push([ts, +o.toFixed(2), +h.toFixed(2), +l.toFixed(2), +c.toFixed(2), 1000 + Math.floor(r() * 5000)])
         px = c
@@ -38,7 +38,7 @@ function makeData({ days = 12, symbols = ['AAA', 'BBB', 'CCC', 'DDD'], drift = (
     })
     results[sym] = { candles }
   })
-  return { interval: '5minute', results }
+  return { interval: step + 'minute', results }
 }
 
 const trendy = makeData({ days: 14, drift: (d, k) => (k % 2 === 0 ? 0.0005 : -0.0005) })
@@ -143,5 +143,18 @@ check('filters only ever remove trades (market filter, yesterday-close filter, e
     assert.ok(r.trades.length > 0)
   }
 })
+
+check('30-minute candles: decisions and exits on the 30-minute grid, square-off 15:15, no bucket collisions', () => {
+  const d30 = makeData({ days: 20, step: 30, drift: (d, k) => (k % 2 === 0 ? 0.0006 : -0.0006) })
+  const r = runBacktest(d30)
+  assert.equal(r.step, 30); assert.equal(r.collisions, 0)
+  assert.ok(r.trades.length > 5, `only ${r.trades.length} trades`)
+  const grid = new Set(Array.from({ length: 13 }, (_, i) => { const m = 555 + i * 30; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0') }))
+  for (const t of r.trades) {
+    assert.ok(grid.has(t.signalTime) && grid.has(t.entryTime) && grid.has(t.exitTime), JSON.stringify(t))
+    if (t.reason === 'squareoff') assert.equal(t.exitTime, '15:15')
+  }
+})
+check('the 5-minute data has no bucket collisions', () => assert.equal(res.collisions, 0))
 
 console.log(`\nAll ${passed} checks passed.`)

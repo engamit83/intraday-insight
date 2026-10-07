@@ -1,10 +1,10 @@
 // Paste into the browser Console (F12) on your signed-in app tab, then press Enter.
 // READ-ONLY: downloads Sharekhan's past candles for the 49 scout stocks and saves
-// them as a file (history-5minute-<date>.json) in your Downloads folder.
+// them as a file (history-<interval>-<date>.json) in your Downloads folder.
 // Needs a fresh Sharekhan connection (app -> Settings -> Connect Sharekhan).
 // Takes about 30 seconds. Send the downloaded file to Claude for the back-test.
 (async () => {
-  const INTERVAL = '5minute'
+  const INTERVAL = '30minute' // 5minute gives ~6 days, 30minute and 60minute ~24 days, daily since 2000 (checked 7 Oct)
   const UNIVERSE = ['RELIANCE','TCS','HDFCBANK','ICICIBANK','INFY','HINDUNILVR','ITC','SBIN',
     'BHARTIARTL','KOTAKBANK','LT','AXISBANK','ASIANPAINT','MARUTI','SUNPHARMA',
     'TITAN','ULTRACEMCO','BAJFINANCE','NESTLEIND','WIPRO','HCLTECH','ONGC',

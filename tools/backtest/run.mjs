@@ -24,7 +24,8 @@ const variants = [
 const runs = variants.map(([name, opts]) => ({ name, r: runBacktest(data, { ...common, ...opts }) }))
 const base = runs[0].r
 const days = base.days.filter((d) => !base.skippedDays.includes(d))
-console.log(`Data: ${base.symbols} stocks, ${base.days.length} days (${base.days[0]} to ${base.days.at(-1)}); back-tested days: ${days.length} (first days skipped for indicator warm-up: ${base.skippedDays.length})`)
+if (base.collisions) console.log(`WARNING: ${base.collisions} candles fell into the same time slot as another (candle timing differs from what the back-tester expects)`)
+console.log(`Data: ${data.interval} candles, ${base.symbols} stocks, ${base.days.length} days (${base.days[0]} to ${base.days.at(-1)}); back-tested days: ${days.length} (first days skipped for indicator warm-up: ${base.skippedDays.length})`)
 console.log(`Costs per round trip: ${roundTripCostPct({ ...DEFAULTS.costs, brokeragePct: brokerage }).toFixed(3)}% + slippage ${slippage}% per side (brokerage ${brokerage}% per side). Rupees assume Rs ${DEFAULTS.notional.toLocaleString('en-IN')} per trade.\n`)
 
 const half = Math.floor(days.length / 2)
