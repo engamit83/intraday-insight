@@ -33,6 +33,12 @@ export const DEFAULTS = {
   noEntryAfter: null,      // e.g. '14:45' (switch)
   marketFilter: false,     // switch: BUY only if the average stock is up on the day, SELL only if down
   prevCloseFilter: false,  // switch: BUY only above yesterday's close, SELL only below
+  topN: null,              // switch: open at most N new positions per decision (null = up to maxOpen)
+  maxTradesPerDay: null,   // switch: stop opening new positions after N entries in a day
+  onePerStockPerDay: false,// switch: each stock traded at most once a day
+  relStrength: false,      // switch: BUY only if the stock is up MORE than the average stock today, SELL only if down more
+  minRelVolume: null,      // switch: require relative volume >= this (e.g. 1.2)
+  dailyLossLimitRs: null,  // switch: no new entries once the day's closed trades lost this many rupees (e.g. 5000)
   stopAtrMult: 1.5,        // live: STOP_ATR_MULT
   minStopPct: 0.25,        // live: MIN_STOP_PCT
   rewardRisk: 1.5,         // live: REWARD_RISK
@@ -124,6 +130,9 @@ export function runBacktest(data, options = {}) {
   for (const day of days) {
     const open = new Map()       // symbol -> position
     const cooldownUntil = new Map()
+    const tradedToday = new Set()
+    let entriesToday = 0
+    const dayStartTrades = trades.length
     let anyTradable = false
 
     // per-stock day data
@@ -175,7 +184,7 @@ export function runBacktest(data, options = {}) {
 
       // market breadth: average % change from the day's open, over stocks with this candle
       let breadth = 0, nb = 0
-      if (o.marketFilter) {
+      if (o.marketFilter || o.relStrength) {
         for (const s of Object.keys(ctx)) {
           const j = ctx[s].byBucket.get(bucket)
           if (j === undefined) continue
@@ -189,6 +198,7 @@ export function runBacktest(data, options = {}) {
       const candidates = []
       for (const s of Object.keys(ctx)) {
         if (open.has(s) || (cooldownUntil.get(s) ?? -1) > t + step) continue
+        if (o.onePerStockPerDay && tradedToday.has(s)) continue
         const j = ctx[s].byBucket.get(bucket)
         if (j === undefined) continue
         const nextJ = ctx[s].byBucket.get(nextBucket)
@@ -202,14 +212,27 @@ export function runBacktest(data, options = {}) {
         const finalScore = Math.round(calculateRawScore(ind) * timeMult)
         if (finalScore < o.minScore) continue
         if (o.marketFilter && ((dir.direction === 'BUY' && breadth <= 0) || (dir.direction === 'SELL' && breadth >= 0))) continue
+        if (o.minRelVolume !== null && !(ind.relativeVolume !== null && ind.relativeVolume >= o.minRelVolume)) continue
+        if (o.relStrength) {
+          const chg = (ind.lastClose / ctx[s].dayOpen - 1) * 100
+          if ((dir.direction === 'BUY' && chg <= breadth) || (dir.direction === 'SELL' && chg >= breadth)) continue
+        }
         const pc = ctx[s].prevClose
         if (o.prevCloseFilter && pc && ((dir.direction === 'BUY' && ind.lastClose <= pc) || (dir.direction === 'SELL' && ind.lastClose >= pc))) continue
         const rankScore = calculateScoreUncapped(ind) * timeMult
         candidates.push({ s, dir: dir.direction, ind, rankScore, finalScore, nextJ })
       }
       candidates.sort((a, b) => b.rankScore - a.rankScore || b.finalScore - a.finalScore)
-      for (const cand of candidates.slice(0, o.maxOpen)) {
+      if (o.maxTradesPerDay !== null && entriesToday >= o.maxTradesPerDay) continue
+      if (o.dailyLossLimitRs !== null) {
+        const realised = trades.slice(dayStartTrades).reduce((a, x) => a + (x.netPct / 100) * o.notional, 0)
+        if (realised <= -o.dailyLossLimitRs) continue
+      }
+      for (const cand of candidates.slice(0, o.topN ?? o.maxOpen)) {
         if (open.size >= o.maxOpen) break
+        if (o.maxTradesPerDay !== null && entriesToday >= o.maxTradesPerDay) break
+        entriesToday++
+        tradedToday.add(cand.s)
         const lv = levelsFor(cand.dir, cand.ind.lastClose, cand.ind.atr, o)
         const nextOpen = ctx[cand.s].list[cand.nextJ].open
         const slip = nextOpen * (o.slippagePct / 100)

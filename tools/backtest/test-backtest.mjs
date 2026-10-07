@@ -157,4 +157,35 @@ check('30-minute candles: decisions and exits on the 30-minute grid, square-off 
 })
 check('the 5-minute data has no bucket collisions', () => assert.equal(res.collisions, 0))
 
+check('new switches: max trades per day, one per stock per day, top-N per decision, daily loss limit', () => {
+  const byDay = (tr) => tr.reduce((m, t) => ((m[t.day] ??= []).push(t), m), {})
+  for (const n of [1, 2]) for (const v of Object.values(byDay(runBacktest(trendy, { maxTradesPerDay: n }).trades))) assert.ok(v.length <= n)
+  const a = runBacktest(trendy, { maxTradesPerDay: 3 }).trades
+  assert.ok(a.length > 0); for (const v of Object.values(byDay(a))) assert.ok(v.length <= 3)
+  const b = runBacktest(trendy, { onePerStockPerDay: true }).trades
+  for (const v of Object.values(byDay(b))) assert.equal(new Set(v.map((t) => t.symbol)).size, v.length)
+  const c = runBacktest(trendy, { topN: 1 }).trades
+  const per = {}; for (const t of c) per[t.day + t.signalTime] = (per[t.day + t.signalTime] ?? 0) + 1
+  assert.ok(Object.values(per).every((n) => n <= 1))
+  // daily loss limit: after the day's closed trades reach the limit, no later ENTRY that day
+  const lim = 300
+  const d = runBacktest(trendy, { dailyLossLimitRs: lim })
+  let checked = 0
+  for (const v of Object.values(byDay(d.trades))) {
+    for (const u of v) {
+      // realised P&L of trades closed at or before u's decision time must be above the limit
+      const realised = v.filter((x) => x.exitTime <= u.signalTime).reduce((acc, x) => acc + (x.netPct / 100) * d.options.notional, 0)
+      assert.ok(realised > -lim, `entry at ${u.entryTime} after the day's loss reached ${realised.toFixed(0)}`)
+      checked++
+    }
+  }
+  assert.ok(runBacktest(trendy).trades.length > d.trades.length, 'the limit should block some entries')
+})
+check('relative-strength and volume switches only remove trades', () => {
+  const base = runBacktest(trendy).trades.length
+  assert.ok(runBacktest(trendy, { relStrength: true }).trades.length <= base + 5)
+  const rv = runBacktest(trendy, { minRelVolume: 1.2 })
+  assert.ok(rv.trades.length < base)
+})
+
 console.log(`\nAll ${passed} checks passed.`)

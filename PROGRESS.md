@@ -496,6 +496,27 @@ Same rules applied to 30-minute candles (1 Sep–6 Oct; first 4 days used to war
 **Reading:** confirms the 5-minute result — baseline has no edge (gross ≈ 0) and loses after costs. The **market filter is the one change that helped in both tests and in both halves** (here: gross turns positive, loss cut by more than half). Half of all baseline trades (190 of 382) are entered at the first decision of the day (09:45) and those lose most (−Rs 29,347). The yesterday-close filter helped on 5-min but hurt on 30-min → not reliable. Nothing is profitable after costs yet.
 **Next (proposed):** test "fewer but better" (top 2–3 only, one trade per stock per day, skip the first decision), market filter on by default; re-test as live days accumulate.
 
+## 🧪 2026-10-07 (late night) — "Missing rules" tested in the back-tester
+
+New back-test switches (all tested, 18 offline checks, mutation-tested): top-N per decision, max trades/day, one trade per stock per day, relative strength vs the 49-stock average, minimum relative volume, daily loss limit. `tools/backtest/run-rules.mjs` runs 12 variants fixed BEFORE seeing results; market filter (M) on in all except #0.
+
+| variant | 5-min (5 days) net Rs | 30-min (20 days) net Rs | 30-min trades/day | 30-min NET exp % | 30-min green days |
+|---|---|---|---|---|---|
+| 0 old rules | −47,771 | −43,366 | 19.1 | −0.114 | 7/20 |
+| 1 market filter M | −44,052 | −19,059 | 18.0 | −0.053 | 10/20 |
+| 2 M + top 3 + 1/stock/day | −34,535 | −9,666 | 15.9 | −0.030 | 11/20 |
+| 3 M + max 10/day + 1/stock/day | −11,376 | −11,218 | 10.0 | −0.056 | 6/20 |
+| 4 M + skip opening | −35,079 | −26,856 | 16.9 | −0.079 | 8/20 |
+| 5 M + relative strength | −40,024 | −23,158 | 17.8 | −0.065 | 11/20 |
+| 6 M + volume ≥ 1.2× | −24,482 | −7,120 | 8.1 | −0.044 | 9/20 |
+| 7 M + daily loss limit 5k | −32,486 | −14,888 | 16.9 | −0.044 | 10/20 |
+| **8 FEWER BUT BETTER (M+2+3+4+5)** | −6,605 | **+1,430** | 9.8 | +0.007 | 12/20 |
+| **9 = 8 + wider levels 2×ATR/2R** | −3,303 | **+6,934** | 9.8 | +0.035 | 11/20 |
+| 10 = 8 + volume ≥ 1.2× | −6,332 | −196 | 0.8 | −0.013 | 4/20 |
+| 11 = 8 + loss limit (never triggered) | −6,605 | +1,430 | 9.8 | +0.007 | 12/20 |
+
+**Reading:** combining the rules works much better than any single rule: losses shrink about 90% and the 30-minute test turns slightly positive (#9: +Rs 6,934 over 20 days, max drawdown −Rs 10,238). BUT: +0.035% per trade on 197 trades is well inside noise; 12 variants were tried (some will look good by luck); #8/#9 lost in the FIRST half of both data sets and gained in the second. Verdict: a promising direction worth building into the scout and paper-trading, NOT evidence of profit. Real money stays off.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
