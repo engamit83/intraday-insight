@@ -37,7 +37,7 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 | **6 — Real money, small** | After stage 5 passes | Order placement via Sharekhan with manual confirm, smallest size, daily and weekly loss limits; check SEBI/Sharekhan rules for API trading first | Live results match paper results |
 | **7 — Scale** | Later | Move the feed to an always-on server; ML on the journal data; size up slowly; multi-user only after legal check | — |
 
-**Decisions needed from the owner:** Sharekhan intraday brokerage rate (Stage 0) · trading capital and risk per trade (Stage 3) · short selling allowed? (assumed yes, intraday) · use intraday margin/leverage? (not before Stage 6).
+**Decisions needed from the owner:** ~~brokerage rate~~ → 0.03% per side (decided 8 Oct) · trading capital and risk per trade (Stage 3) · short selling allowed? (assumed yes, intraday) · use intraday margin/leverage? (not before Stage 6).
 **Ideas parked for later (agreed useful, not scheduled):** limit-order execution rules · weekly loss limit · bigger size for A+ setups · ML model.
 
 ---
@@ -65,7 +65,7 @@ Back-test v4 vs the original rules: 5-min (4 days) +Rs 5,452 vs −Rs 47,771 bas
 | A12 | Profit lock | at +1× stop distance → stop to entry + costs (no-loss); at +1.5× → lock +0.75× | ✅ owner's idea, raised win rate to ~60% |
 | A13 | Trailing stop | stop follows the best close by 1.5×ATR, never loosens | ✅ |
 | A14 | Square-off | everything closed at 15:15 | ✅ |
-| A15 | Costs in every test | brokerage 0.03%/side (to confirm), STT, exchange, SEBI, stamp, GST, slippage 0.02%/side | ✅ |
+| A15 | Costs in every test | brokerage 0.03%/side (owner confirmed 8 Oct: use 0.03%), STT, exchange, SEBI, stamp, GST, slippage 0.02%/side | ✅ |
 
 ### B. Tested and dropped (can be revisited with more data)
 | Rule | Why out |
