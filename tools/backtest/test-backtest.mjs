@@ -218,4 +218,23 @@ check('breakeven: after the move, a stop-out exits at the entry price (minus sli
   for (const t of be) assert.ok(Math.abs(t.grossPct) < 0.2 + 2 * DEFAULTS.slippagePct, `${t.grossPct}`)
 })
 
+check('time-of-day volume: only stocks trading far above their usual volume for that slot pass the gate', () => {
+  const d = JSON.parse(JSON.stringify(trendy))
+  const lastDay = runBacktest(trendy).days.at(-1)
+  for (const c of d.results.AAA.candles) if (c[0].startsWith(lastDay)) c[5] *= 20
+  for (const c of d.results.BBB.candles) c[5] *= 20 // always busy: high volume is USUAL for BBB, so it must not pass
+  const r = runBacktest(d, { todRvolMin: 8 }).trades
+  assert.ok(r.length > 0, 'expected trades for the high-volume stock')
+  assert.ok(r.every((t) => t.symbol === 'AAA' && t.day === lastDay), JSON.stringify(r.map((t) => t.symbol + t.day)))
+  const r2 = runBacktest(d, { dayRvolMin: 8 }).trades
+  assert.ok(r2.length > 0 && r2.every((t) => t.symbol === 'AAA' && t.day === lastDay))
+  assert.equal(runBacktest(trendy, { todRvolMin: 100 }).trades.length, 0)
+})
+check('volume rank weight changes the order but never filters', () => {
+  const a = runBacktest(trendy, { topN: 1 }), b = runBacktest(trendy, { topN: 1, volRankWeight: 5 })
+  assert.ok(b.trades.length > 0)
+  const ka = a.trades.map((t) => t.day + t.signalTime + t.symbol).join(), kb = b.trades.map((t) => t.day + t.signalTime + t.symbol).join()
+  assert.notEqual(ka, kb, 'a large volume weight should change which stock is picked at least once')
+})
+
 console.log(`\nAll ${passed} checks passed.`)

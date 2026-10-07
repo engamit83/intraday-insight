@@ -535,6 +535,23 @@ New switches (21 offline checks, mutation-tested): daily trend (N-day average of
 **Candidate rule set "scout v3" (to build as switches, then paper-trade, NOT real money):** market filter + relative strength + no entries before 10:00 + top 3 per decision + one trade per stock per day + max 10 trades/day + stop 2×ATR / target 2R + only beyond yesterday's high/low (+ optional breakeven after 1R for the paper exits).
 **Not testable on history:** spread check (no past bid/offer), alerts, exposure in rupees (needs capital), special days (too few in sample).
 
+## 🔊 2026-10-07 (late night) — Volume, done properly (owner: "don't remove volume, look at increasing volume")
+
+**Correction to the earlier volume rule:** it compared the last 2 candles with the previous 20 candles of the SAME day. Intraday volume is always high at the open and close and low at midday, so that rule mostly measured the time of day, not unusual interest. New switches compare like with like (earlier days, same time slot, up to 5 days, needs ≥ 2): slot volume (`todRvolMin`), today's volume so far vs usual by this time (`dayRvolMin`), rising slot-relative volume (`volRising`), and a ranking weight (`volRankWeight`). 23 offline checks incl. "a stock that is ALWAYS busy must not pass" (mutation-tested).
+**Results on top of rule set v3** (v3 = #15 + breakeven 1R). 5-min compared from 30 Sep (first day lacks 2 earlier days of volume):
+
+| variant | 5-min trades / net Rs / exp % | 30-min trades / net Rs / exp % / max DD |
+|---|---|---|
+| v3, no volume rule | 38 / +806 / +0.021 | 187 / +12,911 / +0.069 / −7,681 |
+| old rule (last 2 vs previous 20 ≥ 1.2×) | 45 / −1,550 / −0.034 (all days) | 9 / +846 (kills almost every trade) |
+| slot volume ≥ 1.5× usual | 36 / +6,202 / +0.172 | 159 / +4,815 / +0.030 / −11,564 |
+| **today's volume so far ≥ 1.2× usual** | **32 / +3,279 / +0.102** | **128 / +11,975 / +0.094 / −8,812** |
+| volume rising | 36 / +79 | 183 / −7,842 (hurts) |
+| rank by volume (no filter) | ≈ no change | slightly worse |
+
+**Decision:** add "today's volume so far ≥ 1.2× its usual by this time" to v3 — better profit per trade on BOTH data sets with ~30% fewer trades (lower cost and risk). Slot volume ≥ 1.5× was best on 5-min but weak on 30-min (inconsistent → not used). "Volume rising" hurts. Same caveats: few days, many variants tried.
+**Rule set v3 (final candidate):** market filter · relative strength · beyond yesterday's high/low · today's volume ≥ 1.2× usual · no entries before 10:00 · top 3 per decision · one trade per stock per day · max 10/day · stop 2×ATR, target 2R · breakeven after 1R.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.

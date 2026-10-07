@@ -37,7 +37,14 @@ export const DEFAULTS = {
   maxTradesPerDay: null,   // switch: stop opening new positions after N entries in a day
   onePerStockPerDay: false,// switch: each stock traded at most once a day
   relStrength: false,      // switch: BUY only if the stock is up MORE than the average stock today, SELL only if down more
-  minRelVolume: null,      // switch: require relative volume >= this (e.g. 1.2)
+  minRelVolume: null,      // switch: require relative volume >= this (e.g. 1.2) [last 2 candles vs previous 20 - biased by time of day]
+  // Time-of-day volume (fairer: compares with the SAME time slot on earlier days, because volume is
+  // always high at the open/close and low at midday). Needs >= volDays earlier days with that slot.
+  volDays: 5,              // how many earlier days to average
+  todRvolMin: null,        // switch: the candle that just closed traded >= X times its usual volume for that time slot
+  dayRvolMin: null,        // switch: today's volume SO FAR >= X times the usual volume by this time of day
+  volRising: false,        // switch: participation rising: the last candle's slot-relative volume > the one before
+  volRankWeight: null,     // switch: no filtering; rank higher-volume stocks first: rank x (1 + w x (min(dayRvol,3) - 1))
   dailyTrendDays: null,    // switch: BUY only if yesterday's close is above its N-day average of daily closes, SELL below
   maxGapPct: null,         // switch: skip a stock for the day if it opened more than X% away from yesterday's close
   openingRangeMin: null,   // switch: no entries until the first N minutes are over; BUY only above that range's high, SELL only below its low
@@ -142,6 +149,32 @@ export function runBacktest(data, options = {}) {
     }
   }
   const dayIndex = new Map(days.map((d, i) => [d, i]))
+
+  // volume by time slot per stock: vol[s][day][bucket] and cumulative-by-slot cum[s][day][bucket]
+  const vol = {}, cum = {}
+  for (const s of symbols) {
+    vol[s] = {}; cum[s] = {}
+    for (const [d, v] of Object.entries(byDay[s])) {
+      vol[s][d] = {}; cum[s][d] = {}
+      let run = 0
+      for (const c of v.list) { vol[s][d][c.bucket] = c.volume; run += c.volume; cum[s][d][c.bucket] = run }
+    }
+  }
+  // average over the previous volDays days that have this slot; null if fewer than 2 such days
+  function slotAvg(table, s, day, bucket) {
+    const prior = days.slice(0, dayIndex.get(day)).reverse()
+    const vals = []
+    for (const d of prior) { const x = table[s][d]?.[bucket]; if (x !== undefined) vals.push(x); if (vals.length >= o.volDays) break }
+    return vals.length >= 2 ? vals.reduce((a, b) => a + b, 0) / vals.length : null
+  }
+  function volStats(s, day, bucket, prevBucket) {
+    const a = slotAvg(vol, s, day, bucket), ac = slotAvg(cum, s, day, bucket)
+    const tod = a ? vol[s][day][bucket] / a : null
+    const dayR = ac ? cum[s][day][bucket] / ac : null
+    let prevTod = null
+    if (prevBucket && vol[s][day][prevBucket] !== undefined) { const ap = slotAvg(vol, s, day, prevBucket); prevTod = ap ? vol[s][day][prevBucket] / ap : null }
+    return { tod, dayR, prevTod }
+  }
 
   for (const day of days) {
     const open = new Map()       // symbol -> position
@@ -265,7 +298,14 @@ export function runBacktest(data, options = {}) {
         if (o.prevDayLevels && ctx[s].prevDay && (B ? ind.lastClose <= ctx[s].prevDay.high : ind.lastClose >= ctx[s].prevDay.low)) continue
         const pc = ctx[s].prevClose
         if (o.prevCloseFilter && pc && ((dir.direction === 'BUY' && ind.lastClose <= pc) || (dir.direction === 'SELL' && ind.lastClose >= pc))) continue
-        const rankScore = calculateScoreUncapped(ind) * timeMult
+        let rankScore = calculateScoreUncapped(ind) * timeMult
+        if (o.todRvolMin !== null || o.dayRvolMin !== null || o.volRising || o.volRankWeight !== null) {
+          const vs = volStats(s, day, bucket, j > 0 ? ctx[s].list[j - 1].bucket : null)
+          if (o.todRvolMin !== null && !(vs.tod !== null && vs.tod >= o.todRvolMin)) continue
+          if (o.dayRvolMin !== null && !(vs.dayR !== null && vs.dayR >= o.dayRvolMin)) continue
+          if (o.volRising && !(vs.tod !== null && vs.prevTod !== null && vs.tod > vs.prevTod)) continue
+          if (o.volRankWeight !== null && vs.dayR !== null) rankScore *= 1 + o.volRankWeight * (Math.min(vs.dayR, 3) - 1)
+        }
         candidates.push({ s, dir: dir.direction, ind, rankScore, finalScore, nextJ })
       }
       candidates.sort((a, b) => b.rankScore - a.rankScore || b.finalScore - a.finalScore)
