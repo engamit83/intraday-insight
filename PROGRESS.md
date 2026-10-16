@@ -909,6 +909,12 @@ Reading (per intent rule 5): many picks were right (43% reached the target after
 - Paper Trades screen: columns "Target reached?" and "With normal stop", plus the running score "X of Y reached (Z%)" with the agreed decision rule.
 - Tests: owner-rule e2e 5/5, learning-record unit 4/4, normal-mode e2e 6/6 and 1-min 5/5, paper = back-test exits 105/105.
 
+## 📱 2026-10-17 (Sat, 01:00) — Charts per trade (live) + phone alerts via Telegram (built, not deployed)
+- Paper Trades screen: click a trade → its day's 5-minute chart with buy point, exit point, stop, normal stop and target (`src/components/TradeChart.tsx`). Live on GitHub Pages.
+- `_shared/notify.ts` + `paper-trader`: Telegram alerts — paper trade opened (with stop and "why chosen"), closed (reason, net ₹), day summary (incl. targets reached), **Sharekhan not connected** (from 08:50, hourly), **price feed off** > 3 min (from 09:20, every 30 min). The chat is linked automatically from the owner's first message to the bot. Token stored only in backend table `notify_settings` (RLS on, no policies) — `tools/sql/notify-setup.sql`, owner pastes the token himself. Alerts never block trading logic.
+- Tests: alerts e2e 4/4 (fake Telegram), paper-trader e2e 6/6, 1-min 5/5, owner 5/5, scout 23/23.
+- Goes live with the same single Lovable message (deploy scout-signals + paper-trader).
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.

@@ -17,6 +17,7 @@ import { verifyAuth, corsHeaders, isTrustedInternalRequest } from '../_shared/au
 import { PAPER, manageOnCandle, entryFill, settle, quantityFor, roundTripCostPct, newTrack, trackOnCandle, trackDone, type PaperPos, type Bar, type Track } from '../_shared/paper.ts'
 import { istDayStartMs } from '../_shared/livecandles.ts'
 import { istOf, bucketOfMs } from '../_shared/v4.ts'
+import { notify } from '../_shared/notify.ts'
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -61,6 +62,17 @@ Deno.serve(async (req) => {
 
   const weekday = new Date(nowMs + 5.5 * 3600_000).getUTCDay()
   const inSession = weekday >= 1 && weekday <= 5 && nowMin >= 9 * 60 + 15 && nowMin <= 15 * 60 + 40
+  // ---- phone alerts: morning checks (owner, 17 Oct) ----
+  if (weekday >= 1 && weekday <= 5 && nowMin >= 8 * 60 + 50 && nowMin <= 15 * 60 + 25) {
+    const { data: tok } = await supabase.from('user_settings').select('sharekhan_token_expiry')
+      .not('sharekhan_access_token', 'is', null).gt('sharekhan_token_expiry', new Date(nowMs).toISOString()).limit(1)
+    if (!tok?.length) await notify(supabase, '⚠️ Sharekhan is NOT connected. Open the app on the Lovable address → Settings → Connect Sharekhan.', { key: `sharekhan-off-${today}`, everyMin: 60 })
+    if (nowMin >= 9 * 60 + 20) {
+      const { data: lastC } = await supabase.from('live_candles').select('updated_at').order('updated_at', { ascending: false }).limit(1).maybeSingle()
+      const ageMin = lastC?.updated_at ? (nowMs - Date.parse(lastC.updated_at)) / 60_000 : Infinity
+      if (ageMin > 3) await notify(supabase, `⚠️ Price feed is OFF${Number.isFinite(ageMin) ? ` (no prices for ${Math.round(ageMin)} min)` : ''}. Check that the laptop is on, signed in and online.`, { key: `feed-off-${today}`, everyMin: 30 })
+    }
+  }
   if (!inSession && body.force !== true) return json({ skipped: 'market_closed' })
 
   const { data: owner } = await supabase.from('user_settings').select('user_id')
@@ -131,6 +143,7 @@ Deno.serve(async (req) => {
         }).eq('id', t.id)
         t.status = 'CLOSED'; t.pnl = st.pnlRs
         log.push(`closed ${t.symbol} ${t.direction} ${step.reason} net Rs ${Math.round(st.pnlRs)}`)
+        await notify(supabase, `${st.pnlRs >= 0 ? '✅' : '🔻'} Paper ${t.direction} ${t.symbol} closed: ${({ stop: 'stop loss', breakeven: 'at buy price', lockedstop: 'raised stop', target: 'TARGET hit', squareoff: '15:15 close' } as Record<string, string>)[step.reason] ?? step.reason}, net ₹${Math.round(st.pnlRs)} (paper money)`)
         return
       }
       lastIso = b.startIso
@@ -216,6 +229,7 @@ Deno.serve(async (req) => {
     // NOTE: the entry price is kept unrounded inside the trade logic via entry_price (2 decimals) — difference < 1 paisa.
     opened++; openCount++
     log.push(`opened ${s.symbol} ${dir} at ${ins.entry_price}`)
+    await notify(supabase, `📈 Paper ${dir} ${s.symbol} at ₹${ins.entry_price} | target ₹${s.target_price} | stop ₹${startStop}${PAPER.exitMode === 'buyPrice' ? ' (buy price)' : ''}${s.indicators?.why ? `\nWhy: ${s.indicators.why}` : ''}`)
     trades.push(ins as Row)
     await manage(ins as Row) // the entry candle may already be closed
     const tr = (ins as Row).details?.track as Track | undefined
@@ -234,6 +248,8 @@ Deno.serve(async (req) => {
       const r = report(trades)
       await supabase.from('system_logs').insert({ level: 'INFO', source: 'paper-trader',
         message: `Paper day summary ${today}: ${r.closedCount} trades, ${r.wins} wins, net Rs ${r.netRs}`, metadata: r })
+      const reachedN = trades.filter((t) => t.details?.track?.pred?.reached).length
+      await notify(supabase, `📊 Paper day ${today}: ${r.closedCount} trades, ${r.wins} wins, net ₹${r.netRs} (paper money). Target reached: ${reachedN} of ${r.closedCount}.`)
     }
   }
 
