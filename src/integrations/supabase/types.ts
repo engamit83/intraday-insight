@@ -319,57 +319,102 @@ export type Database = {
       }
       simulated_trades: {
         Row: {
+          at_breakeven: boolean | null
+          atr: number | null
+          best_close: number | null
+          best_exc: number | null
           confidence_at_entry: number | null
+          costs_rs: number | null
+          details: Json | null
           direction: string | null
           entry_price: number
           entry_time: string | null
           exit_price: number | null
           exit_reason: string | null
           exit_time: string | null
+          gross_pct: number | null
           id: string
+          initial_stop: number | null
+          last_bucket: string | null
+          locked: boolean | null
           market_condition: string | null
+          net_pct: number | null
           pnl: number | null
           pnl_percent: number | null
           quantity: number | null
+          rules: string | null
           signal_id: string | null
           status: string | null
+          stop_dist: number | null
+          stoploss: number | null
           symbol: string
+          target: number | null
           user_id: string | null
         }
         Insert: {
+          at_breakeven?: boolean | null
+          atr?: number | null
+          best_close?: number | null
+          best_exc?: number | null
           confidence_at_entry?: number | null
+          costs_rs?: number | null
+          details?: Json | null
           direction?: string | null
           entry_price: number
           entry_time?: string | null
           exit_price?: number | null
           exit_reason?: string | null
           exit_time?: string | null
+          gross_pct?: number | null
           id?: string
+          initial_stop?: number | null
+          last_bucket?: string | null
+          locked?: boolean | null
           market_condition?: string | null
+          net_pct?: number | null
           pnl?: number | null
           pnl_percent?: number | null
           quantity?: number | null
+          rules?: string | null
           signal_id?: string | null
           status?: string | null
+          stop_dist?: number | null
+          stoploss?: number | null
           symbol: string
+          target?: number | null
           user_id?: string | null
         }
         Update: {
+          at_breakeven?: boolean | null
+          atr?: number | null
+          best_close?: number | null
+          best_exc?: number | null
           confidence_at_entry?: number | null
+          costs_rs?: number | null
+          details?: Json | null
           direction?: string | null
           entry_price?: number
           entry_time?: string | null
           exit_price?: number | null
           exit_reason?: string | null
           exit_time?: string | null
+          gross_pct?: number | null
           id?: string
+          initial_stop?: number | null
+          last_bucket?: string | null
+          locked?: boolean | null
           market_condition?: string | null
+          net_pct?: number | null
           pnl?: number | null
           pnl_percent?: number | null
           quantity?: number | null
+          rules?: string | null
           signal_id?: string | null
           status?: string | null
+          stop_dist?: number | null
+          stoploss?: number | null
           symbol?: string
+          target?: number | null
           user_id?: string | null
         }
         Relationships: [
