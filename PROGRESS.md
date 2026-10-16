@@ -745,6 +745,15 @@ Nothing was run between 8 and 15 Oct (owner busy) — the plan simply paused; no
 - `_shared/paper.ts` + new `paper-trader` function: every minute; enters each new v4 signal at the open of the candle forming at signal time (+0.02% slippage), ₹1 lakh per trade, manages on each closed 5-min candle with the v4 exits (stop, target, breakeven at 1R, lock no-loss at 1R / +0.75R at 1.5R, trail 1.5×ATR, square-off 15:15), daily loss stop −₹2,000, max 10 open, summary to `system_logs` after 15:30. Uses `simulated_trades` (+ new columns, `tools/sql/paper-trader-setup.sql`). **Verified: exits identical to the back-tester on all 36 trades** (`tools/backtest/test-paper-matches-backtest.mjs`); e2e 6 checks (e.g. a +1R trade that reverses closes at the locked stop with +₹104 instead of a loss). Signed-in users can call it read-only to see today's paper P&L. No real orders anywhere.
 - **To go live (owner):** SQL + deploy `scout-signals` and `paper-trader` (Lovable), then the every-minute jobs.
 
+## 🟢 2026-10-16 (Fri, afternoon) — LIVE: v4 signals + automatic paper trading running
+
+- 13:15 Lovable (1 credit; 4 left): SQL applied (paper columns) + `scout-signals` and `paper-trader` deployed.
+- 13:27 **Stage 0 dry run PASSED** on live data: 49/49 stocks, 0 errors, 18 live 5-min candles + 657 history candles each, ~37 s per run. v4 candidates at 13:27: GRASIM BUY, POWERGRID BUY; the other 47 skipped with clear reasons (mostly choppy).
+- 13:43 Owner ran the job SQL in the SQL editor (free): `scout-v4-every-minute` and `paper-trader-every-minute`, cron `* 3-10 * * 1-5` UTC, x-job-token 'cron', pg_net timeout 120 s.
+- 13:49 **First automatic paper trades:** HEROMOTOCO BUY 5,224.04 (13:40), ULTRACEMCO BUY 10,973.19 (13:40), GRASIM BUY 2,912.68 (13:45). Results after the 15:15 square-off / 15:30 summary.
+- **Known issue:** Lovable shows "Build unsuccessful — Preview is out of date" for the web app since ~6 Oct (frontend build only; edge functions deploy fine). To investigate.
+- **Owner rules today:** ask before any action that uses Lovable credits; SQL always via the free SQL editor.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
