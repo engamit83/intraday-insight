@@ -44,6 +44,7 @@ import {
 import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay, DEFAULT_INTERVAL } from '../_shared/sharekhan.ts'
 import { STARTER_UNIVERSE } from '../_shared/universe.ts'
 import { liveRowsToCandles, mergeHistoryAndLive, historyBeforeToday, istDayStartMs, istDateKey, type LiveRow } from '../_shared/livecandles.ts'
+import { prepareStock, evaluateV4, V4 } from '../_shared/v4.ts'
 
 const DEFAULT_BATCH_SIZE = 25
 const MAX_BATCH_SIZE = 40
@@ -147,6 +148,9 @@ Deno.serve(async (req) => {
   const interval: string =
     typeof body.interval === 'string' && /^[A-Za-z0-9]{1,12}$/.test(body.interval) ? body.interval : DEFAULT_INTERVAL
   const source: 'live' | 'rest' = body.source === 'rest' ? 'rest' : 'live'
+  // Rule set: 'v4' (back-tested, default for the live path) or 'v2' (old scoring-only rules).
+  const rules: 'v4' | 'v2' = source === 'live' && body.rules !== 'v2' ? 'v4' : 'v2'
+  const mergedBySymbol = new Map<string, Candle[]>()
   const maxBatch = source === 'live' ? MAX_BATCH_SIZE_LIVE : MAX_BATCH_SIZE
 
   // ---- market-hours gate ----
@@ -290,7 +294,9 @@ Deno.serve(async (req) => {
         await pause()
         continue
       }
-      candles = newestFirst(mergeHistoryAndLive(fetched.candles, conv.candles, nowMs))
+      const merged = mergeHistoryAndLive(fetched.candles, conv.candles, nowMs)
+      candles = newestFirst(merged)
+      mergedBySymbol.set(symbol, merged)
       // Freshness = when the feed last wrote this stock's candles (not the candle's start time).
       latestMs = conv.newestWriteMs ?? Date.parse(conv.candles[conv.candles.length - 1].timestamp)
       liveCount = conv.candles.length
@@ -341,7 +347,50 @@ Deno.serve(async (req) => {
     await pause()
   }
 
-  // ---- choose the best ----
+  // ---- rule set v4: same rules as the back-tester (tools/backtest), see PROGRESS.md RULEBOOK A ----
+  let v4Summary: Record<string, unknown> | null = null
+  if (rules === 'v4') {
+    const nowMs = Date.now()
+    const scoredSyms = new Set(results.filter((r) => r.status === 'scored').map((r) => r.symbol))
+    const states = [...mergedBySymbol.entries()].filter(([s]) => scoredSyms.has(s)).map(([s, cs]) => prepareStock(s, cs, nowMs))
+    const ev = evaluateV4(states, nowMs)
+    // today's v4 signals: one per stock per day, max per day
+    const dayStartIso = new Date(istDayStartMs(nowMs)).toISOString()
+    const { data: todays } = await supabase.from('signals').select('symbol, indicators, created_at').gte('created_at', dayStartIso)
+    const todayV4 = (todays ?? []).filter((r: { indicators: { rules?: string } | null }) => r.indicators?.rules === 'v4')
+    const usedToday = new Set(todayV4.map((r: { symbol: string }) => r.symbol))
+    const room = Math.max(0, V4.maxSignalsPerDay - todayV4.length)
+    const pick = ev.entryWindowOpen && timeMult > 0
+      ? ev.candidates.filter((c) => !usedToday.has(c.symbol)).slice(0, Math.min(V4.topN, room))
+      : []
+    const inserted: string[] = []
+    if (!dryRun && pick.length) {
+      const expiresAt = new Date(nowMs + SIGNAL_TTL_MINUTES * 60_000).toISOString()
+      for (const c of pick) {
+        const { error } = await supabase.from('signals').insert({
+          symbol: c.symbol, signal_type: c.direction, entry_price: c.entry, target_price: c.target, stoploss_price: c.stoploss,
+          confidence: c.finalScore, timeframe: '5min', is_active: true, expires_at: expiresAt,
+          raw_score: c.rawScore, final_score: c.finalScore, market_condition: marketCondition, is_tradable: true, rejection_reason: null,
+          indicators: { rules: 'v4', source: 'scout-v4-live', rank_score: c.rankScore, atr: c.atr, stop_dist: c.stopDist, reasons: c.reasons,
+            market_breadth_pct: ev.breadthPct, management: { lockAtR: V4.lockAtR, lock2AtR: V4.lock2AtR, lock2KeepR: V4.lock2KeepR, trailAtrMult: V4.trailAtrMult, squareOff: V4.squareOff } },
+        })
+        if (!error) inserted.push(c.symbol)
+      }
+    }
+    if (!dryRun) {
+      // expire unused signals after their time-to-live
+      await supabase.from('signals').update({ is_active: false, rejection_reason: 'expired' }).eq('is_active', true).lt('expires_at', new Date(nowMs).toISOString())
+    }
+    v4Summary = {
+      rules: 'v4', entryWindowOpen: ev.entryWindowOpen, marketBreadthPct: ev.breadthPct, timeMult: ev.timeMult,
+      signalsToday: todayV4.length, picked: pick.map((c) => ({ symbol: c.symbol, direction: c.direction, entry: c.entry, stoploss: c.stoploss, target: c.target, rank: c.rankScore, reasons: c.reasons })),
+      inserted, candidates: ev.candidates.length,
+      candidateList: ev.candidates.slice(0, 15).map((c) => ({ symbol: c.symbol, direction: c.direction, entry: c.entry, stoploss: c.stoploss, target: c.target, rank: c.rankScore })),
+      rejectedSample: ev.rejected.slice(0, 60),
+    }
+  }
+
+  // ---- choose the best (old v2 rules; skipped when v4 is active) ----
   const scored = results.filter((r) => r.status === 'scored')
   const selected = scored
     .filter((r) => r.direction && r.levels && (r.finalScore ?? 0) >= minScore && marketMult > 0 && timeMult > 0)
@@ -349,7 +398,7 @@ Deno.serve(async (req) => {
 
   const written = { inserted: 0, updated: 0, deactivated: 0, expired: 0, capped: 0 }
 
-  if (!dryRun) {
+  if (!dryRun && rules === 'v2') {
     const nowIso = new Date().toISOString()
     const expiresAt = new Date(Date.now() + SIGNAL_TTL_MINUTES * 60_000).toISOString()
 
@@ -435,6 +484,8 @@ Deno.serve(async (req) => {
     batch: batchInfo,
     interval,
     source,
+    rules,
+    v4: v4Summary,
     scanned: symbols.length,
     scored: scored.length,
     errors: results.filter((r) => r.status === 'error').length,
