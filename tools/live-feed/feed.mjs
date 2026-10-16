@@ -58,6 +58,22 @@ const builder = new CandleBuilder({ ignoreMarketHours: TEST_IGNORE_MARKET_HOURS 
 const recorder = new DayRecorder(process.env.RECORD_DIR || path.join(here, 'data'))
 const BOOK_EVERY_MS = 60_000
 const CANDLE_FILE_EVERY_MS = 5 * 60_000
+// Extra stocks/indices to RECORD ONLY (file record-extra.csv: "SYMBOL,scripcode" per line). Their candles go to the
+// data folder only, never to the database, so signals and paper trades are unaffected. If subscribing to them
+// makes the trading stocks stop arriving, the feed drops the extras for the rest of the session (safety switch).
+const EXTRA_FILE = path.join(here, 'record-extra.csv')
+const EXTRA_CHECK_MS = Number(process.env.EXTRA_CHECK_MS || 90_000)
+function loadExtras() {
+  const out = new Map()
+  try {
+    if (!fs.existsSync(EXTRA_FILE)) return out
+    for (const line of fs.readFileSync(EXTRA_FILE, 'utf8').split(/\r?\n/)) {
+      const m = line.trim().match(/^([^,#\s][^,]*),\s*(\d{1,9})\s*$/)
+      if (m) out.set(Number(m[2]), m[1].trim())
+    }
+  } catch { /* a bad file must never stop the feed */ }
+  return out
+}
 function saveDayFiles() {
   const n = recorder.writeCandles(builder, Date.now())
   if (n) say(`saved ${n} one-minute candles to the data folder`)
@@ -103,13 +119,16 @@ async function gateway(action, payload = {}) {
 }
 
 // ---------- saving candles ----------
+let uploadSymbols = null // only these go to the database (the app's stock list); extras are recorded locally only
 let saveFailures = 0
 let savedRows = 0
 let lastSaveErrorAt = 0
 
 async function flush() {
-  const { rows, pending } = builder.collectDirty()
-  if (rows.length === 0) return
+  const collected = builder.collectDirty()
+  const pending = collected.pending
+  const rows = uploadSymbols ? collected.rows.filter((r) => uploadSymbols.has(r.symbol)) : collected.rows
+  if (rows.length === 0) { builder.commit(pending); return }
   try {
     for (let i = 0; i < rows.length; i += 400) {
       await gateway('candles', { rows: rows.slice(i, i + 400) })
@@ -137,6 +156,11 @@ async function runSession() {
   const codes = [...codeToSymbol.keys()]
   if (codes.length === 0) throw new Error('No stocks to watch (scripcodes table empty?)')
   say(`Watching ${codes.length} stocks.${info.unresolved?.length ? ` Not found in scripcodes: ${info.unresolved.join(', ')}` : ''}`)
+  uploadSymbols = new Set(codeToSymbol.values())
+  const extraCodes = []
+  for (const [code, sym] of loadExtras()) if (!codeToSymbol.has(code)) { codeToSymbol.set(code, sym); extraCodes.push(code) }
+  if (extraCodes.length) say(`Also recording ${extraCodes.length} extra stocks/indices to the data folder (record-extra.csv).`)
+  let extrasSentAt = 0
 
   const url = `${WS_BASE}?ACCESS_TOKEN=${encodeURIComponent(info.accessToken)}`
   const ws = new WebSocket(url)
@@ -159,6 +183,26 @@ async function runSession() {
           say('Asked for live prices.')
         }
       }, 400)
+      if (extraCodes.length) {
+        setTimeout(() => {
+          if (ws.readyState !== WebSocket.OPEN) return
+          ws.send(JSON.stringify({ action: 'feed', key: ['ltp'], value: [extraCodes.map((c) => `NC${c}`).join(',')] }))
+          extrasSentAt = Date.now()
+          say(`Asked for prices of the ${extraCodes.length} extras.`)
+          // safety switch: if the trading stocks stop arriving after asking for the extras, ask for the trading stocks
+          // again and leave the extras out for this session
+          setTimeout(() => {
+            if (ws.readyState !== WebSocket.OPEN) return
+            const fresh = [...uploadSymbols].filter((sym) => (stats.symbolLastTick.get(sym) ?? 0) > extrasSentAt).length
+            const extrasArriving = extraCodes.some((c) => (stats.symbolLastTick.get(codeToSymbol.get(c)) ?? 0) > extrasSentAt)
+            if (extrasArriving && fresh < uploadSymbols.size * 0.5) {
+              say(`! After adding the extras only ${fresh}/${uploadSymbols.size} trading stocks are arriving. Dropping the extras for today.`)
+              for (const c of extraCodes) codeToSymbol.delete(c)
+              ws.send(JSON.stringify({ action: 'feed', key: ['ltp'], value: [codes.map((c) => `NC${c}`).join(',')] }))
+            }
+          }, EXTRA_CHECK_MS)
+        }, 2_000)
+      }
 
       timers.push(setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.ping('ping') }, PING_EVERY_MS))
       timers.push(setInterval(flush, FLUSH_EVERY_MS))
