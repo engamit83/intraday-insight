@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.history-export]
 verify_jwt = false
+
+[functions.paper-trader]
+verify_jwt = false
