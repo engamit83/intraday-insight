@@ -7,6 +7,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import Dashboard from "./pages/Dashboard";
 import Signals from "./pages/Signals";
 import AutoTrading from "./pages/AutoTrading";
+import PaperTrades from "./pages/PaperTrades";
 import ManualTrades from "./pages/ManualTrades";
 import Watchlist from "./pages/Watchlist";
 import Performance from "./pages/Performance";
@@ -23,7 +24,8 @@ const AppContent = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
       <Route path="/signals" element={<AuthGuard><Signals /></AuthGuard>} />
-      <Route path="/auto-trading" element={<AuthGuard><AutoTrading /></AuthGuard>} />
+      <Route path="/paper-trades" element={<AuthGuard><PaperTrades /></AuthGuard>} />
+      <Route path="/auto-trading"element={<AuthGuard><AutoTrading /></AuthGuard>} />
       <Route path="/manual-trades" element={<AuthGuard><ManualTrades /></AuthGuard>} />
       <Route path="/watchlist" element={<AuthGuard><Watchlist /></AuthGuard>} />
       <Route path="/performance" element={<AuthGuard><Performance /></AuthGuard>} />

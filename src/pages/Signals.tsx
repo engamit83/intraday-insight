@@ -27,10 +27,14 @@ export default function Signals() {
 
   const fetchSignals = async () => {
     setLoading(true);
+    // Show every signal created today (India time), including ones that have expired,
+    // plus any older signal that is still active.
+    const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const istDayStart = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - 5.5 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from("signals")
       .select("*")
-      .eq("is_active", true)
+      .or(`is_active.eq.true,created_at.gte.${istDayStart}`)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -121,7 +125,7 @@ export default function Signals() {
           )}
           <Badge variant="outline" className="px-3 py-1.5">
             <Zap className="h-4 w-4 mr-1 text-primary" />
-            {allSignals.length} Active
+            {allSignals.length} Today
           </Badge>
           <Button variant="outline" size="sm" onClick={fetchSignals} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
@@ -201,7 +205,7 @@ export default function Signals() {
               <h3 className="text-lg font-semibold text-foreground mb-2">No Signals Found</h3>
               <p className="text-muted-foreground">
                 {allSignals.length === 0
-                  ? "No active signals right now. Check back once the signal engine generates new ones."
+                  ? "No signals yet today. New signals come between 10:00 and 14:00 while the price feed is running."
                   : "No signals match your current filters."}
               </p>
             </div>

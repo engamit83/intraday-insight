@@ -6,13 +6,15 @@ import {
   BookOpen, 
   Settings, 
   Zap,
-  BarChart3
+  BarChart3,
+  FlaskConical
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: TrendingUp, label: "Signals", path: "/signals" },
+  { icon: FlaskConical, label: "Paper Trades", path: "/paper-trades" },
   { icon: Zap, label: "Auto Trading", path: "/auto-trading" },
   { icon: BookOpen, label: "Manual Trades", path: "/manual-trades" },
   { icon: BarChart3, label: "Watchlist", path: "/watchlist" },
