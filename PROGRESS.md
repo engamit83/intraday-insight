@@ -828,6 +828,17 @@ Fixes: feed now starts automatically at 09:00 (done); add a "complete data" guar
 - **To go live:** one Lovable message (when a credit is available) — deploy `scout-signals` and `paper-trader` from GitHub main AND fix the frontend build (Paper Trades screen).
 - Monday check-ins scheduled: 09:20 IST (feed + extras) and 15:45 IST (paper results).
 
+## 📅 2026-10-16 (Fri, night) — Daily-chart filters tested on v4.1 trades (`run-daily-filters.mjs`)
+Daily candles fetched read-only (Sharekhan gives daily since 2000; kept 2026 in /home/claude/data/daily-2026.json, not in git). 88 v4.1 trades (1–15 Oct), split by conditions known before the day starts:
+- trend agrees with 20-day avg: YES 0.175%/trade vs NO 0.275% → no help
+- 50-day avg agrees: 0.208% vs 0.232% → no help
+- 20-day avg rising in trade direction: 0.258% vs 0.175% (both halves +) → **small hint, re-test with more data**
+- near 20-day high/low: 0.233% vs 0.211% → no real difference
+- last 5 days in trade direction: 0.218% vs 0.219% → none
+- yesterday narrow day: 0.123% vs 0.238% (15 trades) → too few
+- volatile stock (>2%/day): 0.149% vs 0.298% → **hint: calmer stocks did better per trade; re-test**
+Conclusion: no daily filter is adopted; v4.1 stays as is. Re-test the two hints when we have more days.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
