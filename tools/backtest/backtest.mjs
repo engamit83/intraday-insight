@@ -74,7 +74,10 @@ export const DEFAULTS = {
   riskRs: null,            // switch: size each trade so that hitting the stop loses about this many rupees
   maxNotional: 300000,     // with riskRs: cap the position value (intraday margin limit)
   // --- v5 setups ---
-  setup: 'v4',             // 'v4' (momentum + yesterday's level), 'vwapPullback' (trend stock dips to VWAP and bounces), 'orb' (opening-range breakout)
+  setup: 'v4',
+  // --- owner's exit rule (16 Oct): stop at the buy price from the start (no planned price loss) ---
+  stopAtEntry: false,      // switch: initial stop = entry fill price (BUY) / entry (SELL); profit lock + trailing as usual
+  stopAtEntryBufferPct: 0, // with stopAtEntry: allow this % below/above the entry (0 = exactly the buy price)             // 'v4' (momentum + yesterday's level), 'vwapPullback' (trend stock dips to VWAP and bounces), 'orb' (opening-range breakout)
   stopAtrMult: 1.5,        // live: STOP_ATR_MULT
   minStopPct: 0.25,        // live: MIN_STOP_PCT
   rewardRisk: 1.5,         // live: REWARD_RISK
@@ -434,6 +437,11 @@ export function runBacktest(data, options = {}) {
           rankScore: Math.round(cand.rankScore * 10) / 10,
           notional: o.riskRs ? Math.min(o.maxNotional, (o.riskRs / Math.abs(cand.ind.lastClose - lv.stop)) * entry) : o.notional,
         })
+        if (o.stopAtEntry) {
+          const p = open.get(cand.s), b = entry * (o.stopAtEntryBufferPct / 100)
+          p.stop = cand.dir === 'BUY' ? entry - b : entry + b
+          p.atBreakeven = true // already at the buy price; target stays at 2R of the normal stop distance
+        }
       }
     }
     // anything still open (missing late candles): exit at that stock's last close of the day
@@ -448,7 +456,16 @@ export function runBacktest(data, options = {}) {
     const exit = p.direction === 'BUY' ? rawPx - slip : rawPx + slip
     let grossPct = p.direction === 'BUY' ? (exit / p.entry - 1) * 100 : (1 - exit / p.entry) * 100
     if (p.partialPx) grossPct = 0.5 * grossPct + 0.5 * (p.direction === 'BUY' ? (p.partialPx / p.entry - 1) * 100 : (1 - p.partialPx / p.entry) * 100)
-    trades.push({ ...p, exit, exitTime: bucket, reason, grossPct, netPct: grossPct - costPct })
+    // did the stock reach the target LATER in the day (after we exited)? (learning record, owner 16 Oct)
+    let laterHitTarget = false
+    if (reason !== 'target') {
+      const list = byDay[p.symbol]?.[p.day]?.list ?? []
+      for (const c of list) {
+        if (c.bucket <= bucket || c.bucket >= o.squareOff) continue
+        if (p.direction === 'BUY' ? c.high >= p.target : c.low <= p.target) { laterHitTarget = true; break }
+      }
+    }
+    trades.push({ ...p, exit, exitTime: bucket, reason, grossPct, netPct: grossPct - costPct, laterHitTarget })
   }
 
   return { options: o, costPct, trades, days, skippedDays, step, collisions, symbols: symbols.length, summary: summarize(trades, o) }

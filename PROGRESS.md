@@ -867,6 +867,18 @@ Conclusion: no daily filter is adopted; v4.1 stays as is. Re-test the two hints 
 - `.github/workflows/pages.yml` publishes the screens to **https://engamit83.github.io/intraday-insight/** on every push to main (owner switched Pages source to "GitHub Actions"). `vite.config.ts` base = env VITE_BASE_PATH (only set for Pages; Lovable still "/"), router basename = BASE_URL. Same database/login (email+password).
 - Use the GitHub address to view signals/paper trades; keep using the Lovable address for "Connect Sharekhan" (Sharekhan returns to the Lovable address). Back-end deploys (v4.1) still need one Lovable message.
 
+## 🧪 2026-10-16 (Fri, 22:30) — Owner's exit rule and range trading, first back-tests (10 days, 49 stocks)
+`run-owner-exit.mjs` (same v4.1 signals, only the exit differs; back-tester switch `stopAtEntry`, record `laterHitTarget`):
+| Exit rule | Trades | Win% | Net Rs | Note |
+|---|---|---|---|---|
+| v4.1 (stop 2×ATR) | 88 | 69 | **+19,206** | 9 of 62 non-target exits later reached target |
+| Owner: stop at buy price | 95 | 0 | **−13,897** | **all 95 closed inside the first 5-min candle** (price almost always ticks below the entry right after buying); **41 of 95 later reached the target** |
+| Owner + 0.1% room | 95 | 19 | −8,780 | 51 closed in the first candle; 31 of 87 later hit target |
+| Owner + 0.2% room | 85 | 31 | −4,524 | 21 closed in the first candle; 23 of 72 later hit target |
+Reading (per intent rule 5): many picks were right (43% reached the target after we were stopped out), but a stop exactly at the buy price is hit by the normal first-minutes wobble → exits too tight. Shown to the owner for a decision.
+
+`run-range.mjs` (rule C7, same-day detection only: 1-hour band 0.8–2.5%, ≥2 touches each edge, flat VWAP, rejection candle at the edge, target near the other edge, exit on range break): **all versions lost** (best −Rs 11,599 on 58 trades; most exits were range breaks: 70 of 137). Large-cap stocks on these trending days broke their ranges more often than they held. Next tries: multi-day range candidates, longer-held ranges (≥ 2 h), wider bands (≥ 1.2%), only on flat-market days; test on the 500-stock recordings.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
