@@ -1,6 +1,6 @@
 // Paper-trade management — the SAME exit rules as the back-tester (tools/backtest/backtest.mjs, rule set v4):
 // initial stop / target, breakeven at +1R, profit lock (+1R -> no-loss, +1.5R -> +0.75R), trailing stop
-// 1.5 x ATR from the best close, square-off at the 15:15 candle's open. Applied once per CLOSED 5-minute candle.
+// 1.5 x ATR from the best close (v4.1: only once the trade has gained +1R), square-off at the 15:15 candle's open. Applied once per CLOSED 5-minute candle.
 // Pure functions only (no network) so they can be tested offline.
 
 export const PAPER = {
@@ -9,6 +9,7 @@ export const PAPER = {
   brokeragePct: 0.03,       // per side (owner confirmed 8 Oct)
   sttSellPct: 0.025, exchangePct: 0.00307, sebiPct: 0.0001, stampBuyPct: 0.003, gstPct: 18,
   breakevenAtR: 1, lockAtR: 1, lock2AtR: 1.5, lock2KeepR: 0.75, trailAtrMult: 1.5,
+  trailAfterR: 1,           // v4.1 (16 Oct): the trailing stop starts only after +1R (an earlier trail choked trades)
   squareOff: '15:15', maxOpen: 10, dailyLossLimitRs: 2000,
 }
 
@@ -63,7 +64,7 @@ export function manageOnCandle(p: PaperPos, c: Bar): Step {
   const noLoss = p.entry * (roundTripCostPct() / 100 + 2 * PAPER.slippagePct / 100)
   if (r >= PAPER.lock2AtR) { p.stop = better(p.stop, B ? p.entry + PAPER.lock2KeepR * p.stopDist : p.entry - PAPER.lock2KeepR * p.stopDist); p.locked = true }
   else if (r >= PAPER.lockAtR) { p.stop = better(p.stop, B ? p.entry + noLoss : p.entry - noLoss); p.locked = true }
-  if (p.atr) {
+  if (p.atr && p.bestExc >= PAPER.trailAfterR * p.stopDist) {
     const trail = B ? p.bestClose - PAPER.trailAtrMult * p.atr : p.bestClose + PAPER.trailAtrMult * p.atr
     const before = p.stop
     p.stop = better(p.stop, trail)

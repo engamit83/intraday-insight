@@ -3,9 +3,11 @@
 // Run every minute in market hours by a scheduled job (x-job-token, see AGENTS.md / auth.ts):
 //   1. manages every open paper trade on each newly CLOSED 5-minute candle with the back-tested v4 exit rules
 //      (stop, target, breakeven, profit lock, trailing stop, 15:15 square-off) — supabase/functions/_shared/paper.ts
-//   2. opens a paper trade for every new rule-set-v4 signal at the open of the candle that was forming when the
-//      signal was created (+ slippage) — exactly what the back-test does — unless the daily loss limit was hit
-//      or 10 trades are already open
+//   2. opens a paper trade for every new rule-set-v4 signal at the FIRST PRICE AFTER THE SIGNAL (v4.1, 16 Oct): the
+//      open of the 1-minute candle that starts right after the signal was created (+ slippage) - what a person
+//      acting on the signal would get. Falls back to the open of the 5-minute candle forming at signal time (the
+//      back-test's entry) if that 1-minute candle never appears. Skipped if the daily loss limit was hit or 10
+//      trades are already open
 //   3. after 15:30 writes one daily summary to system_logs
 // A signed-in user may call it with {} to READ today's paper trades and P&L (nothing is changed).
 // Real orders are never placed here.
@@ -71,11 +73,32 @@ Deno.serve(async (req) => {
       .map((r) => ({ bucket: bucketOfMs(Date.parse(r.bucket_start)).bucket, startIso: r.bucket_start, open: +r.open, high: +r.high, low: +r.low, close: +r.close }))
   }
   const log: string[] = []
+  const FIVE = 5 * 60_000
+  // the part of the entry's 5-minute window AFTER a 1-minute entry, as one bar (only once that window has closed)
+  const partialBar = async (symbol: string, entryIso: string): Promise<(Bar & { startIso: string; endIso: string }) | null> => {
+    const startMs = Date.parse(entryIso), bStart = Math.floor(startMs / FIVE) * FIVE, bEnd = bStart + FIVE
+    if (bEnd > nowMs) return null
+    const { data } = await supabase.from('live_candles').select('bucket_start, open, high, low, close')
+      .eq('symbol', symbol).eq('timeframe', '1min').gte('bucket_start', entryIso).lt('bucket_start', new Date(bEnd).toISOString()).order('bucket_start', { ascending: true })
+    const rows = (data ?? []) as Row[]
+    const startIso = new Date(bStart).toISOString(), endIso = new Date(bEnd).toISOString()
+    if (!rows.length) return { bucket: bucketOfMs(bStart).bucket, startIso, endIso, open: NaN, high: NaN, low: NaN, close: NaN }
+    return { bucket: bucketOfMs(bStart).bucket, startIso, endIso, open: +rows[0].open, high: Math.max(...rows.map((r) => +r.high)),
+      low: Math.min(...rows.map((r) => +r.low)), close: +rows[rows.length - 1].close }
+  }
 
   // ---- 1) manage open trades ----
   const manage = async (t: Row) => {
-    const from = t.last_bucket ? new Date(Date.parse(t.last_bucket) + 5 * 60_000).toISOString() : t.entry_time
-    const bars = await barsFrom(t.symbol, from) as (Bar & { startIso: string })[]
+    let from = t.last_bucket ? new Date(Date.parse(t.last_bucket) + 5 * 60_000).toISOString() : t.entry_time
+    const bars: (Bar & { startIso: string })[] = []
+    if (!t.last_bucket && t.details?.entry_mode === '1min') {
+      // entry inside a 5-minute window: manage the rest of that window from 1-minute candles first
+      const pb = await partialBar(t.symbol, t.entry_time)
+      if (!pb) return // that window has not closed yet
+      if (Number.isFinite(pb.open)) bars.push(pb)
+      from = pb.endIso
+    }
+    bars.push(...await barsFrom(t.symbol, from) as (Bar & { startIso: string })[])
     const p: PaperPos = {
       direction: t.direction, entry: +t.entry_price, stop: +t.stoploss, target: +t.target, stopDist: +t.stop_dist, atr: +t.atr,
       atBreakeven: !!t.at_breakeven, locked: !!t.locked, bestExc: t.best_exc === null ? undefined : +t.best_exc, bestClose: t.best_close === null ? undefined : +t.best_close,
@@ -131,11 +154,21 @@ Deno.serve(async (req) => {
     if (openCount >= PAPER.maxOpen) break
     const k = bucketOfMs(Date.parse(s.created_at))
     if (k.day !== today || k.bucket >= PAPER.squareOff) continue
-    const entryStartIso = new Date(Date.parse(`${today}T${k.bucket}:00+05:30`)).toISOString()
-    const { data: ec } = await supabase.from('live_candles').select('open').eq('symbol', s.symbol).eq('timeframe', '5min').eq('bucket_start', entryStartIso).maybeSingle()
-    if (!ec) continue // the entry candle has no tick yet; try again next minute
     const dir = s.signal_type as 'BUY' | 'SELL'
-    const fill = entryFill(dir, +ec.open)
+    // v4.1: first 1-minute candle after the signal; fall back to the 5-minute candle forming at signal time
+    const minuteStartMs = Math.floor(Date.parse(s.created_at) / 60_000) * 60_000 + 60_000
+    const minuteIso = new Date(minuteStartMs).toISOString()
+    const { data: m1 } = await supabase.from('live_candles').select('open').eq('symbol', s.symbol).eq('timeframe', '1min').eq('bucket_start', minuteIso).maybeSingle()
+    let entryStartIso: string, entryOpen: number, entryMode: '1min' | '5min'
+    if (m1) { entryStartIso = minuteIso; entryOpen = +m1.open; entryMode = '1min' }
+    else {
+      if (nowMs - minuteStartMs < 3 * 60_000) continue // the 1-minute candle may still arrive; try again next minute
+      entryStartIso = new Date(Date.parse(`${today}T${k.bucket}:00+05:30`)).toISOString()
+      const { data: ec } = await supabase.from('live_candles').select('open').eq('symbol', s.symbol).eq('timeframe', '5min').eq('bucket_start', entryStartIso).maybeSingle()
+      if (!ec) continue // the entry candle has no tick yet; try again next minute
+      entryOpen = +ec.open; entryMode = '5min'
+    }
+    const fill = entryFill(dir, entryOpen)
     const stopDist = Number(s.indicators?.stop_dist ?? Math.abs(+s.entry_price - +s.stoploss_price))
     const { data: ins, error } = await supabase.from('simulated_trades').insert({
       user_id: owner?.user_id ?? null, symbol: s.symbol, signal_id: s.id, direction: dir,
@@ -143,7 +176,7 @@ Deno.serve(async (req) => {
       market_condition: s.indicators?.market_breadth_pct != null ? `breadth ${Number(s.indicators.market_breadth_pct).toFixed(2)}%` : null,
       confidence_at_entry: s.indicators?.rank_score ?? null,
       rules: 'v4', stoploss: +s.stoploss_price, initial_stop: +s.stoploss_price, target: +s.target_price, stop_dist: stopDist, atr: Number(s.indicators?.atr ?? 0),
-      details: { signal_price: +s.entry_price, reasons: s.indicators?.reasons ?? [], signal_time: s.created_at },
+      details: { signal_price: +s.entry_price, reasons: s.indicators?.reasons ?? [], signal_time: s.created_at, entry_mode: entryMode, version: s.indicators?.version ?? 'v4' },
     }).select('*').single()
     if (error || !ins) { log.push(`open failed ${s.symbol}: ${error?.message}`); continue }
     // NOTE: the entry price is kept unrounded inside the trade logic via entry_price (2 decimals) — difference < 1 paisa.

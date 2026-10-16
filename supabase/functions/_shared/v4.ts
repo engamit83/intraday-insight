@@ -14,9 +14,10 @@
 
 import { computeIndicators, type Candle, type Indicators } from './indicators.ts'
 import { calculateRawScore, calculateScoreUncapped, decideDirection, getTimeMultiplier } from './scoring.ts'
+import { sectorOf } from './sectors.ts'
 
 export const V4 = {
-  version: 'v4',
+  version: 'v4.1',          // 16 Oct: + one stock per sector, trailing only after +1R, complete-morning-data guard
   minScore: 60,
   noEntryBefore: '10:00',
   noEntryAfter: '14:00',
@@ -27,6 +28,9 @@ export const V4 = {
   rewardRisk: 2,
   volDays: 5,
   historyWindow: 300,
+  maxPerSector: 1,          // at most one open position / pick per sector (sectors.ts)
+  latestFirstCandle: '09:20', // today's first closed candle must start by this time, else the day's numbers are wrong
+  trailAfterR: 1,           // the trailing stop only starts once the trade has gained 1R (paper.ts)
   // management rules used by the paper trader
   lockAtR: 1, lock2AtR: 1.5, lock2KeepR: 0.75, trailAtrMult: 1.5, squareOff: '15:15', dailyLossLimitRs: 2000,
 }
@@ -88,6 +92,9 @@ export function prepareStock(symbol: string, all: Candle[], nowMs: number): Stoc
   })
   const todayRows = rows.filter((c) => c.day === today)
   if (todayRows.length === 0) return { symbol, ok: false, reason: 'no closed candles today' }
+  // v4.1 guard: if today's data starts late (feed started late), "% up today", VWAP, market direction and day
+  // volume would be measured from the wrong point (16 Oct: feed from 12:00) - do not trade this stock today
+  if (todayRows[0].bucket > V4.latestFirstCandle) return { symbol, ok: false, reason: `today's data starts late (${todayRows[0].bucket}), morning missing` }
   const past = rows.filter((c) => c.day < today)
   if (past.length < 40) return { symbol, ok: false, reason: `not enough history (${past.length} candles)` }
 
@@ -192,4 +199,23 @@ export function evaluateV4(states: StockState[], nowMs: number): V4Result {
   }
   candidates.sort((a, b) => b.rankScore - a.rankScore || b.finalScore - a.finalScore)
   return { breadthPct, timeMult, entryWindowOpen, candidates, rejected }
+}
+
+/**
+ * Choose which candidates become signals now (v4.1): skip stocks already signalled today, at most `topN` per run
+ * and `room` left today, and at most V4.maxPerSector per sector counting the sectors of trades still open.
+ * Same order and rules as the back-tester's selection (tools/backtest/backtest.mjs, maxPerSector).
+ */
+export function pickV4(candidates: V4Candidate[], usedToday: Set<string>, room: number, openSymbols: string[]): V4Candidate[] {
+  const count = new Map<string, number>()
+  for (const s of openSymbols) count.set(sectorOf(s), (count.get(sectorOf(s)) ?? 0) + 1)
+  const out: V4Candidate[] = []
+  for (const c of candidates) {
+    if (out.length >= Math.min(V4.topN, room)) break
+    if (usedToday.has(c.symbol)) continue
+    const sec = sectorOf(c.symbol)
+    if ((count.get(sec) ?? 0) >= V4.maxPerSector) continue
+    out.push(c); count.set(sec, (count.get(sec) ?? 0) + 1)
+  }
+  return out
 }

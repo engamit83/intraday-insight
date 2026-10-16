@@ -6,7 +6,7 @@ import { runBacktest } from './backtest.mjs'
 import { manageOnCandle, entryFill, settle, quantityFor } from '../../supabase/functions/_shared/paper.ts'
 
 const v4 = { marketFilter: true, relStrength: true, onePerStockPerDay: true, maxTradesPerDay: 10, topN: 3, noEntryBefore: '10:00', noEntryAfter: '14:00',
-  stopAtrMult: 2, rewardRisk: 2, prevDayLevels: true, volMode: 'either', dailyLossLimitRs: 2000, breakevenAtR: 1, lockProfit: true, trailAtrMult: 1.5 }
+  stopAtrMult: 2, rewardRisk: 2, prevDayLevels: true, volMode: 'either', dailyLossLimitRs: 2000, breakevenAtR: 1, lockProfit: true, trailAtrMult: 1.5, trailAfterR: 1 }
 for (const file of process.argv.slice(2)) {
   const data = JSON.parse(readFileSync(file, 'utf8'))
   if (data.interval !== '5minute') { console.log(`(skipping ${data.interval}: paper trader manages on 5-minute candles)`); continue }

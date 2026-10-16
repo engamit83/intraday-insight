@@ -819,6 +819,15 @@ Fixes: feed now starts automatically at 09:00 (done); add a "complete data" guar
 - Sensex: Sharekhan's scrip list has no BSE codes; Sensex ≈ Nifty, so Nifty + sector indices are used instead.
 - Data options checked: Sharekhan API has no date range (1–15 min = last 9 trading days, 30/60 min ≈ 1.5 months, daily = years). Zerodha Kite Connect ₹500/month includes historical candles (needs a Zerodha account; owner prefers no extra hassle for now). TrueData ≈ ₹1,440–2,796/month (live plans; history depth not published), Global Datafeeds = quote on request. Plan: free route (own recording + weekly Sharekhan pulls), revisit paid data later.
 
+## 🧩 2026-10-16 (Fri, night) — Rule set v4.1 written and tested (NOT deployed; needs one Lovable deploy = 1 credit)
+- `_shared/sectors.ts` (new, shared with the back-tester) + `_shared/v4.ts` v4.1: **one stock per sector** (`pickV4`, counting open paper trades), **late-start guard** (a stock is not traded if today's first candle starts after 09:20 → 16 Oct-type half-day data can't produce signals).
+- `_shared/paper.ts`: **trailing stop only after +1R** (`trailAfterR: 1`).
+- `paper-trader`: **entry at the first price after the signal** = open of the 1-minute candle after the signal minute (+slippage); the rest of that 5-minute window is managed from 1-minute candles, then 5-minute candles. Falls back to the old 5-minute entry if no 1-minute candle appears within 3 minutes. Trades record `details.entry_mode` and `details.version`.
+- `scout-signals`: signals tagged `indicators.version = 'v4.1'`; response shows `openPaperTrades`.
+- Tests: `test-v41.mjs` 7/7 (incl. **v4.1 live picks = back-test in 75/75 runs**), paper = back-test exits 105/105 (13-day file) and 36/36, live v4 picks 105/105, back-tester 28/28, paper-trader e2e 6/6 + new 1-minute-entry e2e 5/5, scout e2e 23/23.
+- **To go live:** one Lovable message (when a credit is available) — deploy `scout-signals` and `paper-trader` from GitHub main AND fix the frontend build (Paper Trades screen).
+- Monday check-ins scheduled: 09:20 IST (feed + extras) and 15:45 IST (paper results).
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.

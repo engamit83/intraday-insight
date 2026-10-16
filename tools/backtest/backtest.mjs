@@ -20,20 +20,8 @@ import { computeIndicators } from '../../supabase/functions/_shared/indicators.t
 import {
   calculateRawScore, calculateScoreUncapped, decideDirection, getTimeMultiplier,
 } from '../../supabase/functions/_shared/scoring.ts'
-
-// NSE sector of each scout stock (for the one-per-sector rule)
-export const SECTOR = {
-  HDFCBANK: 'bank', ICICIBANK: 'bank', SBIN: 'bank', KOTAKBANK: 'bank', AXISBANK: 'bank', INDUSINDBK: 'bank',
-  BAJFINANCE: 'finance', BAJAJFINSV: 'finance', SBILIFE: 'insurance', HDFCLIFE: 'insurance',
-  TCS: 'it', INFY: 'it', WIPRO: 'it', HCLTECH: 'it', TECHM: 'it',
-  RELIANCE: 'energy', ONGC: 'energy', BPCL: 'energy', COALINDIA: 'energy', NTPC: 'power', POWERGRID: 'power',
-  HINDUNILVR: 'fmcg', ITC: 'fmcg', NESTLEIND: 'fmcg', BRITANNIA: 'fmcg', TATACONSUM: 'fmcg',
-  MARUTI: 'auto', 'M&M': 'auto', TMPV: 'auto', TMCV: 'auto', EICHERMOT: 'auto', HEROMOTOCO: 'auto', 'BAJAJ-AUTO': 'auto',
-  TATASTEEL: 'metal', JSWSTEEL: 'metal', HINDALCO: 'metal',
-  ULTRACEMCO: 'cement', GRASIM: 'cement',
-  SUNPHARMA: 'pharma', CIPLA: 'pharma', DRREDDY: 'pharma', DIVISLAB: 'pharma', APOLLOHOSP: 'health',
-  ASIANPAINT: 'consumer', TITAN: 'consumer', BHARTIARTL: 'telecom', LT: 'infra', ADANIENT: 'adani', ADANIPORTS: 'adani',
-}
+import { SECTOR } from '../../supabase/functions/_shared/sectors.ts'
+export { SECTOR }
 
 export const DEFAULTS = {
   minScore: 60,

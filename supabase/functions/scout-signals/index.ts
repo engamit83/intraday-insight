@@ -44,7 +44,7 @@ import {
 import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay, DEFAULT_INTERVAL } from '../_shared/sharekhan.ts'
 import { STARTER_UNIVERSE } from '../_shared/universe.ts'
 import { liveRowsToCandles, mergeHistoryAndLive, historyBeforeToday, istDayStartMs, istDateKey, type LiveRow } from '../_shared/livecandles.ts'
-import { prepareStock, evaluateV4, V4 } from '../_shared/v4.ts'
+import { prepareStock, evaluateV4, pickV4, V4 } from '../_shared/v4.ts'
 
 const DEFAULT_BATCH_SIZE = 25
 const MAX_BATCH_SIZE = 40
@@ -360,9 +360,10 @@ Deno.serve(async (req) => {
     const todayV4 = (todays ?? []).filter((r: { indicators: { rules?: string } | null }) => r.indicators?.rules === 'v4')
     const usedToday = new Set(todayV4.map((r: { symbol: string }) => r.symbol))
     const room = Math.max(0, V4.maxSignalsPerDay - todayV4.length)
-    const pick = ev.entryWindowOpen && timeMult > 0
-      ? ev.candidates.filter((c) => !usedToday.has(c.symbol)).slice(0, Math.min(V4.topN, room))
-      : []
+    // v4.1: one stock per sector, counting paper trades that are still open
+    const { data: openPaper } = await supabase.from('simulated_trades').select('symbol').eq('rules', 'v4').eq('status', 'OPEN').gte('entry_time', dayStartIso)
+    const openSymbols = (openPaper ?? []).map((r: { symbol: string }) => r.symbol)
+    const pick = ev.entryWindowOpen && timeMult > 0 ? pickV4(ev.candidates, usedToday, room, openSymbols) : []
     const inserted: string[] = []
     if (!dryRun && pick.length) {
       const expiresAt = new Date(nowMs + SIGNAL_TTL_MINUTES * 60_000).toISOString()
@@ -371,8 +372,8 @@ Deno.serve(async (req) => {
           symbol: c.symbol, signal_type: c.direction, entry_price: c.entry, target_price: c.target, stoploss_price: c.stoploss,
           confidence: c.finalScore, timeframe: '5min', is_active: true, expires_at: expiresAt,
           raw_score: c.rawScore, final_score: c.finalScore, market_condition: marketCondition, is_tradable: true, rejection_reason: null,
-          indicators: { rules: 'v4', source: 'scout-v4-live', rank_score: c.rankScore, atr: c.atr, stop_dist: c.stopDist, reasons: c.reasons,
-            market_breadth_pct: ev.breadthPct, management: { lockAtR: V4.lockAtR, lock2AtR: V4.lock2AtR, lock2KeepR: V4.lock2KeepR, trailAtrMult: V4.trailAtrMult, squareOff: V4.squareOff } },
+          indicators: { rules: 'v4', version: V4.version, source: 'scout-v4-live', rank_score: c.rankScore, atr: c.atr, stop_dist: c.stopDist, reasons: c.reasons,
+            market_breadth_pct: ev.breadthPct, management: { lockAtR: V4.lockAtR, lock2AtR: V4.lock2AtR, lock2KeepR: V4.lock2KeepR, trailAtrMult: V4.trailAtrMult, trailAfterR: V4.trailAfterR, squareOff: V4.squareOff } },
         })
         if (!error) inserted.push(c.symbol)
       }
@@ -382,7 +383,7 @@ Deno.serve(async (req) => {
       await supabase.from('signals').update({ is_active: false, rejection_reason: 'expired' }).eq('is_active', true).lt('expires_at', new Date(nowMs).toISOString())
     }
     v4Summary = {
-      rules: 'v4', entryWindowOpen: ev.entryWindowOpen, marketBreadthPct: ev.breadthPct, timeMult: ev.timeMult,
+      rules: 'v4', version: V4.version, openPaperTrades: openSymbols, entryWindowOpen: ev.entryWindowOpen, marketBreadthPct: ev.breadthPct, timeMult: ev.timeMult,
       signalsToday: todayV4.length, picked: pick.map((c) => ({ symbol: c.symbol, direction: c.direction, entry: c.entry, stoploss: c.stoploss, target: c.target, rank: c.rankScore, reasons: c.reasons })),
       inserted, candidates: ev.candidates.length,
       candidateList: ev.candidates.slice(0, 15).map((c) => ({ symbol: c.symbol, direction: c.direction, entry: c.entry, stoploss: c.stoploss, target: c.target, rank: c.rankScore })),
