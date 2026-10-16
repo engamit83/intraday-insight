@@ -92,9 +92,13 @@ export function SignalCard({ signal, onTrade, isTrading }: SignalCardProps) {
 
         {/* Analysis Tags */}
         <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary" className="text-xs">
-            {signal.analysis.pattern_detected}
-          </Badge>
+          {signal.analysis.pattern_detected.length > 24 ? (
+            <p className="w-full text-xs text-muted-foreground">Why chosen: {signal.analysis.pattern_detected}</p>
+          ) : (
+            <Badge variant="secondary" className="text-xs">
+              {signal.analysis.pattern_detected}
+            </Badge>
+          )}
           <Badge variant="secondary" className="text-xs">
             R:R {riskReward.toFixed(1)}
           </Badge>

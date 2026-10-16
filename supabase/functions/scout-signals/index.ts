@@ -364,6 +364,14 @@ Deno.serve(async (req) => {
     const { data: openPaper } = await supabase.from('simulated_trades').select('symbol').eq('rules', 'v4').eq('status', 'OPEN').gte('entry_time', dayStartIso)
     const openSymbols = (openPaper ?? []).map((r: { symbol: string }) => r.symbol)
     const pick = ev.entryWindowOpen && timeMult > 0 ? pickV4(ev.candidates, usedToday, room, openSymbols) : []
+    // "why chosen" (owner, 16 Oct): rank among today's candidates, room to target vs risk, and who it was preferred over
+    const notPicked = ev.candidates.filter((x) => !pick.includes(x)).slice(0, 3)
+    const whyOf = (c: typeof ev.candidates[number]) => {
+      const rank = ev.candidates.indexOf(c) + 1
+      const tgtPct = Math.abs(c.target - c.entry) / c.entry * 100, riskPct = c.stopDist / c.entry * 100
+      const over = notPicked.map((x) => `${x.symbol} (rank ${ev.candidates.indexOf(x) + 1})`).join(', ')
+      return `rank ${rank} of ${ev.candidates.length}; target +${tgtPct.toFixed(2)}% for risk -${riskPct.toFixed(2)}%; ${c.reasons.slice(0, 4).join('; ')}${over ? `; preferred over ${over}` : ''}`
+    }
     const inserted: string[] = []
     if (!dryRun && pick.length) {
       const expiresAt = new Date(nowMs + SIGNAL_TTL_MINUTES * 60_000).toISOString()
@@ -372,7 +380,7 @@ Deno.serve(async (req) => {
           symbol: c.symbol, signal_type: c.direction, entry_price: c.entry, target_price: c.target, stoploss_price: c.stoploss,
           confidence: c.finalScore, timeframe: '5min', is_active: true, expires_at: expiresAt,
           raw_score: c.rawScore, final_score: c.finalScore, market_condition: marketCondition, is_tradable: true, rejection_reason: null,
-          indicators: { rules: 'v4', version: V4.version, source: 'scout-v4-live', rank_score: c.rankScore, atr: c.atr, stop_dist: c.stopDist, reasons: c.reasons,
+          indicators: { rules: 'v4', version: V4.version, source: 'scout-v4-live', why: whyOf(c), rank_score: c.rankScore, atr: c.atr, stop_dist: c.stopDist, reasons: c.reasons,
             market_breadth_pct: ev.breadthPct, management: { lockAtR: V4.lockAtR, lock2AtR: V4.lock2AtR, lock2KeepR: V4.lock2KeepR, trailAtrMult: V4.trailAtrMult, trailAfterR: V4.trailAfterR, squareOff: V4.squareOff } },
         })
         if (!error) inserted.push(c.symbol)

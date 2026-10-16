@@ -56,7 +56,7 @@ export default function Signals() {
           vwap_analysis: (s.indicators as any)?.vwap_analysis ?? "No VWAP data available",
           volume_analysis: (s.indicators as any)?.volume_analysis ?? "No volume data available",
           trend_analysis: (s.indicators as any)?.trend_analysis ?? "No trend data available",
-          pattern_detected: (s.indicators as any)?.pattern_detected ?? "N/A",
+          pattern_detected: (s.indicators as any)?.why ?? (s.indicators as any)?.pattern_detected ?? "N/A",
           risk_reward_ratio:
             Math.abs(s.target_price - s.entry_price) /
             (Math.abs(s.entry_price - s.stoploss_price) || 1),
