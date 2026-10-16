@@ -154,7 +154,7 @@ Back-test v4 vs the original rules: 5-min (4 days) +Rs 5,452 vs −Rs 47,771 bas
 Guardrails: never change a rule because of 1–2 losses; minimum ~30 trades of a pattern before acting; the app never rewrites its own live rules without the test + approval (self-changing systems over-fit and blow up).
 
 ### D. Process rules (always)
-0. **Owner's request (8 Oct): every task Claude gives the owner states its PURPOSE — what it does and what we achieve by it.** 1. No rule goes live unless it improved BOTH back-test data sets and both halves. 2. The owner approves every change to live rules. 3. Re-test weekly. 4. One trading feed only. 5. Never paste tokens in chat. 6. Update this rulebook whenever a rule changes status.
+00. **Owner's rule (16 Oct) — approval before every action:** when Claude has control of the owner's computer/browser, it first states the exact action and its purpose, then waits for the owner's "do it"; one action at a time; never logs in, never places real trades or moves money, never deletes files, never touches anything outside the project. 0. **Owner's request (8 Oct): every task Claude gives the owner states its PURPOSE — what it does and what we achieve by it.** 1. No rule goes live unless it improved BOTH back-test data sets and both halves. 2. The owner approves every change to live rules. 3. Re-test weekly. 4. One trading feed only. 5. Never paste tokens in chat. 6. Update this rulebook whenever a rule changes status.
 
 ---
 
