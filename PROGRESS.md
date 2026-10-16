@@ -839,6 +839,11 @@ Daily candles fetched read-only (Sharekhan gives daily since 2000; kept 2026 in 
 - volatile stock (>2%/day): 0.149% vs 0.298% → **hint: calmer stocks did better per trade; re-test**
 Conclusion: no daily filter is adopted; v4.1 stays as is. Re-test the two hints when we have more days.
 
+## 🌐 2026-10-16 (Fri, 20:50) — Screens published on GitHub Pages (free); Lovable unchanged
+- Finding: the app builds cleanly on GitHub Actions in 4 ways (npm ci + build, build:dev, bun install --frozen-lockfile + build:dev, lint) → the "Build unsuccessful" on Lovable is inside Lovable's GitHub-sync builder, not our code. Workflow `.github/workflows/build-check.yml` builds every push.
+- `.github/workflows/pages.yml` publishes the screens to **https://engamit83.github.io/intraday-insight/** on every push to main (owner switched Pages source to "GitHub Actions"). `vite.config.ts` base = env VITE_BASE_PATH (only set for Pages; Lovable still "/"), router basename = BASE_URL. Same database/login (email+password).
+- Use the GitHub address to view signals/paper trades; keep using the Lovable address for "Connect Sharekhan" (Sharekhan returns to the Lovable address). Back-end deploys (v4.1) still need one Lovable message.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
