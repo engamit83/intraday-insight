@@ -21,6 +21,20 @@ import {
   calculateRawScore, calculateScoreUncapped, decideDirection, getTimeMultiplier,
 } from '../../supabase/functions/_shared/scoring.ts'
 
+// NSE sector of each scout stock (for the one-per-sector rule)
+export const SECTOR = {
+  HDFCBANK: 'bank', ICICIBANK: 'bank', SBIN: 'bank', KOTAKBANK: 'bank', AXISBANK: 'bank', INDUSINDBK: 'bank',
+  BAJFINANCE: 'finance', BAJAJFINSV: 'finance', SBILIFE: 'insurance', HDFCLIFE: 'insurance',
+  TCS: 'it', INFY: 'it', WIPRO: 'it', HCLTECH: 'it', TECHM: 'it',
+  RELIANCE: 'energy', ONGC: 'energy', BPCL: 'energy', COALINDIA: 'energy', NTPC: 'power', POWERGRID: 'power',
+  HINDUNILVR: 'fmcg', ITC: 'fmcg', NESTLEIND: 'fmcg', BRITANNIA: 'fmcg', TATACONSUM: 'fmcg',
+  MARUTI: 'auto', 'M&M': 'auto', TMPV: 'auto', TMCV: 'auto', EICHERMOT: 'auto', HEROMOTOCO: 'auto', 'BAJAJ-AUTO': 'auto',
+  TATASTEEL: 'metal', JSWSTEEL: 'metal', HINDALCO: 'metal',
+  ULTRACEMCO: 'cement', GRASIM: 'cement',
+  SUNPHARMA: 'pharma', CIPLA: 'pharma', DRREDDY: 'pharma', DIVISLAB: 'pharma', APOLLOHOSP: 'health',
+  ASIANPAINT: 'consumer', TITAN: 'consumer', BHARTIARTL: 'telecom', LT: 'infra', ADANIENT: 'adani', ADANIPORTS: 'adani',
+}
+
 export const DEFAULTS = {
   minScore: 60,
   maxOpen: 10,
@@ -64,6 +78,15 @@ export const DEFAULTS = {
   aboveDayOpen: false,     // switch: BUY only above today's opening price, SELL only below (intraday strength / gap held)
   levelsEither: false,     // with openingRangeMin + prevDayLevels: accept a break of EITHER level instead of requiring both       // switch: exit at the candle close if neither stop nor target is hit within N minutes
   dailyLossLimitRs: null,  // switch: no new entries once the day's closed trades lost this many rupees (e.g. 5000)
+  // --- added 16 Oct (lessons from the first paper day) ---
+  maxPerSector: null,      // switch: at most N open positions in the same sector (uses SECTOR below)
+  trailAfterR: null,       // switch: the trailing stop only starts once the trade has gained this many R (e.g. 1)
+  partialAtR: null,        // switch: book HALF the position at +R x stop distance (limit fill), the rest runs
+  minBreadthAbs: null,     // switch: no entries while the market (average stock) is within +/-X% of its open (choppy)
+  riskRs: null,            // switch: size each trade so that hitting the stop loses about this many rupees
+  maxNotional: 300000,     // with riskRs: cap the position value (intraday margin limit)
+  // --- v5 setups ---
+  setup: 'v4',             // 'v4' (momentum + yesterday's level), 'vwapPullback' (trend stock dips to VWAP and bounces), 'orb' (opening-range breakout)
   stopAtrMult: 1.5,        // live: STOP_ATR_MULT
   minStopPct: 0.25,        // live: MIN_STOP_PCT
   rewardRisk: 1.5,         // live: REWARD_RISK
@@ -259,6 +282,10 @@ export function runBacktest(data, options = {}) {
         } else {
           const B = p.direction === 'BUY'
           const better = (a, b) => (B ? Math.max(a, b) : Math.min(a, b)) // tighter stop
+          if (o.partialAtR && !p.partialPx) {
+            const lvl = B ? p.entry + o.partialAtR * p.stopDist : p.entry - o.partialAtR * p.stopDist
+            if (B ? c.high >= lvl : c.low <= lvl) p.partialPx = lvl
+          }
           if (o.breakevenAtR && !p.atBreakeven) {
             const gain = B ? c.high - p.entry : p.entry - c.low
             if (gain >= o.breakevenAtR * p.stopDist) { p.stop = better(p.stop, p.entry); p.atBreakeven = true }
@@ -271,7 +298,7 @@ export function runBacktest(data, options = {}) {
             if (r >= 1.5) { p.stop = better(p.stop, B ? p.entry + 0.75 * p.stopDist : p.entry - 0.75 * p.stopDist); p.locked = true }
             else if (r >= 1) { p.stop = better(p.stop, B ? p.entry + noLoss : p.entry - noLoss); p.locked = true }
           }
-          if (o.trailAtrMult && p.atr) {
+          if (o.trailAtrMult && p.atr && (o.trailAfterR === null || p.bestExc >= o.trailAfterR * p.stopDist)) {
             const trail = B ? p.bestClose - o.trailAtrMult * p.atr : p.bestClose + o.trailAtrMult * p.atr
             const before = p.stop
             p.stop = better(p.stop, trail)
@@ -303,7 +330,7 @@ export function runBacktest(data, options = {}) {
 
       // market breadth: average % change from the day's open, over stocks with this candle
       let breadth = 0, nb = 0
-      if (o.marketFilter || o.relStrength) {
+      if (o.marketFilter || o.relStrength || o.minBreadthAbs !== null) {
         for (const s of Object.keys(ctx)) {
           const j = ctx[s].byBucket.get(bucket)
           if (j === undefined) continue
@@ -326,9 +353,30 @@ export function runBacktest(data, options = {}) {
         const start = Math.max(0, gi + 1 - (o.historyWindow + j + 1))
         const series = stocks[s].slice(start, gi + 1)
         const ind = computeIndicators(series)
-        const dir = decideDirection(ind)
+        let dir = decideDirection(ind)
+        let finalScore = Math.round(calculateRawScore(ind) * timeMult)
+        if (o.setup === 'vwapPullback') {
+          // trend stock (on the right side of VWAP and of its day open) whose previous candle dipped to VWAP
+          // and whose last candle closed back on the trend side, in the trend direction
+          const c = ctx[s].list[j], pr = j > 0 ? ctx[s].list[j - 1] : null
+          const vw = ctx[s].vwap[j], vwp = j > 0 ? ctx[s].vwap[j - 1] : null
+          dir = { direction: null, reason: 'no pullback' }
+          if (pr && vw && vwp && ind.atr !== null && j >= 6) {
+            if (c.close > vw && c.close > ctx[s].dayOpen && pr.low <= vwp * 1.001 && c.close > c.open && c.close > pr.high) dir = { direction: 'BUY', reason: 'vwap pullback' }
+            if (c.close < vw && c.close < ctx[s].dayOpen && pr.high >= vwp * 0.999 && c.close < c.open && c.close < pr.low) dir = { direction: 'SELL', reason: 'vwap pullback' }
+          }
+          finalScore = 100
+        } else if (o.setup === 'orb') {
+          // first close beyond the opening range (openingRangeMin) in either direction
+          dir = { direction: null, reason: 'inside range' }
+          if (ctx[s].orEnd && nextBucket > ctx[s].orEnd && ind.atr !== null) {
+            const c = ctx[s].list[j], pr = j > 0 ? ctx[s].list[j - 1] : null
+            if (c.close > ctx[s].orHigh && pr && pr.close <= ctx[s].orHigh) dir = { direction: 'BUY', reason: 'orb' }
+            if (c.close < ctx[s].orLow && pr && pr.close >= ctx[s].orLow) dir = { direction: 'SELL', reason: 'orb' }
+          }
+          finalScore = 100
+        }
         if (!dir.direction || ind.atr === null || ind.lastClose === null) continue
-        const finalScore = Math.round(calculateRawScore(ind) * timeMult)
         if (finalScore < o.minScore) continue
         if (o.marketFilter && ((dir.direction === 'BUY' && breadth <= 0) || (dir.direction === 'SELL' && breadth >= 0))) continue
         if (o.minRelVolume !== null && !(ind.relativeVolume !== null && ind.relativeVolume >= o.minRelVolume)) continue
@@ -372,11 +420,19 @@ export function runBacktest(data, options = {}) {
       candidates.sort((a, b) => b.rankScore - a.rankScore || b.finalScore - a.finalScore)
       if (o.maxTradesPerDay !== null && entriesToday >= o.maxTradesPerDay) continue
       if (o.dailyLossLimitRs !== null) {
-        const realised = trades.slice(dayStartTrades).reduce((a, x) => a + (x.netPct / 100) * o.notional, 0)
+        const realised = trades.slice(dayStartTrades).reduce((a, x) => a + (x.netPct / 100) * (x.notional ?? o.notional), 0)
         if (realised <= -o.dailyLossLimitRs) continue
       }
-      for (const cand of candidates.slice(0, o.topN ?? o.maxOpen)) {
+      if (o.minBreadthAbs !== null && Math.abs(breadth) < o.minBreadthAbs) continue
+      let picked = 0
+      for (const cand of candidates) {
+        if (picked >= (o.topN ?? o.maxOpen)) break
         if (open.size >= o.maxOpen) break
+        if (o.maxPerSector !== null) {
+          const sec = SECTOR[cand.s] ?? cand.s
+          if ([...open.keys()].filter((x) => (SECTOR[x] ?? x) === sec).length >= o.maxPerSector) continue
+        }
+        picked++
         if (o.maxTradesPerDay !== null && entriesToday >= o.maxTradesPerDay) break
         entriesToday++
         tradedToday.add(cand.s)
@@ -388,6 +444,7 @@ export function runBacktest(data, options = {}) {
           symbol: cand.s, day, direction: cand.dir, signalTime: bucket, entryTime: nextBucket,
           signalPrice: cand.ind.lastClose, entry, stop: lv.stop, target: lv.target, stopDist: Math.abs(cand.ind.lastClose - lv.stop), atr: cand.ind.atr,
           rankScore: Math.round(cand.rankScore * 10) / 10,
+          notional: o.riskRs ? Math.min(o.maxNotional, (o.riskRs / Math.abs(cand.ind.lastClose - lv.stop)) * entry) : o.notional,
         })
       }
     }
@@ -401,7 +458,8 @@ export function runBacktest(data, options = {}) {
   function close(p, rawPx, reason, bucket, slipped) {
     const slip = slipped ? rawPx * (o.slippagePct / 100) : 0
     const exit = p.direction === 'BUY' ? rawPx - slip : rawPx + slip
-    const grossPct = p.direction === 'BUY' ? (exit / p.entry - 1) * 100 : (1 - exit / p.entry) * 100
+    let grossPct = p.direction === 'BUY' ? (exit / p.entry - 1) * 100 : (1 - exit / p.entry) * 100
+    if (p.partialPx) grossPct = 0.5 * grossPct + 0.5 * (p.direction === 'BUY' ? (p.partialPx / p.entry - 1) * 100 : (1 - p.partialPx / p.entry) * 100)
     trades.push({ ...p, exit, exitTime: bucket, reason, grossPct, netPct: grossPct - costPct })
   }
 
@@ -416,13 +474,13 @@ export function summarize(trades, o = DEFAULTS) {
   const wins = trades.filter((t) => t.netPct > 0)
   const losses = trades.filter((t) => t.netPct <= 0)
   const sum = (a, f) => a.reduce((x, t) => x + f(t), 0)
-  const rupees = (pct) => (pct / 100) * o.notional
+  const rupees = (pct, t) => (pct / 100) * (t?.notional ?? o.notional)
   // equity curve in rupees, trade order = exit order within days
   let eq = 0, peak = 0, maxDD = 0
   const ordered = [...trades].sort((a, b) => (a.day + a.exitTime).localeCompare(b.day + b.exitTime))
-  for (const t of ordered) { eq += rupees(t.netPct); peak = Math.max(peak, eq); maxDD = Math.min(maxDD, eq - peak) }
+  for (const t of ordered) { eq += rupees(t.netPct, t); peak = Math.max(peak, eq); maxDD = Math.min(maxDD, eq - peak) }
   const byDay = {}
-  for (const t of trades) byDay[t.day] = (byDay[t.day] ?? 0) + rupees(t.netPct)
+  for (const t of trades) byDay[t.day] = (byDay[t.day] ?? 0) + rupees(t.netPct, t)
   const dayVals = Object.values(byDay)
   return {
     trades: n,
@@ -431,7 +489,7 @@ export function summarize(trades, o = DEFAULTS) {
     avgLossPct: losses.length ? r3(sum(losses, (t) => t.netPct) / losses.length) : 0,
     grossExpectancyPct: r3(sum(trades, (t) => t.grossPct) / n),
     netExpectancyPct: r3(sum(trades, (t) => t.netPct) / n),
-    totalNetRupees: Math.round(rupees(sum(trades, (t) => t.netPct))),
+    totalNetRupees: Math.round(sum(trades, (t) => rupees(t.netPct, t))),
     maxDrawdownRupees: Math.round(maxDD),
     daysTraded: dayVals.length,
     greenDays: dayVals.filter((v) => v > 0).length,

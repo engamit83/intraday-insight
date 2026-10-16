@@ -778,6 +778,40 @@ Build: the "Build unsuccessful" cause was found. Lovable added drizzle-kit, driz
 - Known small bug (not fixed, owner not yet asked): `start-feed.bat` uses `>/dev/null` (not valid on Windows), so its "close an earlier feed first" step doesn't run.
 - App (commit e1494ae, pushed free via GitHub): new **Paper Trades** page; Signals page shows all of today's signals (expired ones marked); tailwind plugin changed from require() to an ES import. **Still "Build unsuccessful" in Lovable for every GitHub push** (since 6 Oct). The lock file is in sync and there is no GitHub check, so Lovable's two suggested causes are not it. The real error is only visible to Lovable. Lovable's own edits build fine. Next: when a credit is available, send Lovable "Rebuild the preview from the latest GitHub main. If the build fails, show me the exact error text and fix only that error. Change nothing else."
 
+## 🔬 2026-10-16 (Fri, evening) — Lessons back-tested, v5 setups tested, feed upgrade ready, why today lost
+
+**Data:** fresh 5-min candles (49 stocks) fetched read-only and merged with the 7 Oct file: 13 days (28 Sep – 15 Oct). 10 tested days (first 3 warm up the volume averages); **6 of them (8–15 Oct) were never used to build v4** = honest out-of-sample test. Sharekhan's history did not contain 16 Oct yet.
+
+`tools/backtest/run-lessons.mjs` (variants fixed before running; new back-tester switches maxPerSector, trailAfterR, partialAtR, minBreadthAbs, riskRs, setup='vwapPullback'|'orb'; old 28 checks + live/paper 36/36 matches still pass):
+
+| Variant | Trades | Win% | Net ₹ all | Max DD ₹ | Net ₹ OLD days | Net ₹ NEW days |
+|---|---|---|---|---|---|---|
+| v4 (live today) | 94 | 46 | +2,963 | −6,126 | +3,315 | −352 |
+| one per sector | 89 | 49 | +9,559 | −4,125 | +7,662 | +1,897 |
+| entries 09:45–13:30 | 97 | 41 | −1,811 | −9,837 | +1,016 | −2,827 |
+| trail only after +1R | 95 | 66 | +14,887 | −3,600 | +5,073 | +9,815 |
+| skip choppy (±0.2%) | 80 | 46 | +1,635 | −5,508 | +1,648 | −13 |
+| half at +1R | 95 | 46 | +1,573 | −6,249 | +1,944 | −370 |
+| equal risk ₹500 | 95 | 48 | +2,692 | −4,565 | +1,942 | +750 |
+| **sector + trail after 1R (L9)** | 88 | 69 | **+19,206** | **−2,970** | +9,177 | **+10,030** |
+| L9 + ₹500 risk | 88 | 69 | +15,471 | −2,488 (9/10 green days) | +8,445 | +7,026 |
+| VWAP pullback | 96 | 36 | −4,694 | | +189 | −4,883 |
+| VWAP pullback + yesterday level | 72 | 40 | +2,803 | | +5,619 | −2,816 |
+| ORB 30 min | 93 | 39 | −9,561 | | −1,118 | −8,444 |
+| ORB 15 min | 93 | 46 | +6,244 | | −2,655 | +8,899 |
+
+Robustness: trail-after 0.75R / 1.5R / no trailing all give similar results (+15.5k…+19.5k), so the gain is real: **the 1.5×ATR trail starting before +1R was choking trades.** Choppy filter: 0.1/0.2/0.3 inconsistent → not adopted yet. Earlier cut-off (owner's lesson 2) → worse, rejected. VWAP pullback / ORB → not consistent in both halves, not adopted. Range trading not yet tested.
+**Recommendation: v4.1 = v4 + one stock per sector + trailing only after +1R** (needs a scout/paper-trader deploy = 1 credit). Equal-₹-risk sizing for the real-money stage.
+
+**Why 16 Oct lost (checked from the database, read-only):**
+- The feed only ran **12:00–15:08 IST** (it was started late; the laptop restarted at ~15:08). So for today the scout saw no candles 09:15–12:00: "stock up X% today", market direction, VWAP and day volume were all measured **from 12:00, not from the open** (e.g. ULTRACEMCO "day volume 0.23x"). The signals were based on half a day.
+- The feed itself was fine while running: ~21 prices per stock per minute (one every ~3 s), only one 1-minute gap (12:22). It did not miss the moves that hit our stops.
+- The market was nearly flat (+0.11%), with 2 of 3 trades in cement (same bet). GRASIM reached +0.99R, then the early trail moved its stop to just above entry → −₹118 (fixed by "trail after 1R").
+- Paper entry uses the open of the candle that was forming when the signal came (13:40 open for a 13:44 signal), as in the back-test; real fills would be at the 13:44 price. Small difference (~₹1–2 per share today) but to fix: enter at the first price after the signal.
+Fixes: feed now starts automatically at 09:00 (done); add a "complete data" guard (no trade unless today's candles start by 09:20) and the real-time entry price — both need a deploy.
+
+**Feed upgrade (ready, NOT installed yet; owner approval needed):** `tools/live-feed/` = laptop files. New `recorder.mjs` keeps our own history in `D:\intraday\live-feed\data\`: `candles-YYYY-MM-DD.csv` (every 1-min candle, rewritten every 5 min) and `book-YYYY-MM-DD.csv` (once a minute per stock: price, best bid/offer + sizes, total buy/sell quantity waiting, from fields Sharekhan already sends). `parse.mjs` keeps the book fields. Tests: recorder 5/5, offline 23/23, end-to-end 11/11. The Nifty index is not recorded yet (needs Sharekhan's index code — to find).
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
