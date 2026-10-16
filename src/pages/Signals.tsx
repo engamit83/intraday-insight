@@ -27,14 +27,14 @@ export default function Signals() {
 
   const fetchSignals = async () => {
     setLoading(true);
-    // Show every signal created today (India time), including ones that have expired,
-    // plus any older signal that is still active.
+    // Show only signals created today (India time), including ones that have expired.
+    // Older rows (e.g. leftover demo signals) are never shown here.
     const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
     const istDayStart = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - 5.5 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from("signals")
       .select("*")
-      .or(`is_active.eq.true,created_at.gte.${istDayStart}`)
+      .gte("created_at", istDayStart)
       .order("created_at", { ascending: false });
 
     if (error) {
