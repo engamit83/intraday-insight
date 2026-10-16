@@ -103,11 +103,11 @@ export default function AutoTrading() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
           <p className="text-sm text-foreground">
-            <span className="font-semibold">No automatic execution exists yet.</span> This
-            toggle writes a real flag (<code>trading_state.auto_mode_active</code>) that the
-            signal-scoring backend checks, but nothing in this project currently runs on a
-            schedule to actually place trades using it. Use the Signals page + Simulator mode
-            in Settings to place trades manually for now.
+            <span className="font-semibold">Automatic PAPER trading is running; real-money trading is not.</span>{" "}
+            Every minute in market hours the signal engine (rule set v4) looks for signals and the paper
+            trader opens and manages a practice trade for each one (no real money). See the Paper Trades
+            page for results. Real orders are never placed automatically - real money stays manual by
+            design. The switch below is an old flag and does not place real trades.
           </p>
         </div>
       </div>

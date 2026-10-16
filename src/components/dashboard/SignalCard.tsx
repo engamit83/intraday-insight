@@ -1,7 +1,6 @@
-import { ArrowUpRight, ArrowDownRight, Target, Shield, Clock, Loader2 } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Target, Shield, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { StockSignal } from "@/types/trading";
 
@@ -118,24 +117,9 @@ export function SignalCard({ signal, onTrade, isTrading }: SignalCardProps) {
             <Clock className="h-3 w-3" />
             <span>{formatTimeRemaining(signal.expires_at)}</span>
           </div>
-          <Button 
-            size="sm"
-            variant={isBuy ? "default" : "destructive"}
-            className={cn(
-              "font-semibold",
-              isBuy && "bg-bullish hover:bg-bullish/90"
-            )}
-            onClick={() => onTrade?.(signal)}
-            disabled={isTrading}
-          >
-            {isTrading ? (
-              <>
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Placing...
-              </>
-            ) : (
-              "Trade Now"
-            )}
-          </Button>
+          {/* Paper trades are opened automatically by the paper trader for every rule-set signal, so there is
+              no manual "Trade Now" here (it used the old demo engine and created duplicate trades). */}
+          <Badge variant="outline" className="text-xs text-muted-foreground">Paper trade: automatic</Badge>
         </div>
       </div>
     </div>

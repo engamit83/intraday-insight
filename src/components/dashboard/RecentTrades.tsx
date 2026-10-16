@@ -36,14 +36,18 @@ export function RecentTrades() {
     if (!user) return;
     const fetchTrades = async () => {
       setLoading(true);
+      // the automatic paper trades (rule set v4); real manual trades are on the Manual Trades page
       const { data, error } = await supabase
-        .from("trades")
-        .select("id, symbol, trade_type, entry_price, exit_price, pnl, pnl_percentage, status, opened_at")
-        .eq("user_id", user.id)
-        .order("opened_at", { ascending: false })
+        .from("simulated_trades")
+        .select("id, symbol, direction, entry_price, exit_price, pnl, net_pct, status, entry_time")
+        .eq("rules", "v4")
+        .order("entry_time", { ascending: false })
         .limit(5);
 
-      if (!error) setTrades(data || []);
+      if (!error) setTrades((data || []).map((t) => ({
+        id: t.id, symbol: t.symbol, trade_type: t.direction ?? "BUY", entry_price: t.entry_price, exit_price: t.exit_price,
+        pnl: t.pnl, pnl_percentage: t.net_pct, status: t.status ?? "OPEN", opened_at: t.entry_time ?? new Date().toISOString(),
+      })));
       setLoading(false);
     };
     fetchTrades();
@@ -52,9 +56,9 @@ export function RecentTrades() {
   return (
     <div className="glass-card rounded-xl p-5">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-lg font-semibold text-foreground">Recent Trades</h3>
+        <h3 className="text-lg font-semibold text-foreground">Recent Paper Trades</h3>
         <Badge variant="outline" className="text-xs">
-          Live
+          Paper
         </Badge>
       </div>
 
@@ -63,7 +67,7 @@ export function RecentTrades() {
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
         </div>
       ) : trades.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">No trades yet.</p>
+        <p className="text-sm text-muted-foreground py-8 text-center">No paper trades yet.</p>
       ) : (
         <div className="space-y-3">
           {trades.map((trade) => {

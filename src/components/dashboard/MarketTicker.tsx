@@ -8,7 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 interface TickerStock {
   symbol: string;
   last_price: number | null;
+  updated_at: string;
 }
+const istTime = (iso: string) => new Date(Date.parse(iso) + 5.5 * 3600_000).toISOString().replace("T", " ").slice(5, 16)
 
 export function MarketTicker() {
   const [stocks, setStocks] = useState<TickerStock[]>([]);
@@ -18,7 +20,7 @@ export function MarketTicker() {
     const fetchStocks = async () => {
       const { data, error } = await supabase
         .from("stocks")
-        .select("symbol, last_price")
+        .select("symbol, last_price, updated_at")
         .order("updated_at", { ascending: false })
         .limit(20);
 
@@ -40,12 +42,23 @@ export function MarketTicker() {
     return (
       <div className="overflow-hidden border-b border-border bg-secondary/30 py-2 px-6">
         <span className="text-sm text-muted-foreground">
-          No stock price data yet — the `stocks` table is empty. This fills in once the market-data pipeline runs.
+          No saved stock prices yet.
         </span>
       </div>
     );
   }
 
+  // prices older than 1 day are not shown as if they were current
+  const newest = Math.max(...stocks.map((s) => Date.parse(s.updated_at)))
+  if (Date.now() - newest > 24 * 60 * 60 * 1000) {
+    return (
+      <div className="overflow-hidden border-b border-border bg-secondary/30 py-2 px-6">
+        <span className="text-sm text-muted-foreground">
+          Price strip paused: the saved prices are old (last update {istTime(new Date(newest).toISOString())} IST).
+        </span>
+      </div>
+    );
+  }
   const duplicatedData = [...stocks, ...stocks];
 
   return (
@@ -64,6 +77,7 @@ export function MarketTicker() {
                 ? `₹${item.last_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
                 : "No price yet"}
             </span>
+            <span className="font-mono text-xs text-muted-foreground">{istTime(item.updated_at)}</span>
           </div>
         ))}
       </div>

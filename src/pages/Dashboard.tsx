@@ -51,8 +51,6 @@ export default function Dashboard() {
         <StatsCard
           title="Today's P&L"
           value={`₹${todayPnl.toLocaleString()}`}
-          change={todayPnl > 0 ? Math.abs(todayPnl / 100) : -Math.abs(todayPnl / 100)}
-          changeLabel="vs yesterday"
           icon={<TrendingUp className="h-6 w-6" />}
           variant={todayPnl >= 0 ? "success" : "danger"}
         />
@@ -65,8 +63,6 @@ export default function Dashboard() {
         <StatsCard
           title="Win Rate"
           value={`${winRate}%`}
-          change={winRate > 70 ? 2.5 : -1.5}
-          changeLabel="this week"
           icon={<Target className="h-6 w-6" />}
           variant={winRate > 60 ? "success" : "warning"}
         />

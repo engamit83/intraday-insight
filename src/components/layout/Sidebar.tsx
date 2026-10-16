@@ -10,6 +10,7 @@ import {
   FlaskConical
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMarketStatus } from "@/hooks/useMarketStatus";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -23,6 +24,7 @@ const navItems = [
 ];
 
 export function Sidebar() {
+  const { marketOpen } = useMarketStatus();
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
       <div className="flex h-full flex-col">
@@ -59,10 +61,10 @@ export function Sidebar() {
         <div className="border-t border-sidebar-border p-4">
           <div className="rounded-lg bg-secondary/50 p-3">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-bullish animate-pulse" />
-              <span className="text-xs font-medium text-foreground">Market Open</span>
+              <div className={cn("h-2 w-2 rounded-full", marketOpen ? "bg-bullish animate-pulse" : "bg-muted-foreground")} />
+              <span className="text-xs font-medium text-foreground">{marketOpen ? "Market open" : "Market closed"}</span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">09:15 AM - 03:30 PM IST</p>
+            <p className="mt-1 text-xs text-muted-foreground">Mon-Fri 09:15 AM - 03:30 PM IST (holidays not shown)</p>
           </div>
         </div>
       </div>

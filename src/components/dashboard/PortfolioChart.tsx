@@ -4,9 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
-// Honesty note: there's no intraday (minute-by-minute) portfolio value series
-// stored anywhere in the schema — only one row per day in `daily_performance`.
-// So this shows real daily P&L history instead of a fake intraday curve.
+// Daily net P&L (after costs) of the automatic paper trades (simulated_trades, rule set v4), last 30 days.
+// (Before 16 Oct this read `daily_performance`, which nothing fills any more.)
 interface DayPoint {
   date: string;
   pnl: number;
@@ -21,15 +20,23 @@ export function PortfolioChart() {
     if (!user) return;
     const fetchData = async () => {
       setLoading(true);
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data: rows, error } = await supabase
-        .from("daily_performance")
-        .select("date, total_pnl")
-        .eq("user_id", user.id)
-        .order("date", { ascending: true })
-        .limit(30);
+        .from("simulated_trades")
+        .select("entry_time, pnl")
+        .eq("rules", "v4")
+        .eq("status", "CLOSED")
+        .gte("entry_time", since)
+        .order("entry_time", { ascending: true });
 
       if (!error) {
-        setData((rows || []).map((r) => ({ date: r.date, pnl: r.total_pnl ?? 0 })));
+        const byDay = new Map<string, number>();
+        for (const r of rows || []) {
+          if (!r.entry_time) continue;
+          const day = new Date(Date.parse(r.entry_time) + 5.5 * 3600_000).toISOString().slice(0, 10);
+          byDay.set(day, (byDay.get(day) ?? 0) + Number(r.pnl ?? 0));
+        }
+        setData([...byDay.entries()].map(([date, pnl]) => ({ date, pnl: Math.round(pnl) })));
       }
       setLoading(false);
     };
@@ -45,8 +52,8 @@ export function PortfolioChart() {
     <div className="glass-card rounded-xl p-5">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Daily P&L History</h3>
-          <p className="text-sm text-muted-foreground">From daily_performance (no intraday series stored)</p>
+          <h3 className="text-lg font-semibold text-foreground">Paper Trading: Daily Result</h3>
+          <p className="text-sm text-muted-foreground">Net after all costs, per day (no real money)</p>
         </div>
         {data.length > 0 && (
           <div className="text-right">
@@ -66,7 +73,7 @@ export function PortfolioChart() {
           </div>
         ) : data.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm text-center px-6">
-            No daily performance records yet for your account.
+            No closed paper trades yet.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

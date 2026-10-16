@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { 
@@ -143,7 +144,8 @@ export default function Performance() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Performance Analytics</h1>
-          <p className="text-muted-foreground">Track your trading performance</p>
+          <p className="text-muted-foreground">Your REAL (manual) trades. Automatic paper-trading results are on the{" "}
+            <Link to="/paper-trades" className="text-primary underline">Paper Trades</Link> page.</p>
         </div>
         <Badge variant="outline" className="w-fit">
           <Calendar className="h-4 w-4 mr-2" />
