@@ -60,6 +60,10 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 | L7 | **Lovable support**: GitHub-push builds fail since 6 Oct though the code builds cleanly on GitHub Actions (4 ways) | Optional; screens now on GitHub Pages |
 | L8 | **~200 F&O stocks for signals** (past-candle store + scout change; one Lovable message) | After v4.1 is live and stable |
 | L9 | **Nifty / sector index prices**: verify they arrive via "NC<code>" (Mon 19 Oct check), then use Nifty for the market filter and as a market-fall exit | Mon 19 Oct, then build |
+| L11 | **MUST before real money — stop order at the broker:** right after every real entry, place a stop-loss order with Sharekhan (sits at the exchange, works even if laptop/app/internet fail); our app only MOVES it up (break-even, profit lock, trailing). | Before stage 6 (first real trade) |
+| L12 | **MUST before real money — reliable feed:** move the price feed from the laptop to an always-on cloud computer (or add a backup); 16 Oct showed a laptop restart stops everything. | Before stage 6 |
+| L13 | **MUST before real money — risk guards:** block watch-list stocks (L2), stop all trading after the daily loss limit, max open trades / money at risk, warning before risky orders (like Zerodha's Nudge). | Before stage 6 |
+| L14 | Nice to have: tax and P&L reports (like Zerodha Console); buyers/sellers (order-book) view per signal. | Later |
 | L10 | Small fixes: `start-feed.bat` uses `>/dev/null` (old start-feed only); old `stocks` price strip is stale (fed by an old job); clean up old `live_candles` rows monthly (database size) | Low priority |
 
 ---
