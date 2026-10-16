@@ -21,6 +21,29 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 
 ---
 
+## 🧡 OWNER'S TRADING INTENT (agreed 16 Oct 2026) — READ THIS FIRST, EVERY SESSION
+> **Claude: always read this section and the AGREED PLAN + RULEBOOK below before suggesting or changing anything. The owner should never have to repeat these points. When a discussion adds or changes intent, update this section the same day.**
+
+1. **Strong trends only.** Enter only where our rules predict a strong up-trend (BUY) or strong down-trend (SELL), using as many factors as needed. We assume a selected stock should move our way.
+2. **Earn both sides.** BUY in rising markets; SELL first and buy back in falling markets (intraday short). Range stocks: buy near the bottom, sell near the top, repeatedly (rule C7).
+3. **Liquidity.** Only trade where others take the other side: enough buyers when we sell, enough sellers when we buy (bid/offer gap, waiting quantity — order book recorded from 19 Oct).
+4. **Owner's exit rule (main, on trial):** the stop sits at the **buy price from the start** — no planned price loss; if the market turns against us we exit as fast as possible at the buy price (only charges lost, ~Rs 100–150 per Rs 1 lakh). As price moves our way the stop keeps moving into profit.
+5. **Learn from every exit at buy price.** For each one, record whether the stock **later reached our target**:
+   - mostly NOT reached → the pick was weak → improve the selection rules (owner's path; keep rule 4);
+   - mostly reached → the pick was right but the exit too tight → only then allow a small planned loss (Claude's suggestion: small fixed risk + early move to break-even).
+   Decide after ~30 trades. Outside shocks (news, big seller, market fall) are not rule mistakes, but warning signs must be detected fast (big candle against us on high volume, market/sector index turning, sellers ≫ buyers in the order book) → exit, keep scanning, re-enter either way when a strong setup appears again.
+6. **If a pick goes against us with no outside reason, our rules were weak** → study it, improve the rules (learning loop F). Every change must work on days it was not built from (no over-fitting).
+7. **Real money stays manual** until paper trading proves the rules (100+ trades, positive after costs).
+8. **Working style:** Claude acts as the market expert and says openly when the owner may be wrong; owner approves every live change ("do it"); credits used wisely (prepare in GitHub, one bundled Lovable message); every task given to the owner states its purpose; speed — don't wait where waiting isn't needed.
+
+**Range trading — how we find and use it (owner's question 16 Oct, detail in C7):**
+- *Before the day (multi-day):* each morning list stocks that ranged on recent days (price crossed VWAP many times, low efficiency, day's high-low mostly within a band, no news) — candidates, not trades.
+- *Same day (confirmation):* from ~10:30, a stock that touched the top ≥ 2 times and the bottom ≥ 2 times, flat VWAP, band ≥ ~0.8% (to beat costs) = live range. BUY near the bottom on a rejection candle / SELL near the top, exits just inside the other edge, repeat (max 2 round trips).
+- *Break of the range:* a 5-min close outside the band by more than a small buffer with volume ≥ 2× usual → exit range trades immediately and, if the break is in the market's direction, switch to the breakout setup.
+- Test first on the 5-min history (13 days now, growing weekly + own recordings).
+
+---
+
 ## 🧭 AGREED PLAN — strategy & build order (agreed 2026-10-08, READ THIS FIRST)
 
 **Goal:** maximum money = highest profit per rupee risked, with a worst case small enough to keep trading through bad weeks. Real money only after paper trading proves it.
