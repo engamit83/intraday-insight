@@ -773,6 +773,11 @@ Learnings (to test in the back-tester, NOT changed live yet):
 
 Build: the "Build unsuccessful" cause was found. Lovable added drizzle-kit, drizzle-orm and postgres to package.json (commit 1c3618c) without updating package-lock.json. Lovable commit a0fc0d8 (15:23 IST) updated the lock file; it now matches package.json (checked). Owner to confirm the build turns green.
 
+## ⏰ 2026-10-16 (Fri, 16:36) — Automatic feed + new screens
+- Laptop: `auto-feed.bat` (runs the feed only Mon–Fri 08:55–15:35; restarts it after 30 s if it stops during market hours) and `setup-auto-feed.bat` (run once by the owner, OK). Created: task `IntradayFeed-Start-0900` (weekdays 09:00), task `IntradayFeed-Stop-1540` (weekdays 15:40), and Startup-folder `intraday-auto-feed.bat` (starts the feed 1 min after sign-in if it is market hours). First run Mon 19 Oct. The laptop must be on and signed in; Sharekhan must still be connected each morning. Undo: delete the 2 tasks + the Startup file.
+- Known small bug (not fixed, owner not yet asked): `start-feed.bat` uses `>/dev/null` (not valid on Windows), so its "close an earlier feed first" step doesn't run.
+- App (commit e1494ae, pushed free via GitHub): new **Paper Trades** page; Signals page shows all of today's signals (expired ones marked); tailwind plugin changed from require() to an ES import. **Still "Build unsuccessful" in Lovable for every GitHub push** (since 6 Oct). The lock file is in sync and there is no GitHub check, so Lovable's two suggested causes are not it. The real error is only visible to Lovable. Lovable's own edits build fine. Next: when a credit is available, send Lovable "Rebuild the preview from the latest GitHub main. If the build fails, show me the exact error text and fix only that error. Change nothing else."
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
