@@ -48,6 +48,22 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 
 ---
 
+## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
+| # | Item | When / trigger |
+|---|---|---|
+| L1 | **Delivery / trade-to-trade (T2T) stocks** — owner wants to look at this later: T2T stocks allow no intraday (full payment, shares arrive T+1, sell from next day, no short selling, same-day sell = short-delivery auction penalty). Possible separate "short-term delivery" strategy, NOT intraday. For now our intraday rule skips them (C2). | After the intraday rules are proven (stage 5) — remind the owner |
+| L2 | **Watch-list filter** (ASM/GSM, T2T, F&O ban, Sharekhan intraday-blocked) — build when scanning the 500 stocks | Before the 500-stock scan goes live |
+| L3 | **Range trading v2** (multi-day range list, ranges held ≥ 2 h, bands ≥ 1.2%, flat-market days only) | When 2–3 weeks of 500-stock recordings exist |
+| L4 | **Ranking by expected profit ÷ risk** (intent 7a2) + compare by daily movement % and price band (7a) | After 2–3 weeks of 500-stock data |
+| L5 | **Years of 1-minute history** (Zerodha Kite Connect ~₹500/month, or Angel One) — owner prefers no hassle for now | If the rules look promising and we want faster proof |
+| L6 | **Sharekhan support questions** (longer history? date range? max stocks per stream? Nifty code?) — owner to send | Any time |
+| L7 | **Lovable support**: GitHub-push builds fail since 6 Oct though the code builds cleanly on GitHub Actions (4 ways) | Optional; screens now on GitHub Pages |
+| L8 | **~200 F&O stocks for signals** (past-candle store + scout change; one Lovable message) | After v4.1 is live and stable |
+| L9 | **Nifty / sector index prices**: verify they arrive via "NC<code>" (Mon 19 Oct check), then use Nifty for the market filter and as a market-fall exit | Mon 19 Oct, then build |
+| L10 | Small fixes: `start-feed.bat` uses `>/dev/null` (old start-feed only); old `stocks` price strip is stale (fed by an old job); clean up old `live_candles` rows monthly (database size) | Low priority |
+
+---
+
 ## 🧭 AGREED PLAN — strategy & build order (agreed 2026-10-08, READ THIS FIRST)
 
 **Goal:** maximum money = highest profit per rupee risked, with a worst case small enough to keep trading through bad weeks. Real money only after paper trading proves it.
