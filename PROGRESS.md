@@ -2,7 +2,7 @@
 
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
-**Last updated:** 2026-10-08
+**Last updated:** 2026-10-16
 
 ---
 
@@ -732,6 +732,12 @@ Base = v3 incl. today's volume ≥ 1.2×. `tools/backtest/run-revisit.mjs`. New 
 
 **Reading:** the owner's idea works in its simple forms: the PROFIT LOCK (move the stop to no-loss at +1R, lock profit at +1.5R) improved both data sets and raised the win rate to ~60%; a trailing stop helped; the softer "either" volume rule helped. The "exit at the first sign of weakness" rules (reversal, volume fade) exited too early — the price often dips and continues — and reduced profit, so they are OFF. M13 improved both data sets AND lowered the worst losing run in both → becomes rule set v4. Same caveats: ~24 days, many variants tried; paper-trade before real money.
 **Rule set v4:** market filter · relative strength · beyond yesterday's high/low · volume: today ≥ 1.2× usual OR a burst ≥ 2× usual in the last candle OR volume rising 3 candles in a row (with today ≥ 1.0×) · entries 10:00–14:00 · top 3 per decision · one trade per stock per day · max 10/day · stop for the day at −Rs 2,000 · stop 2×ATR, target 2R · at +1R stop moves to no-loss, at +1.5R locks +0.75R · trailing stop 1.5×ATR from the best close · square-off 15:15.
+
+## ▶️ 2026-10-16 (Fri) — Resumed; Stage 0 in progress
+
+Nothing was run between 8 and 15 Oct (owner busy) — the plan simply paused; no data from those days. Today (owner on holiday, market open) we resume Stage 0.
+**New on the laptop (`D:\intraday\live-feed`):** `start-feed.bat` (double-click: closes any earlier feed window titled INTRADAY-FEED, then runs ONE `node feed.mjs`) and `stop-feed.bat`. Reason: the owner prefers not to type commands; Claude cannot type into terminals.
+**Shifted dates:** Stage 1 (v4 + ~200 stocks) and Stage 1b (automatic paper trading) built over the weekend 17–18 Oct; first automatic paper-trading day **Mon 19 Oct**. Tue 20 Oct is a market holiday (Dussehra).
 
 ## 📌 Rule for this file going forward
 
