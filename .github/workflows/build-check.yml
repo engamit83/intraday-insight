@@ -1,11 +1,11 @@
 # build-check: builds the web app on every push so build errors are visible (free for public repos).
-# It only builds and reports; it publishes nothing.
+# It only builds and reports; it publishes nothing. Extra steps repeat what Lovable's builder may do (bun, dev build, lint).
 name: build-check
 on:
   push:
   workflow_dispatch:
 jobs:
-  build:
+  npm-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,5 +16,16 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build
         run: npm run build
-      - name: Type check (report only)
-        run: npx tsc --noEmit -p tsconfig.app.json || true
+      - name: Dev build (Lovable preview style)
+        run: npm run build:dev
+      - name: Lint (report only)
+        run: npm run lint 2>&1 | tail -15 || true
+  bun-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: bun install (frozen lockfile, like Lovable)
+        run: bun install --frozen-lockfile
+      - name: bun dev build
+        run: bun run build:dev
