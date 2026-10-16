@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FlaskConical, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Fragment } from "react";
+import { TradeChart } from "@/components/TradeChart";
 
 // Automatic paper trades (no real money) made by the paper-trader job with rule set v4.
 // Read-only screen: newest day first, one table per day with the day's net result after costs.
@@ -17,6 +19,7 @@ type PaperRow = {
   entry_price: number;
   exit_price: number | null;
   stoploss: number | null;
+  initial_stop: number | null;
   target: number | null;
   status: string | null;
   exit_reason: string | null;
@@ -45,13 +48,14 @@ const REASON: Record<string, string> = {
 export default function PaperTrades() {
   const [rows, setRows] = useState<PaperRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openChart, setOpenChart] = useState<string | null>(null); // trade id whose chart is shown
 
   const load = async () => {
     setLoading(true);
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from("simulated_trades")
-      .select("id, symbol, direction, entry_price, exit_price, stoploss, target, status, exit_reason, pnl, net_pct, entry_time, exit_time, details")
+      .select("id, symbol, direction, entry_price, exit_price, stoploss, initial_stop, target, status, exit_reason, pnl, net_pct, entry_time, exit_time, details")
       .eq("rules", "v4")
       .gte("entry_time", since)
       .order("entry_time", { ascending: false });
@@ -145,7 +149,7 @@ export default function PaperTrades() {
         return (
           <div key={day} className="glass-card rounded-xl p-4 mb-6">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <h2 className="text-lg font-semibold">{day}</h2>
+              <h2 className="text-lg font-semibold">{day} <span className="text-xs font-normal text-muted-foreground">(click a trade to see its chart)</span></h2>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">{closed.length} closed, {wins} wins</span>
                 {closed.length > 0 && (
@@ -174,7 +178,8 @@ export default function PaperTrades() {
                   {list.map((r) => {
                     const p = Number(r.pnl ?? 0);
                     return (
-                      <TableRow key={r.id}>
+                      <Fragment key={r.id}>
+                      <TableRow className="cursor-pointer" title="Click to show the chart" onClick={() => setOpenChart(openChart === r.id ? null : r.id)}>
                         <TableCell className="font-medium">{r.symbol}</TableCell>
                         <TableCell className={r.direction === "BUY" ? "text-bullish" : "text-bearish"}>{r.direction}</TableCell>
                         <TableCell>{istTime(r.entry_time)}</TableCell>
@@ -191,6 +196,12 @@ export default function PaperTrades() {
                           {r.details?.track?.shadow?.closed ? rs(Number(r.details.track.shadow.netRs ?? 0)) : r.details?.track ? "…" : "—"}
                         </TableCell>
                       </TableRow>
+                      {openChart === r.id && (
+                        <TableRow>
+                          <TableCell colSpan={11}><TradeChart t={r} /></TableCell>
+                        </TableRow>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </TableBody>
