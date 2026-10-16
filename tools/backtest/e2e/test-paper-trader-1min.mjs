@@ -30,6 +30,8 @@ const DB = { trades: [], logs: [], calls: [],
     return { data: null, error: null }
   } }
 globalThis.__DB = DB
+const { PAPER } = await import('../../../supabase/functions/_shared/paper.ts')
+PAPER.exitMode = 'normal' // these checks are for the back-tested normal exit; the owner's buy-price rule is checked in test-paper-trader-owner.mjs
 await import('../../../supabase/functions/paper-trader/index.ts')
 const call = async () => { const r = await handler(new Request('https://x/', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + ENV.SUPABASE_SERVICE_ROLE_KEY }, body: '{}' })); return r.json() }
 let passed = 0; const check = (n, fn) => { fn(); passed++; console.log('  ok  ' + n) }

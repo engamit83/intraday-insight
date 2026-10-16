@@ -9,7 +9,10 @@ export const PAPER = {
   brokeragePct: 0.03,       // per side (owner confirmed 8 Oct)
   sttSellPct: 0.025, exchangePct: 0.00307, sebiPct: 0.0001, stampBuyPct: 0.003, gstPct: 18,
   breakevenAtR: 1, lockAtR: 1, lock2AtR: 1.5, lock2KeepR: 0.75, trailAtrMult: 1.5,
-  trailAfterR: 1,           // v4.1 (16 Oct): the trailing stop starts only after +1R (an earlier trail choked trades)
+  trailAfterR: 1,
+  // Owner's exit rule (16 Oct, on trial): the stop sits at the BUY PRICE from the start (no planned price loss).
+  // 'normal' = stop at the signal's stop (2 x ATR) as back-tested. The normal-stop result is always recorded as a shadow.
+  exitMode: 'buyPrice' as 'buyPrice' | 'normal',           // v4.1 (16 Oct): the trailing stop starts only after +1R (an earlier trail choked trades)
   squareOff: '15:15', maxOpen: 10, dailyLossLimitRs: 2000,
 }
 
@@ -84,3 +87,41 @@ export function settle(p: PaperPos, step: Extract<Step, { action: 'close' }>, qu
 }
 
 export const quantityFor = (entry: number) => Math.max(1, Math.floor(PAPER.notionalRs / entry))
+
+/**
+ * Learning record kept for every paper trade (owner, 16 Oct), independent of how the trade itself exits:
+ *  - prediction: did the price reach the TARGET before 15:15 and before falling to the NORMAL stop (signal stop)?
+ *    (stop checked first inside a candle = conservative; `best` = best move our way in R of the target distance)
+ *  - shadow: the result the normal-stop rules (v4.1 exits) would have had on the same trade.
+ */
+export interface Track {
+  stop0: number                // the signal's normal stop
+  pred: { best: number; reached: boolean; failed: boolean; done: boolean }
+  shadow: PaperPos & { closed?: boolean; exit?: number; reason?: string; netRs?: number; netPct?: number }
+  cursor: string | null        // start of the last candle processed (ISO)
+}
+export function newTrack(direction: 'BUY' | 'SELL', entry: number, signalStop: number, target: number, stopDist: number, atr: number): Track {
+  return { stop0: signalStop, pred: { best: 0, reached: false, failed: false, done: false },
+    shadow: { direction, entry, stop: signalStop, target, stopDist, atr }, cursor: null }
+}
+export function trackOnCandle(tr: Track, c: Bar, quantity: number): void {
+  const p = tr.pred, sh = tr.shadow, B = sh.direction === 'BUY'
+  if (!p.done) {
+    if (c.bucket >= PAPER.squareOff) p.done = true
+    else {
+      const dist = Math.abs(sh.target - sh.entry) || 1
+      p.best = Math.max(p.best, (B ? c.high - sh.entry : sh.entry - c.low) / dist)
+      if (B ? c.low <= tr.stop0 : c.high >= tr.stop0) { p.failed = true; p.done = true }
+      else if (B ? c.high >= sh.target : c.low <= sh.target) { p.reached = true; p.done = true }
+    }
+  }
+  if (!sh.closed) {
+    const step = manageOnCandle(sh, c)
+    if (step.action === 'close') {
+      const st = settle(sh, step, quantity)
+      sh.closed = true; sh.exit = Math.round(st.exit * 100) / 100; sh.reason = step.reason
+      sh.netRs = Math.round(st.pnlRs * 100) / 100; sh.netPct = Math.round(st.netPct * 1000) / 1000
+    }
+  }
+}
+export const trackDone = (tr: Track) => tr.pred.done && !!tr.shadow.closed

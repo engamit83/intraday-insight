@@ -14,7 +14,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyAuth, corsHeaders, isTrustedInternalRequest } from '../_shared/auth.ts'
-import { PAPER, manageOnCandle, entryFill, settle, quantityFor, roundTripCostPct, type PaperPos, type Bar } from '../_shared/paper.ts'
+import { PAPER, manageOnCandle, entryFill, settle, quantityFor, roundTripCostPct, newTrack, trackOnCandle, trackDone, type PaperPos, type Bar, type Track } from '../_shared/paper.ts'
 import { istDayStartMs } from '../_shared/livecandles.ts'
 import { istOf, bucketOfMs } from '../_shared/v4.ts'
 
@@ -48,7 +48,9 @@ Deno.serve(async (req) => {
     return {
       ok: true, day: today, rules: 'v4', costPctPerRoundTrip: Math.round(roundTripCostPct() * 1000) / 1000,
       open: trades.filter((t) => t.status === 'OPEN').map((t) => ({ symbol: t.symbol, direction: t.direction, entry: t.entry_price, stop: t.stoploss, target: t.target, since: t.entry_time })),
-      closed: closed.map((t) => ({ symbol: t.symbol, direction: t.direction, entry: t.entry_price, exit: t.exit_price, reason: t.exit_reason, netRs: Math.round(Number(t.pnl ?? 0)), netPct: t.net_pct })),
+      closed: closed.map((t) => ({ symbol: t.symbol, direction: t.direction, entry: t.entry_price, exit: t.exit_price, reason: t.exit_reason, netRs: Math.round(Number(t.pnl ?? 0)), netPct: t.net_pct,
+        targetReached: t.details?.track?.pred?.done ? !!t.details.track.pred.reached : null, normalStopNetRs: t.details?.track?.shadow?.closed ? t.details.track.shadow.netRs : null })),
+      exitMode: PAPER.exitMode,
       closedCount: closed.length, wins: closed.filter((t) => Number(t.pnl) > 0).length, netRs: Math.round(net), ...extra,
     }
   }
@@ -85,6 +87,20 @@ Deno.serve(async (req) => {
     if (!rows.length) return { bucket: bucketOfMs(bStart).bucket, startIso, endIso, open: NaN, high: NaN, low: NaN, close: NaN }
     return { bucket: bucketOfMs(bStart).bucket, startIso, endIso, open: +rows[0].open, high: Math.max(...rows.map((r) => +r.high)),
       low: Math.min(...rows.map((r) => +r.low)), close: +rows[rows.length - 1].close }
+  }
+
+  // bars after a cursor (or from the entry) for the learning record; handles a 1-minute entry's partial window
+  const barsAfter = async (t: Row, cursorIso: string | null): Promise<(Bar & { startIso: string })[]> => {
+    const out: (Bar & { startIso: string })[] = []
+    let from = cursorIso ? new Date(Date.parse(cursorIso) + 5 * 60_000).toISOString() : t.entry_time
+    if (!cursorIso && t.details?.entry_mode === '1min') {
+      const pb = await partialBar(t.symbol, t.entry_time)
+      if (!pb) return out
+      if (Number.isFinite(pb.open)) out.push(pb)
+      from = pb.endIso
+    }
+    out.push(...await barsFrom(t.symbol, from) as (Bar & { startIso: string })[])
+    return out
   }
 
   // ---- 1) manage open trades ----
@@ -141,6 +157,18 @@ Deno.serve(async (req) => {
   }
   for (const t of trades.filter((x) => x.status === 'OPEN')) await manage(t)
 
+  // ---- 1b) learning record for every trade of today (keeps running after the trade itself closed) ----
+  for (const t of trades) {
+    const tr = t.details?.track as Track | undefined
+    if (!tr || trackDone(tr)) continue
+    const bars = await barsAfter(t, tr.cursor)
+    if (!bars.length) continue
+    for (const b of bars) { trackOnCandle(tr, b, +t.quantity); tr.cursor = b.startIso }
+    if (nowMin >= 15 * 60 + 25 && !tr.pred.done) tr.pred.done = true
+    t.details = { ...t.details, track: tr }
+    await supabase.from('simulated_trades').update({ details: t.details }).eq('id', t.id)
+  }
+
   // ---- 2) open new paper trades from today's v4 signals ----
   const realised = trades.filter((t) => t.status === 'CLOSED').reduce((a, t) => a + Number(t.pnl ?? 0), 0)
   let openCount = trades.filter((t) => t.status === 'OPEN').length
@@ -170,13 +198,19 @@ Deno.serve(async (req) => {
     }
     const fill = entryFill(dir, entryOpen)
     const stopDist = Number(s.indicators?.stop_dist ?? Math.abs(+s.entry_price - +s.stoploss_price))
+    const entryR = Math.round(fill * 100) / 100
+    // owner's rule: stop at the buy price from the start; the normal stop stays in initial_stop and in the learning record
+    const startStop = PAPER.exitMode === 'buyPrice' ? entryR : +s.stoploss_price
+    const track = newTrack(dir, entryR, +s.stoploss_price, +s.target_price, stopDist, Number(s.indicators?.atr ?? 0))
     const { data: ins, error } = await supabase.from('simulated_trades').insert({
       user_id: owner?.user_id ?? null, symbol: s.symbol, signal_id: s.id, direction: dir,
       entry_price: Math.round(fill * 100) / 100, quantity: quantityFor(fill), status: 'OPEN', entry_time: entryStartIso,
       market_condition: s.indicators?.market_breadth_pct != null ? `breadth ${Number(s.indicators.market_breadth_pct).toFixed(2)}%` : null,
       confidence_at_entry: s.indicators?.rank_score ?? null,
-      rules: 'v4', stoploss: +s.stoploss_price, initial_stop: +s.stoploss_price, target: +s.target_price, stop_dist: stopDist, atr: Number(s.indicators?.atr ?? 0),
-      details: { signal_price: +s.entry_price, reasons: s.indicators?.reasons ?? [], signal_time: s.created_at, entry_mode: entryMode, version: s.indicators?.version ?? 'v4' },
+      rules: 'v4', stoploss: startStop, initial_stop: +s.stoploss_price, target: +s.target_price, stop_dist: stopDist, atr: Number(s.indicators?.atr ?? 0),
+      at_breakeven: PAPER.exitMode === 'buyPrice',
+      details: { signal_price: +s.entry_price, reasons: s.indicators?.reasons ?? [], signal_time: s.created_at, entry_mode: entryMode, version: s.indicators?.version ?? 'v4',
+        exit_mode: PAPER.exitMode, track },
     }).select('*').single()
     if (error || !ins) { log.push(`open failed ${s.symbol}: ${error?.message}`); continue }
     // NOTE: the entry price is kept unrounded inside the trade logic via entry_price (2 decimals) — difference < 1 paisa.
@@ -184,6 +218,12 @@ Deno.serve(async (req) => {
     log.push(`opened ${s.symbol} ${dir} at ${ins.entry_price}`)
     trades.push(ins as Row)
     await manage(ins as Row) // the entry candle may already be closed
+    const tr = (ins as Row).details?.track as Track | undefined
+    if (tr) {
+      const bars = await barsAfter(ins as Row, null)
+      for (const b of bars) { trackOnCandle(tr, b, +(ins as Row).quantity); tr.cursor = b.startIso }
+      if (bars.length) await supabase.from('simulated_trades').update({ details: { ...(ins as Row).details, track: tr } }).eq('id', (ins as Row).id)
+    }
   }
 
   // ---- 3) one daily summary after 15:30 ----

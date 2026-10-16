@@ -24,6 +24,8 @@ type PaperRow = {
   net_pct: number | null;
   entry_time: string | null;
   exit_time: string | null;
+  // learning record (owner, 16 Oct): did the price reach the target before the normal stop? normal-stop result?
+  details: { track?: { pred?: { done?: boolean; reached?: boolean; failed?: boolean; best?: number }; shadow?: { closed?: boolean; netRs?: number } } } | null;
 };
 
 const IST_MS = 5.5 * 60 * 60 * 1000;
@@ -34,7 +36,7 @@ const px = (n: number | null) => (n == null ? "—" : Number(n).toLocaleString("
 
 const REASON: Record<string, string> = {
   stop: "Stop loss hit",
-  breakeven: "Stop at cost hit",
+  breakeven: "Exited at buy price",
   lockedstop: "Raised stop hit",
   target: "Target hit",
   squareoff: "Closed at 15:15",
@@ -49,7 +51,7 @@ export default function PaperTrades() {
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from("simulated_trades")
-      .select("id, symbol, direction, entry_price, exit_price, stoploss, target, status, exit_reason, pnl, net_pct, entry_time, exit_time")
+      .select("id, symbol, direction, entry_price, exit_price, stoploss, target, status, exit_reason, pnl, net_pct, entry_time, exit_time, details")
       .eq("rules", "v4")
       .gte("entry_time", since)
       .order("entry_time", { ascending: false });
@@ -73,6 +75,18 @@ export default function PaperTrades() {
   const closedAll = rows.filter((r) => r.status === "CLOSED");
   const netAll = closedAll.reduce((a, r) => a + Number(r.pnl ?? 0), 0);
   const winsAll = closedAll.filter((r) => Number(r.pnl) > 0).length;
+  // prediction score (owner's decision rule): share of decided trades whose price reached the target
+  const decided = rows.filter((r) => r.details?.track?.pred?.done);
+  const reached = decided.filter((r) => r.details?.track?.pred?.reached).length;
+  const reachedPct = decided.length ? Math.round((reached / decided.length) * 100) : null;
+  const verdict = reachedPct === null ? "" : decided.length < 30 ? `(need ~30 trades to decide; ${decided.length} so far)`
+    : reachedPct >= 50 ? "predictions strong" : reachedPct < 40 ? "predictions weak - improve selection" : "in between - improve selection and test a small stop";
+  const predCell = (r: PaperRow) => {
+    const p = r.details?.track?.pred;
+    if (!p) return "—";
+    if (!p.done) return "watching…";
+    return p.reached ? "Yes" : `No (${Math.round((p.best ?? 0) * 100)}%)`;
+  };
 
   return (
     <MainLayout>
@@ -104,6 +118,15 @@ export default function PaperTrades() {
           <p className="text-sm text-muted-foreground">Open now</p>
           <p className="text-2xl font-bold">{rows.filter((r) => r.status === "OPEN").length}</p>
         </div>
+      </div>
+
+      <div className="glass-card rounded-xl p-4 mb-6">
+        <p className="text-sm text-muted-foreground">Predictions: price reached our target (before 15:15 and before the normal stop)</p>
+        <p className="text-xl font-bold">
+          {reachedPct === null ? "No decided trades yet" : `${reached} of ${decided.length} (${reachedPct}%)`}
+          <span className="ml-2 text-sm font-normal text-muted-foreground">{verdict}</span>
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">Rule agreed 16 Oct: 50%+ = predictions strong · below 40% = improve the selection rules · in between = both.</p>
       </div>
 
       {!loading && rows.length === 0 && (
@@ -143,6 +166,8 @@ export default function PaperTrades() {
                     <TableHead className="text-right">Exit</TableHead>
                     <TableHead>Result</TableHead>
                     <TableHead className="text-right">Net</TableHead>
+                    <TableHead>Target reached?</TableHead>
+                    <TableHead className="text-right">With normal stop</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -160,6 +185,10 @@ export default function PaperTrades() {
                         <TableCell>{r.status === "OPEN" ? <Badge variant="outline">Open</Badge> : REASON[r.exit_reason ?? ""] ?? r.exit_reason}</TableCell>
                         <TableCell className={`text-right font-medium ${r.status === "OPEN" ? "" : p >= 0 ? "text-bullish" : "text-bearish"}`}>
                           {r.status === "OPEN" ? "—" : `${rs(p)} (${Number(r.net_pct ?? 0).toFixed(2)}%)`}
+                        </TableCell>
+                        <TableCell>{predCell(r)}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {r.details?.track?.shadow?.closed ? rs(Number(r.details.track.shadow.netRs ?? 0)) : r.details?.track ? "…" : "—"}
                         </TableCell>
                       </TableRow>
                     );

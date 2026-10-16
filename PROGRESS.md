@@ -34,6 +34,8 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
    Decide after ~30 trades. Outside shocks (news, big seller, market fall) are not rule mistakes, but warning signs must be detected fast (big candle against us on high volume, market/sector index turning, sellers ≫ buyers in the order book) → exit, keep scanning, re-enter either way when a strong setup appears again.
 6. **If a pick goes against us with no outside reason, our rules were weak** → study it, improve the rules (learning loop F). Every change must work on days it was not built from (no over-fitting).
 7. **Real money stays manual** until paper trading proves the rules (100+ trades, positive after costs).
+7b. **Intraday only (owner reminder 16 Oct):** we are NOT long-term investors here — every position is closed the same day (square-off 15:15), nothing is held overnight, and intraday rules (tight risk, quick exits, same-day targets) apply, not long-term "wait and recover" thinking.
+7c. **Decision B (16 Oct, 22:57):** the owner's buy-price stop runs as the LIVE paper rule. For every trade the app records (1) **did the price reach our target** before 15:15 and before the normal (signal) stop — this is how we judge a prediction ("came close" is extra info only); (2) what the **normal stop** would have earned. After ~30 decided trades: **≥ 50% reached → predictions strong** (if the buy-price rule still loses, move to a small stop) · **< 40% → predictions weak → improve the selection rules** · 40–50% → both. Back-test baseline (10 days, 88 v4.1 picks): 32 reached the target = 36%.
 8. **Working style:** Claude acts as the market expert and says openly when the owner may be wrong; owner approves every live change ("do it"); credits used wisely (prepare in GitHub, one bundled Lovable message); every task given to the owner states its purpose; speed — don't wait where waiting isn't needed.
 
 **Range trading — how we find and use it (owner's question 16 Oct, detail in C7):**
@@ -878,6 +880,12 @@ Conclusion: no daily filter is adopted; v4.1 stays as is. Re-test the two hints 
 Reading (per intent rule 5): many picks were right (43% reached the target after we were stopped out), but a stop exactly at the buy price is hit by the normal first-minutes wobble → exits too tight. Shown to the owner for a decision.
 
 `run-range.mjs` (rule C7, same-day detection only: 1-hour band 0.8–2.5%, ≥2 touches each edge, flat VWAP, rejection candle at the edge, target near the other edge, exit on range break): **all versions lost** (best −Rs 11,599 on 58 trades; most exits were range breaks: 70 of 137). Large-cap stocks on these trending days broke their ranges more often than they held. Next tries: multi-day range candidates, longer-held ranges (≥ 2 h), wider bands (≥ 1.2%), only on flat-market days; test on the 500-stock recordings.
+
+## 🛠 2026-10-16 (Fri, 23:10) — Owner's buy-price stop + learning record built (NOT deployed; goes with the v4.1 Lovable message)
+- `_shared/paper.ts`: `PAPER.exitMode = 'buyPrice'` (stop at the fill price from the start; `'normal'` = back-tested stop). `newTrack/trackOnCandle/trackDone`: per trade, prediction (target reached before 15:15 and before the signal stop; best move in R) + shadow result with the normal v4.1 exits.
+- `paper-trader`: opens trades with `stoploss` = buy price (`initial_stop` keeps the signal stop), `details.track` updated every minute — also after the trade itself has closed; report shows `targetReached` and `normalStopNetRs`.
+- Paper Trades screen: columns "Target reached?" and "With normal stop", plus the running score "X of Y reached (Z%)" with the agreed decision rule.
+- Tests: owner-rule e2e 5/5, learning-record unit 4/4, normal-mode e2e 6/6 and 1-min 5/5, paper = back-test exits 105/105.
 
 ## 📌 Rule for this file going forward
 
