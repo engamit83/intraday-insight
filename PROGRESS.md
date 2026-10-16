@@ -754,6 +754,25 @@ Nothing was run between 8 and 15 Oct (owner busy) — the plan simply paused; no
 - **Known issue:** Lovable shows "Build unsuccessful — Preview is out of date" for the web app since ~6 Oct (frontend build only; edge functions deploy fine). To investigate.
 - **Owner rules today:** ask before any action that uses Lovable credits; SQL always via the free SQL editor.
 
+## 📒 2026-10-16 (Fri, close) — First paper-trading day: result + learnings
+
+| Stock | Dir | Entry (IST) | Entry ₹ | Exit (IST) | Exit ₹ | Why | Net % | Net ₹ |
+|---|---|---|---|---|---|---|---|---|
+| HEROMOTOCO | BUY | 13:40 | 5,224.04 | 14:05 | 5,208.71 | stop | −0.400 | −397 |
+| ULTRACEMCO | BUY | 13:40 | 10,973.19 | 14:30 | 10,938.93 | stop | −0.418 | −413 |
+| GRASIM | BUY | 13:45 | 2,912.68 | 14:25 | 2,912.32 | lockedstop | −0.119 | −118 |
+
+**Day: 3 trades, 0 wins, net −₹928 after all costs** (daily loss limit −₹2,000 not reached). One day is far too small to judge; stage 5 needs 100+ trades.
+
+Learnings (to test in the back-tester, NOT changed live yet):
+1. **Same sector, same minute:** ULTRACEMCO + GRASIM are both cement (same group), and all three were BUYs within 5 minutes → really one bet, not three. Supports the planned v5 sector limit (max 1 per sector at a time).
+2. **Late entries:** all came 13:40–13:45, near the 14:00 cut-off, with little time left to reach 2R. Test a later-entry penalty or an earlier cut-off (e.g. 13:30) for v5.
+3. **"Locked" stop that still lost:** GRASIM's trailing stop moved to 2,912.90, just above the entry, and was marked "locked". But a stop that close to the entry doesn't cover costs and slippage (needed ~2,916.9), so the exit still lost ₹118. Test this rule: only count a stop as locked once it covers costs, or don't trail until 1R.
+4. **Feed:** the laptop restarted in the afternoon and the feed did not come back on its own (all trades had already closed, so today's results are not affected). To do: auto-start the feed at login (Windows Task Scheduler), with the owner's approval.
+5. **Owner can't see results in the app:** signals expire after 30 min and the Signals page shows active ones only; there is no Paper Trades screen. Fixes A/B pending.
+
+Build: the "Build unsuccessful" cause was found. Lovable added drizzle-kit, drizzle-orm and postgres to package.json (commit 1c3618c) without updating package-lock.json. Lovable commit a0fc0d8 (15:23 IST) updated the lock file; it now matches package.json (checked). Owner to confirm the build turns green.
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
