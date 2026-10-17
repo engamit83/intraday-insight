@@ -923,3 +923,11 @@ Live from Monday 19 Oct: rule set **v4.1** (one stock per sector, late-start gua
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
+
+## 17 Oct 2026 (evening) - phone alerts: ntfy added next to Telegram (af6bcad)
+- Owner could not log back in to Telegram (SMS code not arriving). Owner asked to keep BOTH so we can switch at once.
+- `notify.ts` now sends to ntfy (free app, no account) and/or Telegram. `notify_settings.channel` = 'ntfy' | 'telegram' | 'both'
+  (default 'both'; each channel is used only if its setting is filled). Test: test-notify.mjs 6/6.
+- Private ntfy topic name was given to the owner in chat only (NOT stored in GitHub). Owner subscribes to it in the ntfy app
+  and runs tools/sql/notify-setup.sql + the ntfy insert line in the Lovable SQL editor.
+- Goes live with the next Lovable deploy (1 credit, needs owner approval; bundle with other changes).
