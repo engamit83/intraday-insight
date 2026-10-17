@@ -917,6 +917,9 @@ Reading (per intent rule 5): many picks were right (43% reached the target after
 - Tests: alerts e2e 4/4 (fake Telegram), paper-trader e2e 6/6, 1-min 5/5, owner 5/5, scout 23/23.
 - Goes live with the same single Lovable message (deploy scout-signals + paper-trader).
 
+## 🚀 2026-10-17 (Sat, 14:22) — DEPLOYED: scout-signals + paper-trader from GitHub main f06589f (1 Lovable credit; 4 left)
+Live from Monday 19 Oct: rule set **v4.1** (one stock per sector, late-start guard, trailing only after +1R, paper entry at the first price after the signal), **owner's buy-price stop** as the paper rule, learning record (target reached? / normal-stop shadow), "why chosen" on every signal, Telegram alert code (silent until `notify_settings` exists with a token — owner's bot setup pending: open the bot, send "hi", then run tools/sql/notify-setup.sql with the token). Lovable did not run a test call; first real check = Monday 09:20 / 15:45 check-ins (signals tagged version v4.1, trades with details.track).
+
 ## 📌 Rule for this file going forward
 
 **Every time we test something, fix something, or confirm something with evidence, add an entry here before moving on.** This file is the single source of truth for "where we are" — if the conversation resets or context is lost, read this file first to know exactly what's been tried, what's confirmed, and what's next. Update the Experiment Log table for anything related to Bug 3.4, and add new numbered bugs/phases as new issues are found.
