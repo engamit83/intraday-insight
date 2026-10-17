@@ -931,3 +931,22 @@ Live from Monday 19 Oct: rule set **v4.1** (one stock per sector, late-start gua
 - Private ntfy topic name was given to the owner in chat only (NOT stored in GitHub). Owner subscribes to it in the ntfy app
   and runs tools/sql/notify-setup.sql + the ntfy insert line in the Lovable SQL editor.
 - Goes live with the next Lovable deploy (1 credit, needs owner approval; bundle with other changes).
+
+## REVIEW ROUTINE (owner approved 17 Oct 2026, 22:38) - scheduled tasks deliver into this session
+**Daily review, weekdays 15:45 IST (read-only):**
+1. Today's paper trades (simulated_trades rules=v4) + signals: per pick - why chosen, target reached? (pred.reached / best %),
+   owner buy-price result vs normal-stop result (track.shadow), net after costs; day total.
+2. Reason for each miss: MARKET (Nifty flat/down, news) / RULE (weak stock, late entry, sector, direction) / SYSTEM (feed, Sharekhan).
+3. Market mood: Nifty 50 day change % and intraday range (index rows NC20000 in live_candles or laptop book/candles CSV). Log it - after
+   ~3 weeks test "skip flat days".
+4. System health: feed from 09:15? day files written on laptop? Sharekhan connected? ntfy alerts sent (system_logs source=notify)?
+5. Append a row to the REVIEW LOG below, push, send the owner a short plain-words report.
+6. NO rule changes before ~30 decided trades, except clear bugs (and those only after the owner's "do it").
+**Friday 16:15:** also pull Sharekhan's last 9 trading days of 1/5-min candles to grow the history (if Sharekhan connected today).
+**Saturday 10:00 weekly review:** patterns across the week (BUY vs SELL, time of day, sector, price band, market mood), back-test any idea
+on all recorded days, propose (never apply) changes with numbers. Running prediction score vs the 50%/40% rule.
+**Decision point:** ~30 decided trades (around early Nov) -> apply the owner's 50/40 rule, propose changes for approval.
+
+### REVIEW LOG
+| Day | Nifty mood | Picks | Target reached | Net (owner rule) | Net (normal stop) | Misses: market/rule/system | Notes |
+|---|---|---|---|---|---|---|---|
