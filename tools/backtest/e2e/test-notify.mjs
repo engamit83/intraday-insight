@@ -14,14 +14,16 @@ const bars1 = [['10:30', 100, 100.3, 99.95, 100.2], ['10:31', 100.2, 100.5, 100.
 const bars5 = [['10:30', 100, 101.0, 99.95, 100.8], ['10:35', 100.8, 101.0, 100.3, 100.4], ['10:40', 100.4, 100.5, 99.8, 99.9], ['10:45', 99.9, 100, 98.9, 99.0]]
 const rowsOf = (list) => list.map(([b, o, h, l, c]) => ({ bucket_start: iso(b), open: o, high: h, low: l, close: c })).filter((r) => RealDate.parse(r.bucket_start) <= NOW)
 const SENT = []
+const NTFY = []
 let FEED_STALE = false
 globalThis.fetch = async (url, init) => {
   const u = String(url)
+  if (u.startsWith('https://ntfy.sh/')) { NTFY.push({ topic: u.slice(16), text: init.body }); return new Response('{}') }
   if (u.includes('/getUpdates')) return new Response(JSON.stringify({ ok: true, result: [{ message: { chat: { id: 777 } } }] }))
   if (u.includes('/sendMessage')) { SENT.push(JSON.parse(init.body)); return new Response('{"ok":true}') }
   throw new Error('unexpected fetch ' + u)
 }
-const NOTIFY = { telegram_bot_token: 'TESTTOKEN', telegram_chat_id: null, enabled: true }
+const NOTIFY = { telegram_bot_token: 'TESTTOKEN', telegram_chat_id: null, ntfy_topic: 'trd-test-topic', channel: 'both', enabled: true }
 const DB = { trades: [], logs: [], calls: [],
   answer(q) {
     const f = (op, col) => q.filters.find((x) => x[0] === op && x[1] === col)?.[2]
@@ -66,4 +68,13 @@ FEED_STALE = true
 NOW = RealDate.parse('2026-10-16T05:30:30Z')
 await call(); await call()
 check('feed OFF alert when no prices for > 3 minutes, sent only once per 30 minutes', () => assert.equal(SENT.filter((m) => m.text.includes('feed is OFF')).length, 1))
+check('ntfy gets the same alerts (both channels on)', () => {
+  assert.ok(NTFY.length >= 3 && NTFY.every((m) => m.topic === 'trd-test-topic'), JSON.stringify(NTFY))
+  assert.ok(NTFY.some((m) => m.text.startsWith('📈')) && NTFY.filter((m) => m.text.includes('feed is OFF')).length === 1)
+})
+NOTIFY.channel = 'ntfy'; const tgBefore = SENT.length, nBefore = NTFY.length
+const { notify } = await import('../../../supabase/functions/_shared/notify.ts')
+const { createClient } = await import('./fake-supabase.mjs')
+await notify(createClient(), 'switch test')
+check("channel='ntfy' sends to ntfy only (switch works)", () => { assert.equal(SENT.length, tgBefore); assert.ok(NTFY.length > nBefore) })
 console.log(`\nAll ${passed} alert checks passed. Messages:\n- ` + SENT.map((m) => m.text.replace(/\n/g, ' | ')).join('\n- '))

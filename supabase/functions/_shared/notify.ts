@@ -1,15 +1,37 @@
-// notify.ts - phone alerts via Telegram (owner, 17 Oct). Free; the bot token lives only in the backend table
-// `notify_settings` (no read access for app users; set once by the owner in the SQL editor). If the table/token is
-// missing, alerts are silently skipped - they can never stop trading logic.
+// notify.ts - phone alerts via ntfy and/or Telegram (owner, 17 Oct: keep both so we can switch at once).
+// Free. Settings live only in the backend table `notify_settings` (no read access for app users; set by the owner in
+// the SQL editor). `channel` = 'ntfy' | 'telegram' | 'both' chooses where alerts go (switch = one SQL line).
+// If the table/settings are missing, alerts are silently skipped - they can never stop trading logic.
 // Duplicate guard: `key` alerts are sent at most once per `everyMin` minutes (remembered in system_logs).
 
 // deno-lint-ignore no-explicit-any
 type Sb = any
 
-async function settings(supabase: Sb): Promise<{ token: string; chatId: string | null; enabled: boolean } | null> {
-  const { data, error } = await supabase.from('notify_settings').select('telegram_bot_token, telegram_chat_id, enabled').eq('id', 1).maybeSingle()
-  if (error || !data?.telegram_bot_token) return null
-  return { token: data.telegram_bot_token, chatId: data.telegram_chat_id ?? null, enabled: data.enabled !== false }
+type Settings = { token: string | null; chatId: string | null; topic: string | null; channel: string; enabled: boolean }
+async function settings(supabase: Sb): Promise<Settings | null> {
+  const { data, error } = await supabase.from('notify_settings').select('*').eq('id', 1).maybeSingle()
+  if (error || !data) return null
+  return { token: data.telegram_bot_token ?? null, chatId: data.telegram_chat_id ?? null, topic: data.ntfy_topic ?? null,
+    channel: data.channel ?? 'both', enabled: data.enabled !== false }
+}
+
+/** ntfy: free push app, no account. The topic name is the private address (long random name). */
+async function sendNtfy(topic: string, text: string): Promise<boolean> {
+  try {
+    const r = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, { method: 'POST', body: text, headers: { Title: 'TRD App' }, signal: AbortSignal.timeout(8000) })
+    return r.ok
+  } catch { return false }
+}
+
+async function sendTelegram(supabase: Sb, s: Settings, text: string): Promise<boolean> {
+  if (!s.token) return false
+  const chatId = s.chatId ?? await linkChat(supabase, s.token)
+  if (!chatId) return false
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${s.token}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text }), signal: AbortSignal.timeout(8000) })
+    return r.ok
+  } catch { return false }
 }
 
 /** First message the owner sends to the bot gives us the chat id (no copying ids by hand). */
@@ -35,11 +57,11 @@ export async function notify(supabase: Sb, text: string, opts: { key?: string; e
       const { data: seen } = await supabase.from('system_logs').select('id').eq('source', 'notify').eq('message', opts.key).gte('created_at', since).limit(1)
       if (seen?.length) return false
     }
-    const chatId = s.chatId ?? await linkChat(supabase, s.token)
-    if (!chatId) return false
-    const r = await fetch(`https://api.telegram.org/bot${s.token}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text }), signal: AbortSignal.timeout(8000) })
+    const useNtfy = (s.channel === 'ntfy' || s.channel === 'both') && !!s.topic
+    const useTg = (s.channel === 'telegram' || s.channel === 'both') && !!s.token
+    if (!useNtfy && !useTg) return false
+    const [a, b] = await Promise.all([useNtfy ? sendNtfy(s.topic!, text) : false, useTg ? sendTelegram(supabase, s, text) : false])
     if (opts.key) await supabase.from('system_logs').insert({ level: 'INFO', source: 'notify', message: opts.key, metadata: { text } })
-    return r.ok
+    return a || b
   } catch { return false }
 }
