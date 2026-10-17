@@ -233,6 +233,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notify_settings: {
+        Row: {
+          channel: string
+          enabled: boolean
+          id: number
+          ntfy_topic: string | null
+          telegram_bot_token: string | null
+          telegram_chat_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          enabled?: boolean
+          id?: number
+          ntfy_topic?: string | null
+          telegram_bot_token?: string | null
+          telegram_chat_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          enabled?: boolean
+          id?: number
+          ntfy_topic?: string | null
+          telegram_bot_token?: string | null
+          telegram_chat_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scripcodes: {
         Row: {
           exchange: string
