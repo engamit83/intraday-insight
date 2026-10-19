@@ -671,6 +671,7 @@ Same rules applied to 30-minute candles (1 Sep–6 Oct; first 4 days used to war
 
 | variant | trades | win % | gross exp % | NET exp % | net Rs | max DD Rs | green days | 1st half Rs | 2nd half Rs |
 |---|---|---|---|---|---|---|---|---|---|
+| 19 Oct (Mon) | flat (breadth -0.26%..+0.21%) | 10 unique (+5 duplicates) | 0/10 (best 61% HDFCBANK) | -Rs1,413 unique (-Rs2,128 shown incl. dupes) | -Rs4,676 | market 10 (flat day) / rule: all 10 hit buy-price stop in 1-4 min / system: DUPLICATE trades bug, sector rule let MARUTI+EICHERMOT (auto) run together | owner rule lost less than normal stop today; Sharekhan+feed OK (517 symbols recorded); ntfy alerts not verifiable (system_logs not readable with app login) |
 | A baseline | 382 | 42.4 | −0.007 | −0.114 | −43,366 | −48,980 | 7/20 | −21,105 | −22,261 |
 | B entry window (no effect: first 30-min entry is 09:45 anyway) | 382 | 42.4 | −0.007 | −0.114 | −43,366 | −48,980 | 7/20 | | |
 | C market filter | 360 | 47.8 | +0.053 | −0.053 | −19,059 | −23,347 | 10/20 | −14,497 | −4,563 |
@@ -955,3 +956,12 @@ on all recorded days, propose (never apply) changes with numbers. Running predic
 summary to the owner's ntfy channel via the laptop's built-in browser pane: navigate to
 https://ntfy.sh/<topic>/publish?title=Claude&message=<url-encoded text> (topic is in chat history, not in GitHub). Needs the laptop
 on + Claude app open; if ntfy.sh access is asked each time, ask the owner to allow it permanently.
+
+## 19 Oct 2026 review findings (bugs - fixes need owner approval)
+- DUPLICATE paper trades: HDFCBANK, MARUTI, ULTRACEMCO, RELIANCE, ITC opened twice from one signal (two paper-trader runs at the
+  same time both saw the signal as unused). Proposed free fix (SQL): mark duplicates rules='v4-dup' (keep rows, no delete), then
+  `create unique index ... on simulated_trades(signal_id) where rules='v4'` -> second insert fails harmlessly ("open failed" log).
+- SECTOR rule gap: EICHERMOT (auto) signal at 10:07 while MARUTI (auto) paper trade was open (pickV4 saw only open trades, the
+  MARUTI trade opened a minute after its signal). Fix: also count today's v4 signals not yet closed. Code change -> Lovable credit.
+- Owner buy-price rule, day 1: all 10 exits at buy price within 1-4 minutes (~Rs145 costs each) - matches the back-test warning.
+  Normal stop would have lost more today (-Rs4,676 vs -Rs1,413). No rule change before ~30 trades (owner rule).
