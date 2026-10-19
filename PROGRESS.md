@@ -950,3 +950,8 @@ on all recorded days, propose (never apply) changes with numbers. Running predic
 ### REVIEW LOG
 | Day | Nifty mood | Picks | Target reached | Net (owner rule) | Net (normal stop) | Misses: market/rule/system | Notes |
 |---|---|---|---|---|---|---|---|
+
+**ntfy for my reports (owner, 19 Oct 08:54: "u can notify me on ntfy whatever"):** after each check/review, also send a 1-line
+summary to the owner's ntfy channel via the laptop's built-in browser pane: navigate to
+https://ntfy.sh/<topic>/publish?title=Claude&message=<url-encoded text> (topic is in chat history, not in GitHub). Needs the laptop
+on + Claude app open; if ntfy.sh access is asked each time, ask the owner to allow it permanently.
