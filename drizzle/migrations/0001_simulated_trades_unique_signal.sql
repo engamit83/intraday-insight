@@ -1,0 +1,1 @@
+create unique index if not exists simulated_trades_one_per_signal on public.simulated_trades (signal_id) where rules = 'v4';

@@ -8,6 +8,13 @@
       "when": 1792136765974,
       "tag": "0000_paper_trader_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792465964604,
+      "tag": "0001_simulated_trades_unique_signal",
+      "breakpoints": true
     }
   ]
 }
