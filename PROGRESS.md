@@ -671,6 +671,7 @@ Same rules applied to 30-minute candles (1 Sep–6 Oct; first 4 days used to war
 
 | variant | trades | win % | gross exp % | NET exp % | net Rs | max DD Rs | green days | 1st half Rs | 2nd half Rs |
 |---|---|---|---|---|---|---|---|---|---|
+| 20 Oct (Tue) | n/a (no data) | 0 | - | Rs0 | - | system: FEED FAILURE - connected+subscribed 09:07 but no prices after 09:15 (no live_candles, no laptop day files); laptop at lock screen, cause unknown | owner out; fixed bugs (dedup + sector) went live 08:41 but untested |
 | 19 Oct (Mon) | flat (breadth -0.26%..+0.21%) | 10 unique (+5 duplicates) | 0/10 (best 61% HDFCBANK) | -Rs1,426 (after dedup) | -Rs4,676 | market 10 (flat day) / rule: all 10 hit buy-price stop in 1-4 min / system: DUPLICATE trades bug, sector rule let MARUTI+EICHERMOT (auto) run together | owner rule lost less than normal stop today; Sharekhan+feed OK (517 symbols recorded); ntfy alerts not verifiable (system_logs not readable with app login) |
 | A baseline | 382 | 42.4 | −0.007 | −0.114 | −43,366 | −48,980 | 7/20 | −21,105 | −22,261 |
 | B entry window (no effect: first 30-min entry is 09:45 anyway) | 382 | 42.4 | −0.007 | −0.114 | −43,366 | −48,980 | 7/20 | | |
@@ -968,3 +969,11 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - 20 Oct 08:41: FIXED via one Lovable message (1 credit, owner approved): dedup SQL applied (5 copies -> 'v4-dup', unique index
   simulated_trades_one_per_signal active) + scout-signals redeployed from b37dede (pending signal holds its sector).
   Verified: 19 Oct now 10 v4 trades, net -Rs1,426. Lovable also added drizzle/migrations records (harmless).
+
+## 20 Oct 2026 - feed failure (open)
+- 09:07 feed connected + "subscribe success FEED" (raw_ticks.log, which only keeps the first 25 messages per run), snapshot of
+  yesterday's prices, heartbeats. From 09:15 NO prices: no live_candles rows today, no data\candles-2026-10-20.csv.
+- Laptop was at the Windows lock screen (user list shows "Immanuel and Amit" and "Amit Engineer"). Console not visible.
+- Next: owner photographs the INTRADAY-FEED window, then restarts auto-feed.bat. TODO (next Lovable bundle): alert "feed connected
+  but no prices" (paper-trader already alerts when live_candles is stale > 3 min from 09:20 - check whether it fired today).
+- TODO (laptop, free): make the feed log its own status lines to a file (feed-YYYY-MM-DD.log) so I can read errors remotely.
