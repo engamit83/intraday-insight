@@ -361,8 +361,14 @@ Deno.serve(async (req) => {
     const usedToday = new Set(todayV4.map((r: { symbol: string }) => r.symbol))
     const room = Math.max(0, V4.maxSignalsPerDay - todayV4.length)
     // v4.1: one stock per sector, counting paper trades that are still open
-    const { data: openPaper } = await supabase.from('simulated_trades').select('symbol').eq('rules', 'v4').eq('status', 'OPEN').gte('entry_time', dayStartIso)
-    const openSymbols = (openPaper ?? []).map((r: { symbol: string }) => r.symbol)
+    const { data: paperToday } = await supabase.from('simulated_trades').select('symbol, status').eq('rules', 'v4').gte('entry_time', dayStartIso)
+    const openSymbols = (paperToday ?? []).filter((r: { status: string }) => r.status === 'OPEN').map((r: { symbol: string }) => r.symbol)
+    // 20 Oct fix: a signal whose paper trade has not opened yet (it opens on the next 1-minute candle) also holds its sector,
+    // otherwise two stocks of one sector can run together (19 Oct: MARUTI + EICHERMOT).
+    const traded = new Set((paperToday ?? []).map((r: { symbol: string }) => r.symbol))
+    for (const r of todayV4 as { symbol: string; created_at: string }[]) {
+      if (!traded.has(r.symbol) && nowMs - Date.parse(r.created_at) < 10 * 60_000) openSymbols.push(r.symbol)
+    }
     const pick = ev.entryWindowOpen && timeMult > 0 ? pickV4(ev.candidates, usedToday, room, openSymbols) : []
     // "why chosen" (owner, 16 Oct): rank among today's candidates, room to target vs risk, and who it was preferred over
     const notPicked = ev.candidates.filter((x) => !pick.includes(x)).slice(0, 3)
