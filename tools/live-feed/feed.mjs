@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url'
 import WebSocket from 'ws'
 import { CandleBuilder, istMinuteOfDay, inMarketHours } from './candles.mjs'
 import { extractTicks } from './parse.mjs'
+import { TickExitEngine, TICK_RULES } from './tick-exits.mjs'
 import { DayRecorder } from './recorder.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -157,6 +158,44 @@ async function flush() {
 }
 
 // ---------- one connection session ----------
+// ---- T2 tick-level exits (owner 21 Oct): exit rules on every tick, closes reported to the app, ntfy straight from here ----
+const tickExits = new TickExitEngine(TEST_IGNORE_MARKET_HOURS ? { ...TICK_RULES, squareOff: '99:99' } : TICK_RULES)
+let ntfyTopic = null
+let tradesFetchedAt = 0
+const pendingMoves = new Map() // trade id -> latest stop move
+const TICK_EXITS = process.env.TICK_EXITS !== '0' // switch off with TICK_EXITS=0 in .env if ever needed
+async function refreshOpenTrades() {
+  if (!TICK_EXITS) return
+  try {
+    const r = await gateway('open_trades')
+    tickExits.setTrades(r.trades ?? [])
+    ntfyTopic = r.ntfyTopic ?? null
+    tradesFetchedAt = Date.now()
+  } catch (e) { say(`! could not load open paper trades for tick exits: ${scrub(e.message)}`) }
+}
+async function ntfy(text) {
+  if (!ntfyTopic) return
+  try { await fetch(`https://ntfy.sh/${encodeURIComponent(ntfyTopic)}`, { method: 'POST', body: text, headers: { Title: 'TRD App' }, signal: AbortSignal.timeout(8000) }) } catch { /* alerts must never stop the feed */ }
+}
+const REASON_TXT = { stop: 'stop loss', breakeven: 'at buy price', lockedstop: 'raised stop', target: 'TARGET hit', squareoff: '15:15 close' }
+async function onTickExit(ev) {
+  const clock = new Date(ev.ts + 330 * 60_000).toISOString().slice(11, 19)
+  let pnl = null
+  try {
+    const r = await gateway('tick_close', { id: ev.id, reason: ev.reason, price: ev.price, ts: ev.ts })
+    if (r.alreadyClosed) return // the app closed it first
+    pnl = r.pnlRs
+  } catch (e) { say(`! tick close not saved (the app's 1-minute check will close it): ${scrub(e.message)}`) }
+  const icon = pnl === null ? (ev.netPct >= 0 ? '✅' : '🔻') : pnl >= 0 ? '✅' : '🔻'
+  say(`tick exit ${ev.symbol} ${ev.direction} ${ev.reason} at ${ev.price} (${clock})${pnl !== null ? ` net Rs ${pnl}` : ''}`)
+  await ntfy(`${icon} Paper ${ev.direction} ${ev.symbol} closed: ${REASON_TXT[ev.reason] ?? ev.reason} at ₹${ev.price} (${clock})${pnl !== null ? `, net ₹${pnl}` : ''} (paper money)`)
+}
+async function flushMoves() {
+  if (!pendingMoves.size) return
+  const moves = [...pendingMoves.values()]; pendingMoves.clear()
+  try { await gateway('tick_stop', { moves }) } catch { /* the next move is sent again */ }
+}
+
 const stats = { messages: 0, unreadable: 0, lastMessageAt: 0, lastPriceAt: 0, sessionStartAt: 0, symbolLastTick: new Map() }
 
 async function runSession() {
@@ -221,7 +260,10 @@ async function runSession() {
       timers.push(setInterval(flush, FLUSH_EVERY_MS))
       timers.push(setInterval(() => { if (TEST_IGNORE_MARKET_HOURS || inMarketHours(Date.now())) recorder.writeBook(Date.now()) }, BOOK_EVERY_MS))
       timers.push(setInterval(saveDayFiles, CANDLE_FILE_EVERY_MS))
-      timers.push(setInterval(() => recorder.flushTicks(Date.now()), 2_000)) // 21 Oct: every tick to data\\ticks-DATE.csv
+      timers.push(setInterval(() => recorder.flushTicks(Date.now()), 2_000))
+      refreshOpenTrades()
+      timers.push(setInterval(refreshOpenTrades, Number(process.env.OPEN_TRADES_EVERY_MS || 60_000))) // T2: new paper trades reach the tick engine within a minute
+      timers.push(setInterval(flushMoves, 5_000)) // T2: raised stops reported to the app every 5 s // 21 Oct: every tick to data\\ticks-DATE.csv
       timers.push(setInterval(() => {
         const seen = builder.symbolsSeen()
         const ago = stats.lastMessageAt ? Math.round((Date.now() - stats.lastMessageAt) / 1000) : '?'
@@ -266,6 +308,15 @@ async function runSession() {
         if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) recorder.onTick(symbol, t, now)
         stats.symbolLastTick.set(symbol, now)
         stats.lastPriceAt = now
+        if (TICK_EXITS && tickExits.trades.size && (TEST_IGNORE_MARKET_HOURS || inMarketHours(now))) {
+          for (const ev of tickExits.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask }, now)) {
+            if (ev.kind === 'close') onTickExit(ev)
+            else if (ev.kind === 'stopMoved') {
+              const tr = tickExits.trades.get(ev.id)
+              pendingMoves.set(ev.id, { id: ev.id, stop: ev.to, atBreakeven: !!tr?.atBreakeven, locked: !!tr?.locked, bestExc: tr?.bestExc })
+            }
+          }
+        }
       }
     })
 

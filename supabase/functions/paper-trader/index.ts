@@ -118,6 +118,7 @@ Deno.serve(async (req) => {
 
   // ---- 1) manage open trades ----
   const manage = async (t: Row) => {
+    let closedByUs = true
     let from = t.last_bucket ? new Date(Date.parse(t.last_bucket) + 5 * 60_000).toISOString() : t.entry_time
     const bars: (Bar & { startIso: string })[] = []
     if (!t.last_bucket && t.details?.entry_mode === '1min') {
@@ -141,10 +142,10 @@ Deno.serve(async (req) => {
           status: 'CLOSED', exit_price: Math.round(st.exit * 100) / 100, exit_time: new Date(Date.parse(b.startIso) + 5 * 60_000).toISOString(), exit_reason: step.reason,
           pnl: Math.round(st.pnlRs * 100) / 100, pnl_percent: Math.round(st.netPct * 1000) / 1000, gross_pct: Math.round(st.grossPct * 1000) / 1000,
           net_pct: Math.round(st.netPct * 1000) / 1000, costs_rs: Math.round(st.costsRs * 100) / 100, last_bucket: b.startIso, stoploss: p.stop,
-        }).eq('id', t.id)
+        }).eq('id', t.id).eq('status', 'OPEN').select('id').then((r: { data: unknown[] | null }) => { closedByUs = !(Array.isArray(r.data) && r.data.length === 0) })
         t.status = 'CLOSED'; t.pnl = st.pnlRs
-        log.push(`closed ${t.symbol} ${t.direction} ${step.reason} net Rs ${Math.round(st.pnlRs)}`)
-        await notify(supabase, `${st.pnlRs >= 0 ? '✅' : '🔻'} Paper ${t.direction} ${t.symbol} closed: ${({ stop: 'stop loss', breakeven: 'at buy price', lockedstop: 'raised stop', target: 'TARGET hit', squareoff: '15:15 close' } as Record<string, string>)[step.reason] ?? step.reason}, net ₹${Math.round(st.pnlRs)} (paper money)`)
+        log.push(`closed ${t.symbol} ${t.direction} ${step.reason} net Rs ${Math.round(st.pnlRs)}${closedByUs ? '' : ' (already closed on a tick by the laptop)'}`)
+        if (closedByUs) await notify(supabase, `${st.pnlRs >= 0 ? '✅' : '🔻'} Paper ${t.direction} ${t.symbol} closed: ${({ stop: 'stop loss', breakeven: 'at buy price', lockedstop: 'raised stop', target: 'TARGET hit', squareoff: '15:15 close' } as Record<string, string>)[step.reason] ?? step.reason}, net ₹${Math.round(st.pnlRs)} (paper money)`)
         return
       }
       lastIso = b.startIso
@@ -170,10 +171,10 @@ Deno.serve(async (req) => {
             status: 'CLOSED', exit_price: Math.round(st.exit * 100) / 100, exit_time: new Date(Date.parse(m.bucket_start) + 60_000).toISOString(), exit_reason: step.reason,
             pnl: Math.round(st.pnlRs * 100) / 100, pnl_percent: Math.round(st.netPct * 1000) / 1000, gross_pct: Math.round(st.grossPct * 1000) / 1000,
             net_pct: Math.round(st.netPct * 1000) / 1000, costs_rs: Math.round(st.costsRs * 100) / 100, stoploss: p.stop,
-          }).eq('id', t.id)
+          }).eq('id', t.id).eq('status', 'OPEN').select('id').then((r: { data: unknown[] | null }) => { closedByUs = !(Array.isArray(r.data) && r.data.length === 0) })
           t.status = 'CLOSED'; t.pnl = st.pnlRs
-          log.push(`closed ${t.symbol} ${t.direction} ${step.reason} (1-min touch) net Rs ${Math.round(st.pnlRs)}`)
-          await notify(supabase, `${st.pnlRs >= 0 ? '✅' : '🔻'} Paper ${t.direction} ${t.symbol} closed: ${({ stop: 'stop loss', breakeven: 'at buy price', lockedstop: 'raised stop', target: 'TARGET hit' } as Record<string, string>)[step.reason]} at ₹${Math.round(st.exit * 100) / 100}, net ₹${Math.round(st.pnlRs)} (paper money)`)
+          log.push(`closed ${t.symbol} ${t.direction} ${step.reason} (1-min touch) net Rs ${Math.round(st.pnlRs)}${closedByUs ? '' : ' (already closed on a tick by the laptop)'}`)
+          if (closedByUs) await notify(supabase, `${st.pnlRs >= 0 ? '✅' : '🔻'} Paper ${t.direction} ${t.symbol} closed: ${({ stop: 'stop loss', breakeven: 'at buy price', lockedstop: 'raised stop', target: 'TARGET hit' } as Record<string, string>)[step.reason]} at ₹${Math.round(st.exit * 100) / 100}, net ₹${Math.round(st.pnlRs)} (paper money)`)
           return
         }
       }
@@ -186,7 +187,7 @@ Deno.serve(async (req) => {
         const st = settle(p, { action: 'close', rawPx: +last.close, reason: 'squareoff', slipped: true }, +t.quantity)
         await supabase.from('simulated_trades').update({ status: 'CLOSED', exit_price: Math.round(st.exit * 100) / 100, exit_time: new Date(nowMs).toISOString(),
           exit_reason: 'squareoff', pnl: Math.round(st.pnlRs * 100) / 100, pnl_percent: Math.round(st.netPct * 1000) / 1000, gross_pct: Math.round(st.grossPct * 1000) / 1000,
-          net_pct: Math.round(st.netPct * 1000) / 1000, costs_rs: Math.round(st.costsRs * 100) / 100 }).eq('id', t.id)
+          net_pct: Math.round(st.netPct * 1000) / 1000, costs_rs: Math.round(st.costsRs * 100) / 100 }).eq('id', t.id).eq('status', 'OPEN')
         t.status = 'CLOSED'; t.pnl = st.pnlRs
         log.push(`closed ${t.symbol} at last price (feed gap) net Rs ${Math.round(st.pnlRs)}`)
         return

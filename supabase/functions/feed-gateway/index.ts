@@ -10,6 +10,10 @@
 // Actions (POST JSON):
 //   { action: 'token' }                 -> { accessToken, expiresAt, symbols: {SYMBOL: scripCode}, unresolved: [] }
 //   { action: 'candles', rows: [...] }  -> { ok: true, saved: n }
+//   T2 tick-level exits (owner 21 Oct): the laptop runs the exit rules on every tick; the app stays the record keeper.
+//   { action: 'open_trades' }           -> { trades: [today's OPEN paper trades with their current stop/target], ntfyTopic }
+//   { action: 'tick_stop', moves: [{ id, stop, atBreakeven, locked, bestExc }] } -> stop raised on the tick (never loosened)
+//   { action: 'tick_close', id, reason, price, ts } -> closes the trade at that tick price (only if still OPEN)
 //
 // The Sharekhan token is only ever returned to a caller holding the feed token,
 // over HTTPS, and is never written to logs.
@@ -17,6 +21,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/auth.ts'
 import { loadStoredSharekhanToken, resolveScripCodes } from '../_shared/sharekhan.ts'
+import { settle, type PaperPos } from '../_shared/paper.ts'
 import { FULL_UNIVERSE as STARTER_UNIVERSE } from '../_shared/universe.ts' // 21 Oct: all ~494 stocks
 
 const MAX_ROWS = 600
@@ -123,6 +128,53 @@ Deno.serve(async (req) => {
     const { error } = await supabase.from('live_candles').upsert(stamped, { onConflict: 'symbol,timeframe,bucket_start' })
     if (error) return json({ error: 'Database write failed', detail: error.message }, 500)
     return json({ ok: true, saved: clean.length, rejected })
+  }
+
+  // ---- T2: tick-level exits ----
+  const dayStartIso = new Date(Math.floor((Date.now() + 19_800_000) / 86_400_000) * 86_400_000 - 19_800_000).toISOString()
+  if (body.action === 'open_trades') {
+    const { data, error } = await supabase.from('simulated_trades')
+      .select('id, symbol, direction, entry_price, stoploss, target, stop_dist, atr, at_breakeven, locked, best_exc, quantity')
+      .eq('rules', 'v4').eq('status', 'OPEN').gte('entry_time', dayStartIso)
+    if (error) return json({ error: 'Database read failed', detail: error.message }, 500)
+    const { data: ns } = await supabase.from('notify_settings').select('ntfy_topic, channel, enabled').eq('id', 1).maybeSingle()
+    const topic = ns && ns.enabled !== false && (ns.channel ?? 'both') !== 'telegram' ? ns.ntfy_topic ?? null : null
+    return json({ trades: (data ?? []).map((t: any) => ({ id: t.id, symbol: t.symbol, direction: t.direction, entry: +t.entry_price, stop: +t.stoploss,
+      target: +t.target, stopDist: +t.stop_dist, atr: +t.atr, atBreakeven: !!t.at_breakeven, locked: !!t.locked, bestExc: t.best_exc === null ? undefined : +t.best_exc })),
+      ntfyTopic: topic })
+  }
+  if (body.action === 'tick_stop') {
+    const moves = Array.isArray(body.moves) ? body.moves.slice(0, 100) : []
+    let saved = 0
+    for (const m of moves) {
+      if (typeof m?.id !== 'string' || !isPrice(m.stop)) continue
+      const { data: t } = await supabase.from('simulated_trades').select('direction, stoploss, status').eq('id', m.id).maybeSingle()
+      if (!t || t.status !== 'OPEN') continue
+      const better = t.direction === 'BUY' ? m.stop > +t.stoploss : m.stop < +t.stoploss // never loosen
+      if (!better) continue
+      await supabase.from('simulated_trades').update({ stoploss: m.stop, at_breakeven: !!m.atBreakeven, locked: !!m.locked,
+        best_exc: isCount(m.bestExc) ? m.bestExc : null }).eq('id', m.id).eq('status', 'OPEN')
+      saved++
+    }
+    return json({ ok: true, saved })
+  }
+  if (body.action === 'tick_close') {
+    const reasons = new Set(['stop', 'breakeven', 'lockedstop', 'target', 'squareoff'])
+    if (typeof body.id !== 'string' || !reasons.has(body.reason) || !isPrice(body.price)) return json({ error: 'bad tick_close' }, 400)
+    const ts = Number.isFinite(body.ts) && Math.abs(Date.now() - body.ts) < 3600_000 ? body.ts : Date.now()
+    const { data: t } = await supabase.from('simulated_trades').select('*').eq('id', body.id).maybeSingle()
+    if (!t) return json({ error: 'unknown trade' }, 404)
+    if (t.status !== 'OPEN') return json({ ok: true, alreadyClosed: true })
+    const p: PaperPos = { direction: t.direction, entry: +t.entry_price, stop: +t.stoploss, target: +t.target, stopDist: +t.stop_dist, atr: +t.atr }
+    // the laptop's price already includes slippage (bid/offer +/- slippage; target = limit), so no extra slippage here
+    const st = settle(p, { action: 'close', rawPx: body.price, reason: body.reason, slipped: false }, +t.quantity)
+    const { data: upd } = await supabase.from('simulated_trades').update({
+      status: 'CLOSED', exit_price: Math.round(st.exit * 100) / 100, exit_time: new Date(ts).toISOString(), exit_reason: body.reason,
+      pnl: Math.round(st.pnlRs * 100) / 100, pnl_percent: Math.round(st.netPct * 1000) / 1000, gross_pct: Math.round(st.grossPct * 1000) / 1000,
+      net_pct: Math.round(st.netPct * 1000) / 1000, costs_rs: Math.round(st.costsRs * 100) / 100,
+      details: { ...(t.details ?? {}), exit_source: 'tick' },
+    }).eq('id', body.id).eq('status', 'OPEN').select('id')
+    return json({ ok: true, closed: (upd ?? []).length === 1, pnlRs: Math.round(st.pnlRs), netPct: Math.round(st.netPct * 1000) / 1000 })
   }
 
   return json({ error: 'Unknown action' }, 400)
