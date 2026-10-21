@@ -118,7 +118,7 @@ Stock choosing (which stock, direction, trigger price) = candles incl. the live 
 7. Reversal warning: checked continuously, alert within seconds.
 8. 15:15 close: at the exact time, at the live price.
 9. ntfy alerts for all of the above within 1-2 seconds.
-Status: T1 (record ticks) from 21 Oct evening; T2 (exits/fills) next; T3 (tick entries) after entry rules show an edge (test tick vs candle entry first).
+Status: T1 (record ticks) installed 21 Oct 15:40; T2 step 1 DONE 21 Oct evening: tools/live-feed/tick-exits.mjs (same exit rules on every tick, fills at bid/offer + slippage, target = limit) + test-tick-exits.mjs 7/7 - NOT yet wired; T2 step 2 = feed-gateway actions 'open_trades' + 'tick_close' (1 Lovable credit, owner OK) + feed wiring + ntfy straight from the laptop; T3 (tick entries) after entry rules show an edge (test tick vs candle entry first).
 
 ---
 
@@ -1096,3 +1096,8 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   +Rs1,458, avg loss -0.66%, worst -1.51%. => tighter protection saves a few winners but costs more profit; live exits best so far.
   ENTRY (fixed exit 2xATR/2R): v4.1 735 entries 26% reached, best +0.62% vs worst -0.42% (1.50); gap held 132, 29%, +0.81/-0.46
   (1.76); gap>=1% 49, 29%, +1.00/-0.49 (2.05); +trend day 40, 20%; +no chase 14, 43%. => gap held improves the entry quality.
+
+- 21 Oct evening: morning-direction test on today's own recording (494 stocks, 1% before -1%): 74% overall (463), DOWN mornings
+  (SELL) 90% of 360, UP mornings (BUY) 18% of 103 -> on a clear down day (Nifty -0.88%) direction with the market is almost
+  everything. Strongest evidence so far for a market day-type / direction rule. (Scorecards with 21 Oct need 20 Oct's prices for
+  "yesterday" levels -> pull Sharekhan history for 20 Oct next time Sharekhan is connected.)
