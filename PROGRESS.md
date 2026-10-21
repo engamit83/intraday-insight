@@ -1002,3 +1002,7 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
     vol>=1.5x, yesterday closed strong our way) 58% (90). Day-to-day swings (40%-60%) are bigger than any stock feature ->
     market day-type matters most.
   * Small moves: Rs 4-5 on a Rs 400 stock = ~1% (fine); on a Rs 4,000 stock 0.1% (below costs) -> think in %, need >= ~0.75-1%.
+- 21 Oct ~10:50 early-exit test (run-earlyexit.py, 2,470 stock-days, every stock in the direction of its 09:15-10:00 move, entry 10:00):
+  615 hit neither +1%/-1% (best move avg +0.58% our way, but only +0.05% at 15:15). Exit rules: hold -0.114%/trade; lock +0.25% after
+  +0.5% -0.112% (winners 49%->64%); trail 0.3% -0.113%; target 0.6% -0.126%; time exits worse. => exits only reshape wins/losses;
+  with no ENTRY edge every exit loses ~costs. Early exit is worth adding only on top of a selection that predicts (>57% at 1%).
