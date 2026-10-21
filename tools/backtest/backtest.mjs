@@ -295,6 +295,7 @@ export function runBacktest(data, options = {}) {
             if (gain >= o.breakevenAtR * p.stopDist) { p.stop = better(p.stop, p.entry); p.atBreakeven = true }
           }
           p.bestExc = Math.max(p.bestExc ?? 0, B ? c.high - p.entry : p.entry - c.low)
+          p.worstExc = Math.max(p.worstExc ?? 0, B ? p.entry - c.low : c.high - p.entry) // learning: worst move against us while open
           p.bestClose = p.bestClose === undefined ? c.close : B ? Math.max(p.bestClose, c.close) : Math.min(p.bestClose, c.close)
           if (o.lockProfit) {
             const r = p.bestExc / p.stopDist
