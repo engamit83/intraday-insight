@@ -985,3 +985,10 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   readable remotely — install after 15:30 today, test before 22 Oct.
 - Owner removed the buy-price stop (intent 4/5 rewritten). PAPER.exitMode='normal' (c499bff); Lovable redeploy of paper-trader +
   scout-signals sent 09:28 (1 credit; ~3 left).
+- 21 Oct ~10:30: owner asked to pull history NOW -> history-export redeployed alone (1 credit; 3 left today, 1 more planned 15:31).
+  5-min history for all 494 stocks pulled (12-19 Oct, 6 days; stored in Claude's workspace /home/claude/data/h500/, not in GitHub).
+  Browser downloads arrive as GUID .tmp files in the laptop's Downloads folder (complete; stage them by name).
+  **First 500-stock prediction score (tools/backtest/run-predict.mjs, 4 tested days 14-19 Oct):** live picking (top 3, max 10/day,
+  1/sector) 6/40 = 15% target reached; ALL accepted candidates 25% of 719. Top-ranked picks do WORSE than average -> the ranking
+  is the main weakness. Hints (small samples): usual daily move 4%+ 35%, SELL 28% vs BUY 22%, Rs 200-500 27%.
+  Per decision rule 7c (<40%) -> improve the selection rules. Next: test stocks-in-play ranking, realistic targets, no-chase, day-type.
