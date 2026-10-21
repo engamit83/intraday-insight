@@ -106,6 +106,21 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 
 ---
 
+## ⚡ TICK-LEVEL LIST — to REVISIT with the owner (marked 21 Oct 15:12; owner says "tick list" or "revisit tick level")
+Stock choosing (which stock, direction, trigger price) = candles incl. the live forming candle. Everything below = live ticks:
+1. Entry: buy/sell the instant the price reaches the candidate's trigger price.
+2. Fill price: the real price at that tick (BUY at the seller's price/offer, SELL at the buyer's price/bid) + slippage.
+3. Stop loss: exit the instant the stop price trades.
+4. Target: exit the instant the target price trades.
+5. No-loss step and profit lock: stop moves up the instant the trade reaches +0.5% / the lock levels.
+6. Trailing stop: follows the best price tick by tick.
+7. Reversal warning: checked continuously, alert within seconds.
+8. 15:15 close: at the exact time, at the live price.
+9. ntfy alerts for all of the above within 1-2 seconds.
+Status: T1 (record ticks) from 21 Oct evening; T2 (exits/fills) next; T3 (tick entries) after entry rules show an edge (test tick vs candle entry first).
+
+---
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
@@ -122,6 +137,7 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 | L12 | **MUST before real money — reliable feed:** move the price feed from the laptop to an always-on cloud computer (or add a backup); 16 Oct showed a laptop restart stops everything. | Before stage 6 |
 | L13 | **MUST before real money — risk guards:** block watch-list stocks (L2), stop all trading after the daily loss limit, max open trades / money at risk, warning before risky orders (like Zerodha's Nudge). | Before stage 6 |
 | L14 | Nice to have: tax and P&L reports (like Zerodha Console); buyers/sellers (order-book) view per signal. | Later |
+| L15 | **Tick-level list (⚡ section above)** — owner marked it to revisit | When the owner says "tick list"; T1 tonight, T2 next |
 | L10 | Small fixes: `start-feed.bat` uses `>/dev/null` (old start-feed only); old `stocks` price strip is stale (fed by an old job); clean up old `live_candles` rows monthly (database size) | Low priority |
 
 ---
