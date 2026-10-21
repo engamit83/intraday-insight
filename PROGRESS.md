@@ -992,3 +992,13 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   1/sector) 6/40 = 15% target reached; ALL accepted candidates 25% of 719. Top-ranked picks do WORSE than average -> the ranking
   is the main weakness. Hints (small samples): usual daily move 4%+ 35%, SELL 28% vs BUY 22%, Rs 200-500 27%.
   Per decision rule 7c (<40%) -> improve the selection rules. Next: test stocks-in-play ranking, realistic targets, no-chase, day-type.
+- 21 Oct ~11:00 R&D on 494 stocks (6 days 5-min + 1-min, 12-19 Oct; only 3-5 judged days -> early evidence):
+  * run-r21.mjs (live picking, 30 picks): v4.1 13% target reached; no-chase (<=0.5 ATR beyond yday level) 33%; in-play rank 20%;
+    combo P8 36% and ~break-even; but on ALL candidates (513) none of these filters beat 25% except trend days (30%).
+  * run-edge.mjs: our direction calls vs coin flip (+X% before -X%): 46% at 0.3%, 50% at 0.5%, 54% at 0.75-1% (break-even after
+    costs 75/65/60/57%). => NO reliable edge yet; small quick profits (0.3-0.5%) cannot beat costs at this accuracy.
+  * run-daycontext.py (2,439 stock-days): yesterday's close position/volume, gap, morning move/volume all ~47-55%. Weak hints:
+    gap in the same direction >0.5% -> 58% (1% follow-through), morning volume 0.8-3x -> 54-55%, combo (morning move>=1%, morning
+    vol>=1.5x, yesterday closed strong our way) 58% (90). Day-to-day swings (40%-60%) are bigger than any stock feature ->
+    market day-type matters most.
+  * Small moves: Rs 4-5 on a Rs 400 stock = ~1% (fine); on a Rs 4,000 stock 0.1% (below costs) -> think in %, need >= ~0.75-1%.

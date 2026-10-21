@@ -77,6 +77,11 @@ export const DEFAULTS = {
   setup: 'v4',
   // --- owner's exit rule (16 Oct): stop at the buy price from the start (no planned price loss) ---
   stopAtEntry: false,      // switch: initial stop = entry fill price (BUY) / entry (SELL); profit lock + trailing as usual
+  // --- 21 Oct R&D (owner: prediction rules are weak; small sure moves count) ---
+  maxChaseAtr: null,       // switch: skip if the price is already more than k x ATR beyond yesterday's high/low (late entry)
+  maxVwapAtr: null,        // switch: skip if the price is more than k x ATR away from VWAP (stretched)
+  rankBy: null,            // 'inPlay': rank by today's volume x usual move x strength vs market (stocks in play)
+  targetPct: null,         // switch: fixed target of X% (quick move) instead of rewardRisk x stop
   stopAtEntryBufferPct: 0, // with stopAtEntry: allow this % below/above the entry (0 = exactly the buy price)             // 'v4' (momentum + yesterday's level), 'vwapPullback' (trend stock dips to VWAP and bounces), 'orb' (opening-range breakout)
   stopAtrMult: 1.5,        // live: STOP_ATR_MULT
   minStopPct: 0.25,        // live: MIN_STOP_PCT
@@ -142,7 +147,7 @@ export function prepare(data) {
 
 function levelsFor(direction, close, atr, o) {
   const stopDist = Math.max(atr * o.stopAtrMult, close * (o.minStopPct / 100))
-  const tgt = stopDist * o.rewardRisk
+  const tgt = o.targetPct ? close * (o.targetPct / 100) : stopDist * o.rewardRisk
   return direction === 'BUY'
     ? { stop: close - stopDist, target: close + tgt }
     : { stop: close + stopDist, target: close - tgt }
@@ -386,6 +391,11 @@ export function runBacktest(data, options = {}) {
         } else {
           if (!beyondOR || !beyondPrev) continue
         }
+        if (o.maxChaseAtr !== null && ctx[s].prevDay) {
+          const beyond = B ? ind.lastClose - ctx[s].prevDay.high : ctx[s].prevDay.low - ind.lastClose
+          if (beyond > o.maxChaseAtr * ind.atr) continue
+        }
+        if (o.maxVwapAtr !== null && ctx[s].vwap[j] && Math.abs(ind.lastClose - ctx[s].vwap[j]) > o.maxVwapAtr * ind.atr) continue
         const pc = ctx[s].prevClose
         if (o.prevCloseFilter && pc && ((dir.direction === 'BUY' && ind.lastClose <= pc) || (dir.direction === 'SELL' && ind.lastClose >= pc))) continue
         let rankScore = calculateScoreUncapped(ind) * timeMult
@@ -405,6 +415,11 @@ export function runBacktest(data, options = {}) {
           if (o.dayRvolMin !== null && !(vs.dayR !== null && vs.dayR >= o.dayRvolMin)) continue
           if (o.volRising && !(vs.tod !== null && vs.prevTod !== null && vs.tod > vs.prevTod)) continue
           if (o.volRankWeight !== null && vs.dayR !== null) rankScore *= 1 + o.volRankWeight * (Math.min(vs.dayR, 3) - 1)
+        }
+        if (o.rankBy === 'inPlay') {
+          const vs = volStats(s, day, bucket, j > 0 ? ctx[s].list[j - 1].bucket : null)
+          const chg = (ind.lastClose / ctx[s].dayOpen - 1) * 100
+          rankScore = Math.min(vs.dayR ?? 1, 4) * (ind.atr / ind.lastClose * 100) * (1 + Math.abs(chg - breadth))
         }
         candidates.push({ s, dir: dir.direction, ind, rankScore, finalScore, nextJ })
       }
