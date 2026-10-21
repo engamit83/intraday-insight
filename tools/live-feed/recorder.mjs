@@ -3,6 +3,8 @@
 //   candles-YYYY-MM-DD.csv  every 1-minute candle of the day (rewritten every 5 minutes, so it is never lost)
 //   book-YYYY-MM-DD.csv     once a minute per stock: price, best bid/offer and their sizes, total buy/sell
 //                           quantity waiting (tells us whether buyers or sellers are stronger)
+//   ticks-YYYY-MM-DD.csv    EVERY price tick (added 21 Oct, owner: everything at tick level) - time to the millisecond,
+//                           price, day volume, best bid/offer and sizes. Written every 2 seconds. ~150-250 MB per day.
 // Recording problems are reported but can never stop the feed.
 
 import fs from 'node:fs'
@@ -17,6 +19,8 @@ export class DayRecorder {
     this.dir = dir
     this.book = new Map() // symbol -> latest { ts, price, cumVol, bid, bidQty, ask, askQty, totBuy, totSell }
     this.errors = 0
+    this.tickBuf = []
+    this.ticksWritten = 0
   }
 
   onTick(symbol, t, ts) {
@@ -29,6 +33,23 @@ export class DayRecorder {
       ask: t.ask ?? prev.ask ?? '', askQty: t.askQty ?? prev.askQty ?? '',
       totBuy: t.totBuy ?? prev.totBuy ?? '', totSell: t.totSell ?? prev.totSell ?? '',
     })
+    const b = this.book.get(symbol)
+    this.tickBuf.push(`${istTime(ts)}.${String(ts % 1000).padStart(3, '0')},${symbol},${t.price},${b.cumVol},${b.bid},${b.bidQty},${b.ask},${b.askQty}`)
+    if (this.tickBuf.length > 200000) this.flushTicks(ts) // safety: never let memory grow
+  }
+
+  // append buffered ticks to today's tick file; returns the number of ticks written
+  flushTicks(nowMs = Date.now()) {
+    if (this.tickBuf.length === 0) return 0
+    const lines = this.tickBuf; this.tickBuf = []
+    try {
+      fs.mkdirSync(this.dir, { recursive: true })
+      const file = path.join(this.dir, `ticks-${istDay(nowMs)}.csv`)
+      const header = fs.existsSync(file) ? '' : 'time,symbol,price,day_volume,bid,bid_qty,offer,offer_qty\n'
+      fs.appendFileSync(file, header + lines.join('\n') + '\n')
+      this.ticksWritten += lines.length
+      return lines.length
+    } catch (e) { this.errors++; return 0 }
   }
 
   // one line per stock with the latest snapshot; returns the number of lines written

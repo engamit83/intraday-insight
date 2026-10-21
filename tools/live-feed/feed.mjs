@@ -76,6 +76,7 @@ function loadExtras() {
   return out
 }
 function saveDayFiles() {
+  recorder.flushTicks(Date.now())
   const n = recorder.writeCandles(builder, Date.now())
   if (n) say(`saved ${n} one-minute candles to the data folder`)
 }
@@ -220,6 +221,7 @@ async function runSession() {
       timers.push(setInterval(flush, FLUSH_EVERY_MS))
       timers.push(setInterval(() => { if (TEST_IGNORE_MARKET_HOURS || inMarketHours(Date.now())) recorder.writeBook(Date.now()) }, BOOK_EVERY_MS))
       timers.push(setInterval(saveDayFiles, CANDLE_FILE_EVERY_MS))
+      timers.push(setInterval(() => recorder.flushTicks(Date.now()), 2_000)) // 21 Oct: every tick to data\\ticks-DATE.csv
       timers.push(setInterval(() => {
         const seen = builder.symbolsSeen()
         const ago = stats.lastMessageAt ? Math.round((Date.now() - stats.lastMessageAt) / 1000) : '?'
@@ -238,7 +240,7 @@ async function runSession() {
           try { ws.close() } catch { /* ignore */ }
           return
         }
-        if (istMinuteOfDay(Date.now()) >= STOP_AT_MINUTE) ws.close()
+        if (istMinuteOfDay(Date.now()) >= STOP_AT_MINUTE && !TEST_IGNORE_MARKET_HOURS) ws.close()
       }, STATUS_EVERY_MS))
     })
 
