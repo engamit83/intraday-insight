@@ -1067,3 +1067,10 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   Q5 1% target/0.65% stop/lock +0.25% after +0.5%: 43%, -1,673 | 31%, -58,733 (more targets reached, still loses)
   Q10 Q2+Q5: 43%, -1,224 | 39%, -4,561 ; Q11 gap>=1%: +5,540 / +11,709 (28/49 picks) ; Q12 Q2+no chase: +4,461 / +5,492 (12/14 picks)
   => hint: GAP HELD is the strongest feature so far; profits come from winners running, not from many small targets. Tiny samples.
+- 21 Oct ~13:30 TWO-PHASE scorecards (run-twophase.mjs, 494 stocks, judged 14/15/16/19 Oct; small sample):
+  EXIT (same 132 gap-held entries): E0 live exits +0.123%/trade, +Rs16,286 (Rs1L) / +Rs9,665 (Rs500 risk sizing), winners 63%,
+  kept 55% of best move, avg loss -0.83%, winners->losers 7 of 82, worst -1.95% | E2 no-loss at +0.5%: +Rs7,589, 4 of 82 |
+  E3 lock ladder: +Rs4,574 | E4 half at 1R: +Rs15,267 | E6 no target + ladder: +Rs11,195 (kept 42%) | E7 ladder + 1.5xATR stop:
+  +Rs1,458, avg loss -0.66%, worst -1.51%. => tighter protection saves a few winners but costs more profit; live exits best so far.
+  ENTRY (fixed exit 2xATR/2R): v4.1 735 entries 26% reached, best +0.62% vs worst -0.42% (1.50); gap held 132, 29%, +0.81/-0.46
+  (1.76); gap>=1% 49, 29%, +1.00/-0.49 (2.05); +trend day 40, 20%; +no chase 14, 43%. => gap held improves the entry quality.
