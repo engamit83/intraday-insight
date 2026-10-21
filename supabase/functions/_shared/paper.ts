@@ -13,7 +13,7 @@ export const PAPER = {
   // Owner's exit rule (16 Oct, on trial): the stop sits at the BUY PRICE from the start (no planned price loss).
   // 'normal' = stop at the signal's stop (2 x ATR) as back-tested. The normal-stop result is always recorded as a shadow.
   exitMode: 'normal' as 'buyPrice' | 'normal',           // v4.1 (16 Oct): the trailing stop starts only after +1R (an earlier trail choked trades) // 21 Oct: owner removed the buy-price stop; judge by target reached
-  squareOff: '15:15', maxOpen: 10, dailyLossLimitRs: 2000,
+  squareOff: '15:15', maxOpen: 30, dailyLossLimitRs: Infinity, // 21 Oct owner: research phase - no daily loss stop and up to 30 open for PAPER only (real money will have its own strict limits, L13)
 }
 
 export function roundTripCostPct(): number {
