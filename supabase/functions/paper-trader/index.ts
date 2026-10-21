@@ -149,6 +149,35 @@ Deno.serve(async (req) => {
       }
       lastIso = b.startIso
     }
+    // FAST EXIT (owner 21 Oct: alerts at the exact time): inside the 5-minute candle that is still forming, check every closed
+    // 1-minute candle for a touch of the CURRENT stop or target. Levels (no-loss, locks, trailing) still move only on closed
+    // 5-minute candles (same rules as the back-test); only the touch is detected ~1 minute after it happens instead of up to 5.
+    if (t.status === 'OPEN' && nowMin < 15 * 60 + 15) {
+      const winFrom = lastIso ? new Date(Date.parse(lastIso) + FIVE).toISOString() : (bars.length ? null : from)
+      if (winFrom) {
+        const { data: mins } = await supabase.from('live_candles').select('bucket_start, open, high, low, close').eq('symbol', t.symbol).eq('timeframe', '1min')
+          .gte('bucket_start', winFrom).order('bucket_start', { ascending: true }).limit(10)
+        const B = t.direction === 'BUY'
+        for (const m of ((mins ?? []) as Row[]).filter((r) => Date.parse(r.bucket_start) + 60_000 <= nowMs && Date.parse(r.bucket_start) >= Date.parse(t.entry_time))) {
+          const hitStop = B ? +m.low <= p.stop : +m.high >= p.stop
+          const hitTarget = B ? +m.high >= p.target : +m.low <= p.target
+          if (!hitStop && !hitTarget) continue
+          const step = hitStop
+            ? { action: 'close' as const, rawPx: B ? Math.min(+m.open, p.stop) : Math.max(+m.open, p.stop), reason: (p.locked ? 'lockedstop' : p.atBreakeven ? 'breakeven' : 'stop') as 'stop' | 'breakeven' | 'lockedstop', slipped: true }
+            : { action: 'close' as const, rawPx: p.target, reason: 'target' as const, slipped: false }
+          const st = settle(p, step, +t.quantity)
+          await supabase.from('simulated_trades').update({
+            status: 'CLOSED', exit_price: Math.round(st.exit * 100) / 100, exit_time: new Date(Date.parse(m.bucket_start) + 60_000).toISOString(), exit_reason: step.reason,
+            pnl: Math.round(st.pnlRs * 100) / 100, pnl_percent: Math.round(st.netPct * 1000) / 1000, gross_pct: Math.round(st.grossPct * 1000) / 1000,
+            net_pct: Math.round(st.netPct * 1000) / 1000, costs_rs: Math.round(st.costsRs * 100) / 100, stoploss: p.stop,
+          }).eq('id', t.id)
+          t.status = 'CLOSED'; t.pnl = st.pnlRs
+          log.push(`closed ${t.symbol} ${t.direction} ${step.reason} (1-min touch) net Rs ${Math.round(st.pnlRs)}`)
+          await notify(supabase, `${st.pnlRs >= 0 ? '✅' : '🔻'} Paper ${t.direction} ${t.symbol} closed: ${({ stop: 'stop loss', breakeven: 'at buy price', lockedstop: 'raised stop', target: 'TARGET hit' } as Record<string, string>)[step.reason]} at ₹${Math.round(st.exit * 100) / 100}, net ₹${Math.round(st.pnlRs)} (paper money)`)
+          return
+        }
+      }
+    }
     // safety: if the feed stopped, close at the last known price after the square-off time
     if (nowMin >= 15 * 60 + 25 && t.status === 'OPEN') {
       const { data: last } = await supabase.from('live_candles').select('close, bucket_start').eq('symbol', t.symbol).eq('timeframe', '1min')

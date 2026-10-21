@@ -44,6 +44,7 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 8f. **How many picks (owner 21 Oct, clarified):** each time we predict, choose only the BEST stocks that pass every rule — fewer or more than 10 is fine; never "pick everything" (that means weak logic). Implementation: top 3 per scan, one per stock per day, safety cap 30 per day (not a fixed 10).
 8g. **Rule v4.2 GAP HELD — ON TRIAL from 22 Oct** (owner "do it" 21 Oct 12:15): BUY only if today opened >= 0.5% above yesterday's close and the price is still above today's open (SELL mirror). Based on 4 days (14-19 Oct, 494 stocks): live picking +Rs5,765 / 23% target reached; all candidates +Rs16,286 / 29%. Review after ~10 trading days with full numbers -> owner decides keep/remove.
 8h. **When the owner asks for the rules, give the 📋 CURRENT RULES quick list immediately** (owner, 21 Oct). Update that list whenever a rule changes.
+8i. **Precise timing (owner 21 Oct 14:33):** ntfy alerts must come at the exact time things happen; if the owner trades manually, any delay is his responsibility; when automation is switched on later it must act precisely. => exits detected on 1-minute candles (from 22 Oct), next: tick-level instant alerts from the laptop feed; real money: stop/target orders at the exchange (L11).
 8e. **Owner decides with ALL the data (21 Oct):** every rule decision goes to the owner with the full numbers — which days, how many stocks/trades, target-reached %, net after costs, results per day, what was left out and why, and how sure we are (sample size). No rule change without his "do it".
 8. **Working style:** Claude acts as the market expert and says openly when the owner may be wrong; owner approves every live change ("do it"); credits used wisely (prepare in GitHub, one bundled Lovable message); every task given to the owner states its purpose; speed — don't wait where waiting isn't needed.
 
@@ -97,6 +98,8 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 1. A prediction is RIGHT if the price reached the target before 15:15 and before the normal stop.
 2. After ~30 decided trades: ≥ 50% right = strong; < 40% = improve the selection rules; 40–50% = both.
 3. Every rule change goes to the owner with ALL the data (days, trades, target-reached %, net after costs, per day, what was left out) → only his "do it" makes it live.
+
+**D8. Fast exit (from 22 Oct):** a touch of the current stop/target is detected on every closed 1-minute candle (alert ~1 min after it happens); stop/lock/trail levels still move on closed 5-minute candles.
 
 **F. Alerts on the phone (ntfy)**: trade opened / closed, reversal warning (trial), day summary, Sharekhan not connected (from 08:50), price feed off > 3 min, Claude's check-ins.
 
