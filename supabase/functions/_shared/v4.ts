@@ -9,7 +9,8 @@
 //    candle >= 2x usual for its slot, OR slot volume rising 3 candles in a row with today >= 1.0x.
 //  - New entries only 10:00-14:00 IST, score >= 60 (time-of-day multiplier applied).
 //  - Levels: stop = max(2 x ATR, 0.25%), target = 2 x stop distance.
-// Selection limits (top 3 per run, one signal per stock per day, max 10 per day) are applied by the caller,
+//  - v4.2 (22 Oct, ON TRIAL): gap held - open >= 0.5% beyond yesterday's close in the trade direction and price still beyond today's open.
+// Selection limits (top 3 best per run, one signal per stock per day, safety cap 30 per day) are applied by the caller,
 // which knows today's existing signals.
 
 import { computeIndicators, type Candle, type Indicators } from './indicators.ts'
@@ -17,12 +18,13 @@ import { calculateRawScore, calculateScoreUncapped, decideDirection, getTimeMult
 import { sectorOf } from './sectors.ts'
 
 export const V4 = {
-  version: 'v4.1',          // 16 Oct: + one stock per sector, trailing only after +1R, complete-morning-data guard
+  version: 'v4.2',          // 22 Oct (owner 'do it' 21 Oct): + GAP HELD rule (on trial); daily cap 30 (quality decides, not a fixed 10)
+  minGapPct: 0.5,           // v4.2 ON TRIAL: today's open >= 0.5% beyond yesterday's close in the trade direction AND price still beyond today's open
   minScore: 60,
   noEntryBefore: '10:00',
   noEntryAfter: '14:00',
   topN: 3,
-  maxSignalsPerDay: 10,
+  maxSignalsPerDay: 30,     // v4.2: safety cap only - each scan picks only the best (top 3) that pass every rule; owner: 'best stocks, fewer or more is OK, never everything'
   stopAtrMult: 2,
   minStopPct: 0.25,
   rewardRisk: 2,
@@ -182,6 +184,11 @@ export function evaluateV4(states: StockState[], nowMs: number): V4Result {
     const c = chg(s)
     if (B ? c <= breadthPct : c >= breadthPct) { rej(`relative strength (stock ${c.toFixed(2)}% vs market ${breadthPct.toFixed(2)}%)`); continue }
     if (!s.prevDay || (B ? ind.lastClose <= s.prevDay.high : ind.lastClose >= s.prevDay.low)) { rej(`not beyond yesterday's ${B ? 'high' : 'low'}`); continue }
+    // v4.2 (on trial): the overnight gap must be in our direction and still held
+    const gapPct = s.prevDay.close ? (s.dayOpen! / s.prevDay.close - 1) * 100 : 0
+    if (B ? !(gapPct >= V4.minGapPct && ind.lastClose > s.dayOpen!) : !(gapPct <= -V4.minGapPct && ind.lastClose < s.dayOpen!)) {
+      rej(`gap not held (${gapPct.toFixed(2)}% at open, price ${B ? 'not above' : 'not below'} today's open)`); continue
+    }
     const v = s.vol!
     const rising3 = v.tod !== null && v.prevTod !== null && v.prev2Tod !== null && v.prev2Tod < v.prevTod && v.prevTod < v.tod
     const volOk = (v.dayR !== null && v.dayR >= 1.2) || (v.tod !== null && v.tod >= 2) || (rising3 && v.dayR !== null && v.dayR >= 1.0)
@@ -193,7 +200,7 @@ export function evaluateV4(states: StockState[], nowMs: number): V4Result {
       symbol: s.symbol, direction: dir.direction, entry: r2(entry),
       stoploss: r2(B ? entry - stopDist : entry + stopDist), target: r2(B ? entry + stopDist * V4.rewardRisk : entry - stopDist * V4.rewardRisk),
       stopDist, atr: ind.atr, rawScore: calculateRawScore(ind), finalScore, rankScore: Math.round(calculateScoreUncapped(ind) * timeMult * 10) / 10,
-      reasons: [`market ${breadthPct.toFixed(2)}%`, `stock ${c.toFixed(2)}%`, `beyond yesterday ${B ? 'high ' + s.prevDay.high : 'low ' + s.prevDay.low}`,
+      reasons: [`gap ${gapPct >= 0 ? '+' : ''}${gapPct.toFixed(2)}% held ${B ? 'above' : 'below'} today's open ${s.dayOpen}`, `market ${breadthPct.toFixed(2)}%`, `stock ${c.toFixed(2)}%`, `beyond yesterday ${B ? 'high ' + s.prevDay.high : 'low ' + s.prevDay.low}`,
         `volume day ${v.dayR?.toFixed(2) ?? '?'}x / candle ${v.tod?.toFixed(2) ?? '?'}x${rising3 ? ' / rising' : ''}`, dir.reason],
     })
   }

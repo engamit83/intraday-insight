@@ -6,7 +6,7 @@ import { runBacktest } from './backtest.mjs'
 import { prepareStock, evaluateV4 } from '../../supabase/functions/_shared/v4.ts'
 
 const data = JSON.parse(readFileSync(process.argv[2], 'utf8'))
-const v4opts = { marketFilter: true, relStrength: true, onePerStockPerDay: true, maxTradesPerDay: 10, topN: 3, noEntryBefore: '10:00', noEntryAfter: '14:00',
+const v4opts = { marketFilter: true, relStrength: true, onePerStockPerDay: true, maxTradesPerDay: 30, minGapPct: 0.5, topN: 3, noEntryBefore: '10:00', noEntryAfter: '14:00',
   stopAtrMult: 2, rewardRisk: 2, prevDayLevels: true, volMode: 'either', dailyLossLimitRs: null, maxOpen: 1000, cooldownMin: 0 }
 const bt = runBacktest(data, v4opts)
 const candles = Object.fromEntries(Object.entries(data.results).map(([s, v]) => [s, v.candles.map((r) => ({ timestamp: r[0], open: +r[1], high: +r[2], low: +r[3], close: +r[4], volume: +r[5] || 0 }))]))

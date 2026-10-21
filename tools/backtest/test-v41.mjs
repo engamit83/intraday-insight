@@ -46,7 +46,7 @@ check('late-start guard: a day whose data begins at 12:00 is not traded (16 Oct 
 })
 
 // v4.1 live selection reproduces the v4.1 back-test, run by run
-const opts = { marketFilter: true, relStrength: true, onePerStockPerDay: true, maxTradesPerDay: 10, topN: 3, noEntryBefore: '10:00', noEntryAfter: '14:00',
+const opts = { marketFilter: true, relStrength: true, onePerStockPerDay: true, maxTradesPerDay: 30, minGapPct: 0.5, topN: 3, noEntryBefore: '10:00', noEntryAfter: '14:00',
   stopAtrMult: 2, rewardRisk: 2, prevDayLevels: true, breakevenAtR: 1, volMode: 'either', lockProfit: true, trailAtrMult: 1.5, trailAfterR: 1, maxPerSector: 1, dailyLossLimitRs: null }
 const bt = runBacktest(data, opts)
 const byRun = new Map()
@@ -61,7 +61,7 @@ for (const [k, trades] of byRun) {
   const earlier = bt.trades.filter((t) => t.day === day && t.signalTime < time)
   const used = new Set(earlier.map((t) => t.symbol))
   const openSyms = earlier.filter((t) => t.exitTime > time).map((t) => t.symbol) // still open when this candle closed
-  const picks = pickV4(ev.candidates, used, 10 - earlier.length, openSyms).map((c) => c.symbol).sort()
+  const picks = pickV4(ev.candidates, used, 30 - earlier.length, openSyms).map((c) => c.symbol).sort()
   runs++
   if (JSON.stringify(picks) === JSON.stringify(trades.map((t) => t.symbol).sort())) same++
   else diffs.push(`${k} bt:${trades.map((t) => t.symbol)} live:${picks}`)
