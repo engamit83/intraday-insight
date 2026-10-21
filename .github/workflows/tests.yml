@@ -28,9 +28,7 @@ jobs:
           TZ: Asia/Kolkata
         run: |
           npm install --no-audit --no-fund
-          node --experimental-strip-types test-tick-exits.mjs
-          node test-offline.mjs
-          node test-recorder.mjs
-          node test-e2e.mjs
-          node test-watchdog.mjs
-          node test-tick-e2e.mjs
+          for t in "node --experimental-strip-types test-tick-exits.mjs" "node test-offline.mjs" "node test-recorder.mjs" "node test-e2e.mjs" "node test-watchdog.mjs" "node test-tick-e2e.mjs"; do
+            $t > out.txt 2>&1 || { echo "::error::$t failed: $(grep -v '^ *at ' out.txt | tail -c 600 | tr '\n' ' ')"; exit 1; }
+            tail -1 out.txt
+          done
