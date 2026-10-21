@@ -1101,3 +1101,13 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   (SELL) 90% of 360, UP mornings (BUY) 18% of 103 -> on a clear down day (Nifty -0.88%) direction with the market is almost
   everything. Strongest evidence so far for a market day-type / direction rule. (Scorecards with 21 Oct need 20 Oct's prices for
   "yesterday" levels -> pull Sharekhan history for 20 Oct next time Sharekhan is connected.)
+
+- 21 Oct 19:50 (owner "do all 3 right away" - save Claude's usage by letting machines do the heavy work):
+  1. NIGHTLY REPORT: tools/live-feed/daily-report.mjs runs inside the feed when the market closes (15:35): from the laptop's own
+     recording -> Nifty move, morning-direction 1% test by side, gap-held test -> logs\report-DATE.txt + ntfy. No AI, no network
+     except ntfy. Tested on 21 Oct: Nifty -0.88%, 74% of 463 (BUY 18%, SELL 90%), gap held 90% of 265 (vs 19 Oct close, 20 Oct missing).
+  2. WEEKLY HISTORY PULL by the laptop: NOT possible without the app - Sharekhan's history needs the API key, which lives only in
+     the app (correctly). Option for the next bundled Lovable message: a gateway action 'history' (feed token) so the feed can pull
+     once a week by itself. Until then: Friday pull by Claude, or skip (own daily recording covers most).
+  3. GitHub Actions tests.yml: all offline tests (back-tester, reversal, paper-trader e2e, history-export, feed: tick exits, offline,
+     recorder, e2e, watchdog, tick e2e) run on every push.

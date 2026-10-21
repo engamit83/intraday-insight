@@ -16,6 +16,7 @@ import WebSocket from 'ws'
 import { CandleBuilder, istMinuteOfDay, inMarketHours } from './candles.mjs'
 import { extractTicks } from './parse.mjs'
 import { TickExitEngine, TICK_RULES } from './tick-exits.mjs'
+import { dailyReport } from './daily-report.mjs'
 import { DayRecorder } from './recorder.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -360,6 +361,15 @@ async function main() {
     if (istMinuteOfDay(Date.now()) >= STOP_AT_MINUTE && !TEST_IGNORE_MARKET_HOURS) {
       await flush()
       saveDayFiles()
+      // nightly research summary (21 Oct): computed from today's recording, saved in logs\report-DATE.txt and sent on ntfy
+      try {
+        const day = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10)
+        const done = path.join(here, 'logs', `report-${day}.txt`)
+        if (!fs.existsSync(done)) {
+          const text = dailyReport(path.join(here, 'data'), day)
+          if (text) { say(text); if (!ntfyTopic) await refreshOpenTrades(); await ntfy(text) }
+        }
+      } catch (e) { say(`! daily report failed: ${e.message}`) }
       say('Market is closed. Final candles saved. Bye!')
       return
     }

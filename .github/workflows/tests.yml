@@ -1,0 +1,36 @@
+# tests.yml - runs ALL offline tests on every push (owner 21 Oct: let machines do the heavy checking).
+# No secrets, no network to the app or Sharekhan: everything uses fakes.
+name: tests
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rule + back-tester tests
+        run: |
+          node --experimental-strip-types tools/backtest/test-backtest.mjs
+          node --experimental-strip-types tools/backtest/test-reversal.mjs
+      - name: Paper-trader, alerts, history tests (fake database)
+        working-directory: tools/backtest/e2e
+        run: |
+          for t in test-paper-trader.mjs test-paper-trader-1min.mjs test-paper-trader-owner.mjs test-notify.mjs; do node --import ./register.mjs $t; done
+          cd ../../.. && node --experimental-strip-types --import ./tools/backtest/e2e/register.mjs tools/backtest/e2e/test-history-export.mjs
+      - name: Laptop feed tests (fake Sharekhan + fake app)
+        working-directory: tools/live-feed
+        env:
+          TZ: Asia/Kolkata
+        run: |
+          npm install --no-audit --no-fund
+          node --experimental-strip-types test-tick-exits.mjs
+          node test-offline.mjs
+          node test-recorder.mjs
+          node test-e2e.mjs
+          node test-watchdog.mjs
+          node test-tick-e2e.mjs
