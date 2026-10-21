@@ -1111,3 +1111,4 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
      once a week by itself. Until then: Friday pull by Claude, or skip (own daily recording covers most).
   3. GitHub Actions tests.yml: all offline tests (back-tester, reversal, paper-trader e2e, history-export, feed: tick exits, offline,
      recorder, e2e, watchdog, tick e2e) run on every push.
+  Installed on the laptop 21 Oct 19:56 (verified identical); GitHub tests.yml run: success.
