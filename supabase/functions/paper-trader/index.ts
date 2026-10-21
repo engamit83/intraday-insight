@@ -14,6 +14,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyAuth, corsHeaders, isTrustedInternalRequest } from '../_shared/auth.ts'
+import { reversalCheck, describeSigns, type MinBar } from '../_shared/reversal.ts'
 import { PAPER, manageOnCandle, entryFill, settle, quantityFor, roundTripCostPct, newTrack, trackOnCandle, trackDone, type PaperPos, type Bar, type Track } from '../_shared/paper.ts'
 import { istDayStartMs } from '../_shared/livecandles.ts'
 import { istOf, bucketOfMs } from '../_shared/v4.ts'
@@ -180,6 +181,36 @@ Deno.serve(async (req) => {
     if (nowMin >= 15 * 60 + 25 && !tr.pred.done) tr.pred.done = true
     t.details = { ...t.details, track: tr }
     await supabase.from('simulated_trades').update({ details: t.details }).eq('id', t.id)
+  }
+
+  // ---- 1c) REVERSAL WARNING (owner 21 Oct, ALERT-ONLY trial): 2+ signs on a closed 1-minute candle -> ntfy warning + record.
+  //          The trade is NOT closed; after ~2 weeks we check what happened after each warning and the owner decides.
+  for (const t of trades.filter((x) => x.status === 'OPEN')) {
+    try {
+      const { data: rows } = await supabase.from('live_candles').select('bucket_start, open, high, low, close, volume')
+        .eq('symbol', t.symbol).eq('timeframe', '1min').gte('bucket_start', dayStartIso).order('bucket_start', { ascending: true }).limit(400)
+      const closedBars: MinBar[] = ((rows ?? []) as Row[]).map((r) => ({ startIso: new Date(Date.parse(r.bucket_start)).toISOString(), open: +r.open, high: +r.high, low: +r.low, close: +r.close, volume: +r.volume || 0 }))
+        .filter((b) => Date.parse(b.startIso) + 60_000 <= nowMs) // closed minutes only
+      const rev = (t.details?.rev ?? { cursor: null, warnings: [] }) as { cursor: string | null; warnings: Record<string, unknown>[] }
+      const reasonTxt = ((t.details?.reasons ?? []) as string[]).join(' ')
+      const lv = reasonTxt.match(/beyond yesterday (?:high|low) ([0-9.]+)/)
+      const level = lv ? +lv[1] : null
+      let changed = false
+      for (let i = 0; i < closedBars.length; i++) {
+        const b = closedBars[i]
+        if (b.startIso < new Date(Date.parse(t.entry_time)).toISOString() || (rev.cursor && b.startIso <= rev.cursor)) continue
+        const r = reversalCheck(t.direction, +t.entry_price, new Date(Date.parse(t.entry_time)).toISOString(), closedBars.slice(0, i + 1), level)
+        rev.cursor = b.startIso; changed = true
+        if (!r.warn) continue
+        const w = { at: b.startIso, price: b.close, signs: r.signs, profitPct: Math.round(r.profitPct * 100) / 100, bestPct: Math.round(r.bestPct * 100) / 100 }
+        if (rev.warnings.length < 20) rev.warnings.push(w)
+        await notify(supabase, `⚠️ Reversal warning (test only, trade NOT closed): paper ${t.direction} ${t.symbol} at ₹${b.close} - ${describeSigns(r.signs)}. Now ${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(2)}% (best +${r.bestPct.toFixed(2)}%).`, { key: `rev-${t.id}`, everyMin: 15 })
+      }
+      if (changed) {
+        t.details = { ...t.details, rev }
+        await supabase.from('simulated_trades').update({ details: t.details }).eq('id', t.id)
+      }
+    } catch (e) { log.push(`reversal check failed ${t.symbol}: ${(e as Error).message}`) }
   }
 
   // ---- 2) open new paper trades from today's v4 signals ----

@@ -43,6 +43,7 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 8d. **Quality over quantity (owner, 21 Oct 09:50):** the goal is ~10 HIGH-CONVICTION picks a day that should give sure profits — picking 30–50 would mean we cannot predict properly. More picks only when the market is very good (strong trend day, many stocks moving with volume); fewer or none on flat days. Prefer stocks with high % move potential and volume (lower price is fine — % gain matters). Live max stays 10; the wider "all candidates" scoring is done OFFLINE (R&D) to learn what predicts, not to trade more.
 8f. **How many picks (owner 21 Oct, clarified):** each time we predict, choose only the BEST stocks that pass every rule — fewer or more than 10 is fine; never "pick everything" (that means weak logic). Implementation: top 3 per scan, one per stock per day, safety cap 30 per day (not a fixed 10).
 8g. **Rule v4.2 GAP HELD — ON TRIAL from 22 Oct** (owner "do it" 21 Oct 12:15): BUY only if today opened >= 0.5% above yesterday's close and the price is still above today's open (SELL mirror). Based on 4 days (14-19 Oct, 494 stocks): live picking +Rs5,765 / 23% target reached; all candidates +Rs16,286 / 29%. Review after ~10 trading days with full numbers -> owner decides keep/remove.
+8h. **When the owner asks for the rules, give the 📋 CURRENT RULES quick list immediately** (owner, 21 Oct). Update that list whenever a rule changes.
 8e. **Owner decides with ALL the data (21 Oct):** every rule decision goes to the owner with the full numbers — which days, how many stocks/trades, target-reached %, net after costs, results per day, what was left out and why, and how sure we are (sample size). No rule change without his "do it".
 8. **Working style:** Claude acts as the market expert and says openly when the owner may be wrong; owner approves every live change ("do it"); credits used wisely (prepare in GitHub, one bundled Lovable message); every task given to the owner states its purpose; speed — don't wait where waiting isn't needed.
 
@@ -51,6 +52,46 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 - *Same day (confirmation):* from ~10:30, a stock that touched the top ≥ 2 times and the bottom ≥ 2 times, flat VWAP, band ≥ ~0.8% (to beat costs) = live range. BUY near the bottom on a rejection candle / SELL near the top, exits just inside the other edge, repeat (max 2 round trips).
 - *Break of the range:* a 5-min close outside the band by more than a small buffer with volume ≥ 2× usual → exit range trades immediately and, if the break is in the market's direction, switch to the breakout setup.
 - Test first on the 5-min history (13 days now, growing weekly + own recordings).
+
+---
+
+## 📋 CURRENT RULES — quick list (give this to the owner IMMEDIATELY whenever he asks for the rules; keep it up to date)
+*Rule set v4.2, live from 22 Oct 2026 (paper trading only, no real money). "ON TRIAL" = being tested, owner reviews with full numbers.*
+
+**A. Which stocks are scanned**
+1. All ~494 Nifty 500 stocks (from 22 Oct; before that 49 big stocks). Scanned in 5 groups, each stock checked every 5 minutes on 5-minute candles.
+2. Indices (Nifty, Bank Nifty, sector indices) are recorded on the laptop for research.
+
+**B. Prediction rules — a stock is picked only if ALL pass**
+1. Time: new picks only 10:00–14:00.
+2. Market direction: BUY only when the market (average stock) is up today; SELL only when it is down.
+3. Relative strength: BUY only if the stock is up MORE than the market; SELL only if down more.
+4. Key level: BUY only above yesterday's high; SELL only below yesterday's low.
+5. Volume (any one): today's volume so far ≥ 1.2× usual for this time, OR the last candle ≥ 2× usual, OR volume rising 3 candles in a row.
+6. Trend votes: trend + MACD + VWAP agree (≥ 2 for, none against); not choppy; no BUY when RSI > 75 / SELL when RSI < 25; score ≥ 60.
+7. **GAP HELD — ON TRIAL (from 22 Oct):** today opened ≥ 0.5% beyond yesterday's close in the trade direction AND the price is still beyond today's open.
+8. Today's data must start by 09:20 (else no picks that day).
+
+**C. How many**
+1. Each scan: only the best 3 that pass every rule (ranked by score). None pass → no pick. Best stocks only — fewer or more than 10 a day is fine, never "everything".
+2. One pick per stock per day; one open trade per sector at a time (a waiting signal also holds its sector).
+3. Safety cap 30 picks per day.
+
+**D. Paper trade (automatic, no real money)**
+1. Entry: first 1-minute price after the signal (+ slippage); full costs counted.
+2. Stop: the rules' normal stop = 2 × ATR (min 0.25%) beyond entry. (Buy-price stop REMOVED 21 Oct.)
+3. Target: 2 × the stop distance.
+4. At +1R: stop to entry + costs (no loss); at +1.5R: lock +0.75R; trailing stop (1.5 × ATR) only after +1R.
+5. Everything closed at 15:15 — nothing overnight.
+6. Paper only: no daily loss stop, up to 30 open trades (research phase, 21 Oct).
+7. **REVERSAL WARNING — ON TRIAL, ALERT ONLY (from 22 Oct):** on every closed 1-minute candle of an open trade, if 2+ signs appear — big candle against us (≥ 0.4%) on ≥ 2× volume / price back through VWAP after being ≥ +0.5% / gave back half the profit after ≥ +0.5% / lost the breakout level — send "⚠️ Reversal warning" on ntfy and record it. The trade is NOT closed; after ~2 weeks we check what happened after each warning.
+
+**E. How we judge (the owner's decision rule)**
+1. A prediction is RIGHT if the price reached the target before 15:15 and before the normal stop.
+2. After ~30 decided trades: ≥ 50% right = strong; < 40% = improve the selection rules; 40–50% = both.
+3. Every rule change goes to the owner with ALL the data (days, trades, target-reached %, net after costs, per day, what was left out) → only his "do it" makes it live.
+
+**F. Alerts on the phone (ntfy)**: trade opened / closed, reversal warning (trial), day summary, Sharekhan not connected (from 08:50), price feed off > 3 min, Claude's check-ins.
 
 ---
 
