@@ -46,9 +46,10 @@ if (!GATEWAY_URL || !FEED_TOKEN || FEED_TOKEN.includes('paste')) {
 }
 
 const FLUSH_EVERY_MS = 5_000
-const STATUS_EVERY_MS = 30_000
+const STATUS_EVERY_MS = Number(process.env.STATUS_EVERY_MS || 30_000)
 const PING_EVERY_MS = 30_000
 const SILENCE_WARN_MS = 60_000
+const NO_PRICE_RECONNECT_MS = Number(process.env.NO_PRICE_RECONNECT_MS || 120_000) // 21 Oct watchdog: connected but no prices for 2 min in market hours -> reconnect
 const RAW_LOG_LIMIT = 400
 const STOP_AT_MINUTE = 15 * 60 + 35 // 15:35 IST
 
@@ -83,7 +84,17 @@ let rawLogged = 0
 let accessTokenInUse = ''
 
 const istClock = () => new Date(Date.now() + 330 * 60_000).toISOString().slice(11, 19)
-const say = (msg) => console.log(`[${istClock()}] ${msg}`)
+// 21 Oct: every message also goes to logs\feed-YYYY-MM-DD.log so problems can be read remotely (no tokens: scrub()).
+const logDir = path.join(here, 'logs')
+function say(msg) {
+  const line = `[${istClock()}] ${msg}`
+  console.log(line)
+  try {
+    fs.mkdirSync(logDir, { recursive: true })
+    const day = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10)
+    fs.appendFileSync(path.join(logDir, `feed-${day}.log`), scrub(line) + '\n')
+  } catch { /* logging must never stop the feed */ }
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 function scrub(text) {
   let s = String(text)
@@ -145,7 +156,7 @@ async function flush() {
 }
 
 // ---------- one connection session ----------
-const stats = { messages: 0, unreadable: 0, lastMessageAt: 0, symbolLastTick: new Map() }
+const stats = { messages: 0, unreadable: 0, lastMessageAt: 0, lastPriceAt: 0, sessionStartAt: 0, symbolLastTick: new Map() }
 
 async function runSession() {
   say('Getting today\'s Sharekhan login from your database...')
@@ -172,6 +183,7 @@ async function runSession() {
     const stopTimers = () => { timers.forEach(clearInterval); timers = [] }
 
     ws.on('open', () => {
+      stats.sessionStartAt = Date.now()
       opened = true
       stats.lastMessageAt = Date.now()
       say('Connected to Sharekhan live feed.')
@@ -218,6 +230,14 @@ async function runSession() {
         if (Date.now() - stats.lastMessageAt > SILENCE_WARN_MS && istMinuteOfDay(Date.now()) >= 9 * 60 + 15) {
           say('! Nothing received from Sharekhan for over a minute.')
         }
+        // watchdog (21 Oct): on 20 Oct the connection stayed open (heartbeats only) but sent no prices all day
+        const m = istMinuteOfDay(Date.now())
+        const since = Date.now() - Math.max(stats.lastPriceAt, stats.sessionStartAt)
+        if ((TEST_IGNORE_MARKET_HOURS || (m >= 9 * 60 + 16 && m < 15 * 60 + 30)) && since > NO_PRICE_RECONNECT_MS) {
+          say(`! No prices for ${Math.round(since / 1000)}s while the market is open - reconnecting.`)
+          try { ws.close() } catch { /* ignore */ }
+          return
+        }
         if (istMinuteOfDay(Date.now()) >= STOP_AT_MINUTE) ws.close()
       }, STATUS_EVERY_MS))
     })
@@ -243,6 +263,7 @@ async function runSession() {
         builder.addTick({ symbol, price: t.price, volume: t.volume, cumulativeVolume: t.cumulativeVolume, ts: now })
         if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) recorder.onTick(symbol, t, now)
         stats.symbolLastTick.set(symbol, now)
+        stats.lastPriceAt = now
       }
     })
 
