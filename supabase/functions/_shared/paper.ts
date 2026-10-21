@@ -12,7 +12,7 @@ export const PAPER = {
   trailAfterR: 1,
   // Owner's exit rule (16 Oct, on trial): the stop sits at the BUY PRICE from the start (no planned price loss).
   // 'normal' = stop at the signal's stop (2 x ATR) as back-tested. The normal-stop result is always recorded as a shadow.
-  exitMode: 'buyPrice' as 'buyPrice' | 'normal',           // v4.1 (16 Oct): the trailing stop starts only after +1R (an earlier trail choked trades)
+  exitMode: 'normal' as 'buyPrice' | 'normal',           // v4.1 (16 Oct): the trailing stop starts only after +1R (an earlier trail choked trades) // 21 Oct: owner removed the buy-price stop; judge by target reached
   squareOff: '15:15', maxOpen: 10, dailyLossLimitRs: 2000,
 }
 
