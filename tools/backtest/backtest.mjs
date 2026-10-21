@@ -82,6 +82,12 @@ export const DEFAULTS = {
   maxVwapAtr: null,        // switch: skip if the price is more than k x ATR away from VWAP (stretched)
   rankBy: null,            // 'inPlay': rank by today's volume x usual move x strength vs market (stocks in play)
   targetPct: null,         // switch: fixed target of X% (quick move) instead of rewardRisk x stop
+  stopPct: null,           // switch: fixed stop of X% instead of the ATR stop
+  lockAtPct: null,         // switch: once the trade gained X%, move the stop to entry + lockToPct% (catch 'went up then came back')
+  lockToPct: 0.25,
+  minGapPct: null,         // switch: today's gap must be >= X% in the trade direction AND still held (price beyond the day open)
+  sectorRS: false,         // switch: stock must be stronger (BUY) / weaker (SELL) than its sector average today
+  trendDayPct: null,       // switch: market (average stock) must be >= X% from the open in the trade direction AND further than 30 min ago
   stopAtEntryBufferPct: 0, // with stopAtEntry: allow this % below/above the entry (0 = exactly the buy price)             // 'v4' (momentum + yesterday's level), 'vwapPullback' (trend stock dips to VWAP and bounces), 'orb' (opening-range breakout)
   stopAtrMult: 1.5,        // live: STOP_ATR_MULT
   minStopPct: 0.25,        // live: MIN_STOP_PCT
@@ -146,7 +152,7 @@ export function prepare(data) {
 }
 
 function levelsFor(direction, close, atr, o) {
-  const stopDist = Math.max(atr * o.stopAtrMult, close * (o.minStopPct / 100))
+  const stopDist = o.stopPct ? close * (o.stopPct / 100) : Math.max(atr * o.stopAtrMult, close * (o.minStopPct / 100))
   const tgt = o.targetPct ? close * (o.targetPct / 100) : stopDist * o.rewardRisk
   return direction === 'BUY'
     ? { stop: close - stopDist, target: close + tgt }
@@ -208,6 +214,7 @@ export function runBacktest(data, options = {}) {
   }
 
   for (const day of days) {
+    const breadthHist = new Map()
     const open = new Map()       // symbol -> position
     const cooldownUntil = new Map()
     const tradedToday = new Set()
@@ -294,6 +301,9 @@ export function runBacktest(data, options = {}) {
             if (r >= 1.5) { p.stop = better(p.stop, B ? p.entry + 0.75 * p.stopDist : p.entry - 0.75 * p.stopDist); p.locked = true }
             else if (r >= 1) { p.stop = better(p.stop, B ? p.entry + noLoss : p.entry - noLoss); p.locked = true }
           }
+          if (o.lockAtPct !== null && (p.bestExc / p.entry) * 100 >= o.lockAtPct) {
+            p.stop = better(p.stop, B ? p.entry * (1 + o.lockToPct / 100) : p.entry * (1 - o.lockToPct / 100)); p.locked = true
+          }
           if (o.trailAtrMult && p.atr && (o.trailAfterR === null || p.bestExc >= o.trailAfterR * p.stopDist)) {
             const trail = B ? p.bestClose - o.trailAtrMult * p.atr : p.bestClose + o.trailAtrMult * p.atr
             const before = p.stop
@@ -326,13 +336,24 @@ export function runBacktest(data, options = {}) {
 
       // market breadth: average % change from the day's open, over stocks with this candle
       let breadth = 0, nb = 0
-      if (o.marketFilter || o.relStrength || o.minBreadthAbs !== null) {
+      if (o.marketFilter || o.relStrength || o.minBreadthAbs !== null || o.trendDayPct !== null) {
         for (const s of Object.keys(ctx)) {
           const j = ctx[s].byBucket.get(bucket)
           if (j === undefined) continue
           breadth += (ctx[s].list[j].close / ctx[s].dayOpen - 1) * 100; nb++
         }
         breadth = nb ? breadth / nb : 0
+      }
+      breadthHist.set(t, breadth)
+      const breadth30 = breadthHist.get(t - 30)
+      let secAvg = null
+      if (o.sectorRS) {
+        const acc = {}
+        for (const s of Object.keys(ctx)) {
+          const j = ctx[s].byBucket.get(bucket); if (j === undefined) continue
+          const k = SECTOR[s] ?? s; (acc[k] ??= [0, 0]); acc[k][0] += (ctx[s].list[j].close / ctx[s].dayOpen - 1) * 100; acc[k][1]++
+        }
+        secAvg = Object.fromEntries(Object.entries(acc).map(([k, [a, n]]) => [k, a / n]))
       }
 
       const timeMult = getTimeMultiplier(istDate(day, nextBucket))
@@ -390,6 +411,18 @@ export function runBacktest(data, options = {}) {
           if (!((nextBucket >= ctx[s].orEnd && beyondOR) || (ctx[s].prevDay && beyondPrev))) continue
         } else {
           if (!beyondOR || !beyondPrev) continue
+        }
+        if (o.trendDayPct !== null) {
+          if (B ? !(breadth >= o.trendDayPct && breadth30 !== undefined && breadth > breadth30) : !(breadth <= -o.trendDayPct && breadth30 !== undefined && breadth < breadth30)) continue
+        }
+        if (o.minGapPct !== null) {
+          if (!ctx[s].prevClose) continue
+          const gap = (ctx[s].dayOpen / ctx[s].prevClose - 1) * 100
+          if (B ? !(gap >= o.minGapPct && ind.lastClose > ctx[s].dayOpen) : !(gap <= -o.minGapPct && ind.lastClose < ctx[s].dayOpen)) continue
+        }
+        if (o.sectorRS && secAvg) {
+          const chg = (ind.lastClose / ctx[s].dayOpen - 1) * 100, sa = secAvg[SECTOR[s] ?? s]
+          if (sa !== undefined && (SECTOR[s] ?? s) !== s && (B ? chg <= sa : chg >= sa)) continue
         }
         if (o.maxChaseAtr !== null && ctx[s].prevDay) {
           const beyond = B ? ind.lastClose - ctx[s].prevDay.high : ctx[s].prevDay.low - ind.lastClose

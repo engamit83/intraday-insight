@@ -1007,3 +1007,13 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   615 hit neither +1%/-1% (best move avg +0.58% our way, but only +0.05% at 15:15). Exit rules: hold -0.114%/trade; lock +0.25% after
   +0.5% -0.112% (winners 49%->64%); trail 0.3% -0.113%; target 0.6% -0.126%; time exits worse. => exits only reshape wins/losses;
   with no ENTRY edge every exit loses ~costs. Early exit is worth adding only on top of a selection that predicts (>57% at 1%).
+- 21 Oct ~12:30 owner "do it" (build + test the 5 prediction improvements; research only). New back-tester switches: trendDayPct,
+  minGapPct (gap our way, held), sectorRS, stopPct, lockAtPct/lockToPct (+ maxChaseAtr, rankBy, targetPct from earlier).
+  run-r21b.mjs, 494 stocks, judged 14/15/16/19 Oct (volDays 2). LIVE picking (40 picks) | EVERY candidate:
+  Q0 v4.1: 18% reached, -Rs4,602 | 26% of 735, -Rs39,861
+  Q1 trend day >=0.3%: 20%, -3,761 (traded only 14+19 Oct) | 26%, -32,061
+  Q2 gap >=0.5% our way & held: 23%, +5,765, winners 60% | 29% of 132, +16,286, winners 63%   <- only rule positive in both views
+  Q3 sector strength: no change | Q4 pullback entry: worse (20%/-70k all)
+  Q5 1% target/0.65% stop/lock +0.25% after +0.5%: 43%, -1,673 | 31%, -58,733 (more targets reached, still loses)
+  Q10 Q2+Q5: 43%, -1,224 | 39%, -4,561 ; Q11 gap>=1%: +5,540 / +11,709 (28/49 picks) ; Q12 Q2+no chase: +4,461 / +5,492 (12/14 picks)
+  => hint: GAP HELD is the strongest feature so far; profits come from winners running, not from many small targets. Tiny samples.
