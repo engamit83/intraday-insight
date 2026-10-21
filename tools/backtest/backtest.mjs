@@ -85,6 +85,7 @@ export const DEFAULTS = {
   stopPct: null,           // switch: fixed stop of X% instead of the ATR stop
   lockAtPct: null,         // switch: once the trade gained X%, move the stop to entry + lockToPct% (catch 'went up then came back')
   lockToPct: 0.25,
+  lockSteps: null,         // switch: list of [gainPct, lockPct] steps, e.g. [[0.5, 0.15], [0.75, 0.25], [1, 0.5]] (profit-lock ladder)
   minGapPct: null,         // switch: today's gap must be >= X% in the trade direction AND still held (price beyond the day open)
   sectorRS: false,         // switch: stock must be stronger (BUY) / weaker (SELL) than its sector average today
   trendDayPct: null,       // switch: market (average stock) must be >= X% from the open in the trade direction AND further than 30 min ago
@@ -300,6 +301,10 @@ export function runBacktest(data, options = {}) {
             const noLoss = p.entry * (costPct / 100 + 2 * o.slippagePct / 100)
             if (r >= 1.5) { p.stop = better(p.stop, B ? p.entry + 0.75 * p.stopDist : p.entry - 0.75 * p.stopDist); p.locked = true }
             else if (r >= 1) { p.stop = better(p.stop, B ? p.entry + noLoss : p.entry - noLoss); p.locked = true }
+          }
+          if (o.lockSteps) {
+            const g = (p.bestExc / p.entry) * 100
+            for (const [at, to] of o.lockSteps) if (g >= at) { p.stop = better(p.stop, B ? p.entry * (1 + to / 100) : p.entry * (1 - to / 100)); p.locked = true }
           }
           if (o.lockAtPct !== null && (p.bestExc / p.entry) * 100 >= o.lockAtPct) {
             p.stop = better(p.stop, B ? p.entry * (1 + o.lockToPct / 100) : p.entry * (1 - o.lockToPct / 100)); p.locked = true

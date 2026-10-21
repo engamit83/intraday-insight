@@ -47,6 +47,11 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 8e. **Owner decides with ALL the data (21 Oct):** every rule decision goes to the owner with the full numbers — which days, how many stocks/trades, target-reached %, net after costs, results per day, what was left out and why, and how sure we are (sample size). No rule change without his "do it".
 8. **Working style:** Claude acts as the market expert and says openly when the owner may be wrong; owner approves every live change ("do it"); credits used wisely (prepare in GitHub, one bundled Lovable message); every task given to the owner states its purpose; speed — don't wait where waiting isn't needed.
 
+9. **TWO-PHASE STRATEGY — core intent (owner + Claude, 21 Oct 13:12).** We improve the app in two SEPARATE parts, each with its own scorecard:
+   - **ENTRY (priority, ~70% of effort):** pick trades where the price really moves our way. Measured with ONE fixed exit: target reached %, best move our way vs worst move against (before the stop). Strong entry = context (market/sector with us) + strength (in play: gap held, volume, stronger than market) + location (near the level, no chasing) + confirmation (buyers/sellers) + timing.
+   - **EXIT (protect what we earned):** keep most of the profit, keep losses small. Measured on the SAME fixed entries: % of the best move kept, average loss, how often a winner turned into a loser. Plan: (1) starting stop just beyond the level that proves us wrong, position SIZED so a stop-out loses only a small fixed Rs amount; (2) no-loss step at ~+0.5%; (3) profit-lock ladder; (4) trailing on structure; (5) reversal exit (alert trial from 22 Oct); (6) market-turn exit; (7) book half at +1R; (8) time exit (re-test).
+   - Truths agreed: exits cannot create profit from a weak entry; "almost no loss" comes from SIZING + no-loss step, not from a stop at the buy price (19 Oct); small controlled losses are normal; keep rules simple; every rule must work on NEW days; owner approves with full data.
+
 **Range trading — how we find and use it (owner's question 16 Oct, detail in C7):**
 - *Before the day (multi-day):* each morning list stocks that ranged on recent days (price crossed VWAP many times, low efficiency, day's high-low mostly within a band, no news) — candidates, not trades.
 - *Same day (confirmation):* from ~10:30, a stock that touched the top ≥ 2 times and the bottom ≥ 2 times, flat VWAP, band ≥ ~0.8% (to beat costs) = live range. BUY near the bottom on a rejection candle / SELL near the top, exits just inside the other edge, repeat (max 2 round trips).
@@ -85,6 +90,8 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 5. Everything closed at 15:15 — nothing overnight.
 6. Paper only: no daily loss stop, up to 30 open trades (research phase, 21 Oct).
 7. **REVERSAL WARNING — ON TRIAL, ALERT ONLY (from 22 Oct):** on every closed 1-minute candle of an open trade, if 2+ signs appear — big candle against us (≥ 0.4%) on ≥ 2× volume / price back through VWAP after being ≥ +0.5% / gave back half the profit after ≥ +0.5% / lost the breakout level — send "⚠️ Reversal warning" on ntfy and record it. The trade is NOT closed; after ~2 weeks we check what happened after each warning.
+
+**E0. Two phases (intent 9):** entry rules and exit rules are built and judged separately (entry: target reached %, best vs worst move; exit: % of profit kept, average loss, winners turned losers).
 
 **E. How we judge (the owner's decision rule)**
 1. A prediction is RIGHT if the price reached the target before 15:15 and before the normal stop.
