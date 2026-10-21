@@ -122,6 +122,11 @@ Status: T1 (record ticks) installed 21 Oct 15:40; T2 step 1 DONE 21 Oct evening:
 
 ---
 
+## 📦 WEEKLY HISTORY PULL — built 21 Oct night (owner "do it now")
+- Every **Friday after the market closes**, the laptop feed pulls Sharekhan's last ~6 days of 1-min and 5-min candles for all stocks through the app (feed-gateway action `history`; the Sharekhan key stays in the app). Saved on the laptop as `data\history\hist-1minute-DATE.json.gz` and `hist-5minute-DATE.json.gz`. Fills gaps in our own recording (like 20 Oct). Force it any day with PULL_HISTORY=1.
+- Needs Sharekhan connected that day; if not, it stops and logs "Sharekhan is not connected". Pulled once per day only. Code: tools/live-feed/pull-history.mjs (+ test, 4/4). Laptop files installed 21 Oct; backup feed.mjs.bak-hist. Lovable redeployed feed-gateway (1 credit, 21 Oct ~20:15).
+- Claude's weekly job: copy the Friday files into the workspace and re-run the scorecards (no browser downloads needed any more).
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
