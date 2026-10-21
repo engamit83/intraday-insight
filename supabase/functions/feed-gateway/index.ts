@@ -14,13 +14,15 @@
 //   { action: 'open_trades' }           -> { trades: [today's OPEN paper trades with their current stop/target], ntfyTopic }
 //   { action: 'tick_stop', moves: [{ id, stop, atBreakeven, locked, bestExc }] } -> stop raised on the tick (never loosened)
 //   { action: 'tick_close', id, reason, price, ts } -> closes the trade at that tick price (only if still OPEN)
+//   { action: 'history', symbols: [<=10], interval: '1minute'|'5minute' } -> Sharekhan's past candles (weekly pull by the laptop, 21 Oct);
+//     the Sharekhan API key stays here on the server, only candles are returned
 //
 // The Sharekhan token is only ever returned to a caller holding the feed token,
 // over HTTPS, and is never written to logs.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/auth.ts'
-import { loadStoredSharekhanToken, resolveScripCodes } from '../_shared/sharekhan.ts'
+import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay } from '../_shared/sharekhan.ts'
 import { settle, type PaperPos } from '../_shared/paper.ts'
 import { FULL_UNIVERSE as STARTER_UNIVERSE } from '../_shared/universe.ts' // 21 Oct: all ~494 stocks
 
@@ -175,6 +177,27 @@ Deno.serve(async (req) => {
       details: { ...(t.details ?? {}), exit_source: 'tick' },
     }).eq('id', body.id).eq('status', 'OPEN').select('id')
     return json({ ok: true, closed: (upd ?? []).length === 1, pnlRs: Math.round(st.pnlRs), netPct: Math.round(st.netPct * 1000) / 1000 })
+  }
+
+  // ---- weekly history pull by the laptop (owner 21 Oct): Sharekhan's past 1/5-minute candles, 10 stocks per call ----
+  if (body.action === 'history') {
+    const interval = ['1minute', '5minute'].includes(body.interval) ? body.interval : '5minute'
+    const symbols = [...new Set((Array.isArray(body.symbols) ? body.symbols : []).filter((x: unknown) => typeof x === 'string' && ALLOWED_SYMBOLS.has(x as string)))].slice(0, 10) as string[]
+    if (!symbols.length) return json({ error: 'No valid symbols' }, 400)
+    const apiKey = Deno.env.get('SHAREKHAN_API_KEY')
+    if (!apiKey) return json({ error: 'SHAREKHAN_API_KEY is not configured' }, 500)
+    const token = await loadStoredSharekhanToken(supabase)
+    if (!token) return json({ error: 'NO_VALID_SHAREKHAN_TOKEN' }, 409)
+    const { codes } = await resolveScripCodes(supabase, symbols)
+    const results: Record<string, unknown> = {}
+    for (const sym of symbols) {
+      if (!codes[sym]) continue
+      const r = await fetchCandles(codes[sym], apiKey, token.accessToken, interval)
+      if (r.candles) results[sym] = { candles: r.candles.map((c) => [c.timestamp, c.open, c.high, c.low, c.close, c.volume]) }
+      else { results[sym] = { error: r.error, status: r.status }; if (r.status === 401 || r.status === 403 || r.status === 429) break }
+      await delay(400)
+    }
+    return json({ interval, fetchedAt: new Date().toISOString(), results })
   }
 
   return json({ error: 'Unknown action' }, 400)

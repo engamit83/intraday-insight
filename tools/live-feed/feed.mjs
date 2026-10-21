@@ -17,6 +17,7 @@ import { CandleBuilder, istMinuteOfDay, inMarketHours } from './candles.mjs'
 import { extractTicks } from './parse.mjs'
 import { TickExitEngine, TICK_RULES } from './tick-exits.mjs'
 import { dailyReport } from './daily-report.mjs'
+import { pullHistory } from './pull-history.mjs'
 import { DayRecorder } from './recorder.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -370,6 +371,13 @@ async function main() {
           if (text) { say(text); if (!ntfyTopic) await refreshOpenTrades(); await ntfy(text) }
         }
       } catch (e) { say(`! daily report failed: ${e.message}`) }
+      // weekly history pull (Fridays after the market, or PULL_HISTORY=1): fills gaps in our own recording
+      try {
+        const nowIst = new Date(Date.now() + 330 * 60_000)
+        if ((nowIst.getUTCDay() === 5 || process.env.PULL_HISTORY === '1') && uploadSymbols?.size) {
+          await pullHistory(gateway, [...uploadSymbols], path.join(here, 'data'), nowIst.toISOString().slice(0, 10), say)
+        }
+      } catch (e) { say(`! history pull failed: ${scrub(e.message)}`) }
       say('Market is closed. Final candles saved. Bye!')
       return
     }
