@@ -13,7 +13,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyAuth, corsHeaders, isValidSymbol, sanitizeSymbol } from '../_shared/auth.ts'
 import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay } from '../_shared/sharekhan.ts'
-import { STARTER_UNIVERSE } from '../_shared/universe.ts'
+import { FULL_UNIVERSE as STARTER_UNIVERSE } from '../_shared/universe.ts' // 21 Oct: all ~494 stocks
 
 const MAX_SYMBOLS = 10
 const CALL_DELAY_MS = 400

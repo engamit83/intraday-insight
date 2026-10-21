@@ -17,7 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/auth.ts'
 import { loadStoredSharekhanToken, resolveScripCodes } from '../_shared/sharekhan.ts'
-import { STARTER_UNIVERSE } from '../_shared/universe.ts'
+import { FULL_UNIVERSE as STARTER_UNIVERSE } from '../_shared/universe.ts' // 21 Oct: all ~494 stocks
 
 const MAX_ROWS = 600
 const TIMEFRAMES = new Set(['1min', '5min'])

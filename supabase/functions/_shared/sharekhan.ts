@@ -65,14 +65,16 @@ export async function resolveScripCodes(
   const wanted = symbols.map((s) => s.toUpperCase())
   const candidates = [...wanted, ...wanted.map((s) => `${s}-EQ`)]
 
-  const { data } = await supabase
-    .from('scripcodes')
-    .select('symbol, scrip_code')
-    .eq('exchange', NSE_CASH)
-    .in('symbol', candidates)
-
+  // 21 Oct: ~500 stocks -> ask in chunks (keeps the request URL short and each answer under the 1,000-row cap)
   const bySymbol: Record<string, number> = {}
-  for (const row of data ?? []) bySymbol[String(row.symbol).toUpperCase()] = row.scrip_code
+  for (let i = 0; i < candidates.length; i += 150) {
+    const { data } = await supabase
+      .from('scripcodes')
+      .select('symbol, scrip_code')
+      .eq('exchange', NSE_CASH)
+      .in('symbol', candidates.slice(i, i + 150))
+    for (const row of data ?? []) bySymbol[String(row.symbol).toUpperCase()] = row.scrip_code
+  }
 
   const codes: Record<string, number> = {}
   const unresolved: string[] = []

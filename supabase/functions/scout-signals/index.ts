@@ -42,7 +42,7 @@ import {
   getTimeMultiplier, getMarketMultiplier, isMarketOpenIST,
 } from '../_shared/scoring.ts'
 import { loadStoredSharekhanToken, resolveScripCodes, fetchCandles, delay, DEFAULT_INTERVAL } from '../_shared/sharekhan.ts'
-import { STARTER_UNIVERSE } from '../_shared/universe.ts'
+import { STARTER_UNIVERSE, FULL_UNIVERSE } from '../_shared/universe.ts'
 import { liveRowsToCandles, mergeHistoryAndLive, historyBeforeToday, istDayStartMs, istDateKey, type LiveRow } from '../_shared/livecandles.ts'
 import { prepareStock, evaluateV4, pickV4, V4 } from '../_shared/v4.ts'
 
@@ -54,7 +54,8 @@ const SIGNAL_TTL_MINUTES = 30
 const CALL_DELAY_MS = 400          // ~2 requests/second, deliberately conservative
 const MAX_RUNTIME_MS = 110_000     // stop gracefully before the platform limit
 const STALE_MINUTES = 15           // newest candle older than this (or not from today) => skip
-const MAX_BATCH_SIZE_LIVE = 60     // live path is cheap (history is cached), so a whole-universe scan fits
+const MAX_BATCH_SIZE_LIVE = 120    // 21 Oct: ~494 stocks scanned in 5 rotating batches (each stock every 5 minutes)
+const LIVE_BATCHES = 5
 const MAX_LIVE_ROWS_PER_SYMBOL = 200 // one session has ~75 five-minute candles
 
 // Candidate interval labels for probe mode. "daily" is the one label seen in
@@ -112,7 +113,7 @@ async function getHistory(code: number, apiKey: string, accessToken: string, int
   if (past.length === 0) {
     return { candles: null, status: r.status, error: 'no earlier-session history in the REST response', sample: r.sample, fromCache: false }
   }
-  if (historyCache.size > 400) historyCache.clear()
+  if (historyCache.size > 1500) historyCache.clear()
   historyCache.set(key, past)
   return { candles: past, status: r.status, error: null, fromCache: false }
 }
@@ -179,12 +180,13 @@ Deno.serve(async (req) => {
     symbols = [...new Set<string>((body.symbols as unknown[]).map((s) => String(s)).filter(isValidSymbol).map(sanitizeSymbol))].slice(0, maxBatch)
     batchInfo = { mode: 'explicit' }
   } else {
-    const defaultSize = source === 'live' ? STARTER_UNIVERSE.length : DEFAULT_BATCH_SIZE
+    const universe = source === 'live' ? FULL_UNIVERSE : STARTER_UNIVERSE
+    const defaultSize = source === 'live' ? Math.ceil(universe.length / LIVE_BATCHES) : DEFAULT_BATCH_SIZE
     const size = Math.min(maxBatch, Math.max(1, Number.isFinite(body.batchSize) ? Number(body.batchSize) : defaultSize))
-    const numBatches = Math.ceil(STARTER_UNIVERSE.length / size)
+    const numBatches = Math.ceil(universe.length / size)
     const idx = Number.isFinite(body.batchIndex) ? Number(body.batchIndex) % numBatches : Math.floor(Date.now() / 60000) % numBatches
-    symbols = STARTER_UNIVERSE.slice(idx * size, idx * size + size)
-    batchInfo = { mode: 'rotating', batchIndex: idx, numBatches, batchSize: size, universeSize: STARTER_UNIVERSE.length }
+    symbols = universe.slice(idx * size, idx * size + size)
+    batchInfo = { mode: 'rotating', batchIndex: idx, numBatches, batchSize: size, universeSize: universe.length }
   }
   if (symbols.length === 0) return json({ error: 'No valid symbols to scan' }, 400)
 
@@ -239,6 +241,8 @@ Deno.serve(async (req) => {
 
   // ---- scan ----
   const results: SymbolResult[] = []
+  const stockRows: Record<string, unknown>[] = []
+  const cacheRows: Record<string, unknown>[] = []
   let abortReason: string | null = null
 
   for (const symbol of symbols) {
@@ -336,16 +340,20 @@ Deno.serve(async (req) => {
     })
 
     if (!dryRun && ind.lastClose) {
-      await supabase.from('stocks').upsert({ symbol, last_price: ind.lastClose, updated_at: new Date().toISOString() }, { onConflict: 'symbol' })
-      await supabase.from('indicator_cache').upsert({
+      // 21 Oct: collected and written in two bulk calls after the scan (~100 stocks per run)
+      stockRows.push({ symbol, last_price: ind.lastClose, updated_at: new Date().toISOString() })
+      cacheRows.push({
         symbol, timeframe: '5min', vwap: ind.vwap, rsi: ind.rsi, macd: ind.macd, macd_signal: ind.macdSignal,
         macd_histogram: ind.macdHistogram, atr: ind.atr, relative_volume: ind.relativeVolume,
         trend_strength: ind.trendStrength, pattern_detected: ind.patternDetected,
         raw_data: candles.slice(0, 40), computed_at: new Date().toISOString(),
-      }, { onConflict: 'symbol,timeframe' })
+      })
     }
     await pause()
   }
+
+  if (stockRows.length) await supabase.from('stocks').upsert(stockRows, { onConflict: 'symbol' })
+  if (cacheRows.length) await supabase.from('indicator_cache').upsert(cacheRows, { onConflict: 'symbol,timeframe' })
 
   // ---- rule set v4: same rules as the back-tester (tools/backtest), see PROGRESS.md RULEBOOK A ----
   let v4Summary: Record<string, unknown> | null = null
