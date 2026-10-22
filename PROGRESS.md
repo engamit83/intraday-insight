@@ -1,5 +1,9 @@
 # Intraday Insight — Progress Tracker
 
+> ## ⭐ RULE 0 — BASE INTENT (owner, 22 Oct 2026): MAXIMUM PROFIT WITH ALMOST NO LOSS.
+> Keep it in mind ALL the time, in every task, review and proposal. Claude = the market expert: analyse every day with ALL our data,
+> self-improve towards this goal without being reminded, test every idea on data (must beat costs), owner approves live changes.
+
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
 **Last updated:** 2026-10-16
