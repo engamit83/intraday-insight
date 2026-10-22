@@ -1067,6 +1067,13 @@ Live from Monday 19 Oct: rule set **v4.1** (one stock per sector, late-start gua
 on all recorded days, propose (never apply) changes with numbers. Running prediction score vs the 50%/40% rule.
 **Decision point:** ~30 decided trades (around early Nov) -> apply the owner's 50/40 rule, propose changes for approval.
 
+### 📈 IMPROVEMENT TRACKER (owner 22 Oct 21:22: "give me the report every day and how our app improved - it should improve exponentially")
+Every daily review MUST add a row here AND report it to the owner: the app's numbers today vs before, so the improvement curve is visible.
+Columns: Day | Strategy version | Trades | Winners % | Avg loss R | Biggest loss Rs | Losing day? | Net Rs (after costs) | Cumulative Rs | Research done today (variants tested, best robust finding) | Improvement proposed / applied
+| Day | Version | Trades | Win% | Avg loss | Biggest loss | Losing day | Net | Cumulative | Research today | Improvement |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 22 Oct (old v4.2, live) | v4.2 | 30 | 10% target | -0.9R | -Rs1,783 | yes | -Rs16,475 | - | 62,208 SIP variants started; textbook rules rejected (costs) | stocks in play built, live from 23 Oct |
+
 ### REVIEW LOG
 | Day | Nifty mood | Picks | Target reached | Net (owner rule) | Net (normal stop) | Misses: market/rule/system | Notes |
 |---|---|---|---|---|---|---|---|
