@@ -151,6 +151,13 @@ Code: tools/backtest/v5/ (load.py builds 1-min data 12-22 Oct; sim.py = textbook
    Caveats: 7 days / 47 trades = promising, not proof; entries 09:20-09:45 need tick-level speed; order-book filter not yet tested (only 3 days of book data).
 **Claude's recommendation:** run STOCKS IN PLAY as the new paper strategy alongside (not mixed with) v4.2 for 3-4 weeks, then decide on numbers. Owner decides.
 
+## 🟢 STOCKS IN PLAY — LIVE ON PAPER from Fri 23 Oct (built 22 Oct night, owner "do it from tomorrow")
+- Laptop only (no app change, no Lovable credit): tools/live-feed/sip-engine.mjs wired into feed.mjs (errors caught - can never stop the price feed; SIP=0 in .env switches it off).
+- 09:20 picks (ntfy "🟢 STOCKS IN PLAY ... watching N"), entries on ticks until 10:15 (ntfy "🟢 NEW BUY/SELL ..."), exits stop / trailing / 15:15 (ntfy "✅/🔻 NEW ... closed"), day summary on ntfy at the close.
+- Files on the laptop: data\sip-baseline.json (relative-volume + turnover baseline, last 10 days, updated every evening), data\sip-state-DATE.json (restart-safe), data\sip-trades-DATE.csv.
+- Tested: 17 offline checks (test-sip.mjs, also on GitHub), replay of 22 Oct's 3.07 million real ticks (replay-sip.mjs) = same 7 trades as the research. If the feed starts after 09:15:20 the day is skipped (no full opening range).
+- The old v4.2 app paper trades + alerts continue for comparison (~2 weeks).
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
