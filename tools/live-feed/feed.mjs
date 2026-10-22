@@ -17,7 +17,6 @@ import { CandleBuilder, istMinuteOfDay, inMarketHours } from './candles.mjs'
 import { extractTicks } from './parse.mjs'
 import { TickExitEngine, TICK_RULES } from './tick-exits.mjs'
 import { dailyReport } from './daily-report.mjs'
-import { pullHistory } from './pull-history.mjs'
 import { DayRecorder } from './recorder.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -371,13 +370,19 @@ async function main() {
           if (text) { say(text); if (!ntfyTopic) await refreshOpenTrades(); await ntfy(text) }
         }
       } catch (e) { say(`! daily report failed: ${e.message}`) }
-      // weekly history pull (Fridays after the market, or PULL_HISTORY=1): fills gaps in our own recording
+      // weekly history pull (Fridays after the market, or PULL_HISTORY=1): runs as its OWN program in its own window
+      // (22 Oct fix) so the laptop's 15:40 stop task, which closes the feed window, cannot cut it off
       try {
         const nowIst = new Date(Date.now() + 330 * 60_000)
-        if ((nowIst.getUTCDay() === 5 || process.env.PULL_HISTORY === '1') && uploadSymbols?.size) {
-          await pullHistory(gateway, [...uploadSymbols], path.join(here, 'data'), nowIst.toISOString().slice(0, 10), say)
+        if ((nowIst.getUTCDay() === 5 || process.env.PULL_HISTORY === '1') && !TEST_IGNORE_MARKET_HOURS) {
+          const { spawn } = await import('node:child_process')
+          const child = process.platform === 'win32'
+            ? spawn('cmd.exe', ['/c', 'start', '"INTRADAY-HISTORY"', '/min', 'node', 'pull-run.mjs'], { cwd: here, detached: true, stdio: 'ignore', windowsVerbatimArguments: true })
+            : spawn(process.execPath, ['pull-run.mjs'], { cwd: here, detached: true, stdio: 'ignore' })
+          child.unref()
+          say('history pull started in its own window (INTRADAY-HISTORY)')
         }
-      } catch (e) { say(`! history pull failed: ${scrub(e.message)}`) }
+      } catch (e) { say(`! history pull could not start: ${scrub(e.message)}`) }
       say('Market is closed. Final candles saved. Bye!')
       return
     }
