@@ -79,6 +79,7 @@ export class SipEngine {
     if (!this.day) { this.day = istDay(ts); this.restore() }
     if (this.picks === null && sec >= this.r.orEnd && sec < this.r.squareOff) ev.push(...this.select(ts))
     if (sec >= this.r.squareOff) for (const t of this.trades.values()) if (!t.exit) ev.push(this.close(t, t.lastPrice ?? t.entry, 'squareoff', ts))
+    if (this.dirty && ts - (this.savedAt ?? 0) >= 10_000) { this.dirty = false; this.savedAt = ts; this.save() } // trailing-stop moves saved at most every 10 s
     return ev
   }
   select(ts) {
@@ -125,7 +126,7 @@ export class SipEngine {
       t.best = r
       if (t.best >= 1) {
         const ns = +(t.entry + sg * (t.best - 1) * t.risk).toFixed(2)
-        if ((ns - t.stop) * sg > 0) { t.stop = ns; this.save() }
+        if ((ns - t.stop) * sg > 0) { t.stop = ns; this.dirty = true }
       }
     }
     return []
