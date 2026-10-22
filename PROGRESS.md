@@ -11,6 +11,7 @@
 > 2. Test THOUSANDS of ideas: every night run large rule-variation tests on ALL days (walk-forward: build on earlier days, check on later days), keep only what holds on unseen days and beats costs.
 > 3. Learn from EVERY trade: each win, loss and missed move analysed daily.
 > 4. Act exactly and without emotion: entries/exits on live ticks, precise timing.
+> 5. KEEP what is good (owner 21:21): whatever works stays; change only the parts that data proves can be better.
 > Keep improving every day towards Rule 0. The owner decides; live changes only with his "do it".
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
