@@ -12,6 +12,7 @@
 > 3. Learn from EVERY trade: each win, loss and missed move analysed daily.
 > 4. Act exactly and without emotion: entries/exits on live ticks, precise timing.
 > 5. KEEP what is good (owner 21:21): whatever works stays; change only the parts that data proves can be better.
+> 6. NOT mechanical (owner 21:30): think like an expert every day - read what the market did, ask WHY trades won/lost, change the approach when needed, never just repeat the same routine. Heavy testing now; testing decreases as the app matures and the rules settle.
 > Keep improving every day towards Rule 0. The owner decides; live changes only with his "do it".
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
