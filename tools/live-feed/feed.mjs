@@ -16,6 +16,7 @@ import WebSocket from 'ws'
 import { CandleBuilder, istMinuteOfDay, inMarketHours } from './candles.mjs'
 import { extractTicks } from './parse.mjs'
 import { TickExitEngine, TICK_RULES } from './tick-exits.mjs'
+import { SipEngine } from './sip-engine.mjs'
 import { dailyReport } from './daily-report.mjs'
 import { DayRecorder } from './recorder.mjs'
 
@@ -191,6 +192,41 @@ async function onTickExit(ev) {
   say(`tick exit ${ev.symbol} ${ev.direction} ${ev.reason} at ${ev.price} (${clock})${pnl !== null ? ` net Rs ${pnl}` : ''}`)
   await ntfy(`${icon} Paper ${ev.direction} ${ev.symbol} closed: ${REASON_TXT[ev.reason] ?? ev.reason} at ₹${ev.price} (${clock})${pnl !== null ? `, net ₹${pnl}` : ''} (paper money)`)
 }
+// ---- STOCKS IN PLAY paper strategy (owner "do it from tomorrow" 22 Oct; sip-engine.mjs). Laptop only, paper only. SIP=0 in .env switches it off.
+// Any error inside it is caught and logged - it can never stop the price feed.
+const SIP_ON = process.env.SIP !== '0' && (!TEST_IGNORE_MARKET_HOURS || process.env.SIP_TEST === '1') // off in feed tests (they run at any clock time)
+let sip = null
+try { if (SIP_ON) sip = new SipEngine({ dataDir: path.join(here, 'data') }) } catch (e) { say(`! stocks-in-play engine could not start: ${e.message}`) }
+const sipClock = (ts) => new Date(ts + 330 * 60_000).toISOString().slice(11, 19)
+async function onSipEvent(ev) {
+  try {
+    let text = null
+    if (ev.kind === 'picks') {
+      text = ev.picks.length
+        ? `🟢 STOCKS IN PLAY ${sipClock(ev.ts)} - watching ${ev.picks.length}: ` + ev.picks.map((p) => `${p.sym} ${p.dir} ${p.dir === 'BUY' ? 'above' : 'below'} ₹${p.dir === 'BUY' ? p.high : p.low}`).join(', ') + ' (paper, entry until 10:15)'
+        : '🟢 STOCKS IN PLAY: no stock qualified today (no paper trades)'
+    } else if (ev.kind === 'entry') {
+      const t = ev.trade
+      text = `🟢 NEW ${t.dir} ${t.sym} at ₹${t.entry} (${sipClock(ev.ts)}), stop ₹${t.stop} (${t.riskPct}%), qty ${t.qty}, risk ₹1,000 - stocks in play (paper money)`
+    } else if (ev.kind === 'exit') {
+      const t = ev.trade, why = { stop: 'stop loss', trail: 'trailing stop (profit kept)', squareoff: '15:15 close' }[t.reason] ?? t.reason
+      text = `${t.netRs >= 0 ? '✅' : '🔻'} NEW ${t.dir} ${t.sym} closed: ${why} at ₹${t.exit} (${sipClock(ev.ts)}), net ₹${t.netRs} (${t.R}R) - stocks in play (paper money)`
+    } else if (ev.kind === 'note') text = `🟢 ${ev.text}`
+    if (!text) return
+    say(`SIP ${text}`)
+    if (!ntfyTopic) await refreshOpenTrades()
+    await ntfy(text)
+  } catch (e) { say(`! stocks-in-play alert failed: ${e.message}`) }
+}
+function sipTick(symbol, t, now) {
+  if (!sip) return
+  try { for (const ev of sip.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask, cum: t.cumulativeVolume }, now)) onSipEvent(ev) }
+  catch (e) { say(`! stocks-in-play error (feed continues): ${e.message}`); sip = null }
+}
+function sipTimer() {
+  if (!sip) return
+  try { for (const ev of sip.onTimer(Date.now())) onSipEvent(ev) } catch (e) { say(`! stocks-in-play timer error (feed continues): ${e.message}`); sip = null }
+}
 async function flushMoves() {
   if (!pendingMoves.size) return
   const moves = [...pendingMoves.values()]; pendingMoves.clear()
@@ -264,6 +300,7 @@ async function runSession() {
       timers.push(setInterval(() => recorder.flushTicks(Date.now()), 2_000))
       refreshOpenTrades()
       timers.push(setInterval(refreshOpenTrades, Number(process.env.OPEN_TRADES_EVERY_MS || 60_000))) // T2: new paper trades reach the tick engine within a minute
+      timers.push(setInterval(sipTimer, 1_000)) // stocks in play: 09:20 selection + 15:15 close even without ticks
       timers.push(setInterval(flushMoves, 5_000)) // T2: raised stops reported to the app every 5 s // 21 Oct: every tick to data\\ticks-DATE.csv
       timers.push(setInterval(() => {
         const seen = builder.symbolsSeen()
@@ -308,6 +345,7 @@ async function runSession() {
         builder.addTick({ symbol, price: t.price, volume: t.volume, cumulativeVolume: t.cumulativeVolume, ts: now })
         if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) recorder.onTick(symbol, t, now)
         stats.symbolLastTick.set(symbol, now)
+        if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) sipTick(symbol, t, now)
         stats.lastPriceAt = now
         if (TICK_EXITS && tickExits.trades.size && (TEST_IGNORE_MARKET_HOURS || inMarketHours(now))) {
           for (const ev of tickExits.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask }, now)) {
@@ -370,6 +408,17 @@ async function main() {
           if (text) { say(text); if (!ntfyTopic) await refreshOpenTrades(); await ntfy(text) }
         }
       } catch (e) { say(`! daily report failed: ${e.message}`) }
+      // stocks in play: day summary on ntfy + add today's opening volume / turnover to the baseline (once a day)
+      try {
+        if (sip) {
+          for (const ev of sip.onTimer(Date.now())) await onSipEvent(ev)
+          const sm = sip.summary()
+          if (sip.updateBaseline()) {
+            const txt = `🟢 STOCKS IN PLAY day: ${sm.n} paper trades, ${sm.wins} winners, net ₹${sm.net}${sm.status.startsWith('skipped') ? ` (${sm.status})` : ''}`
+            say(txt); if (!ntfyTopic) await refreshOpenTrades(); await ntfy(txt)
+          }
+        }
+      } catch (e) { say(`! stocks-in-play day summary failed: ${e.message}`) }
       // weekly history pull (Fridays after the market, or PULL_HISTORY=1): runs as its OWN program in its own window
       // (22 Oct fix) so the laptop's 15:40 stop task, which closes the feed window, cannot cut it off
       try {
