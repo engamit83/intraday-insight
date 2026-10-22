@@ -167,6 +167,16 @@ Code: tools/backtest/v5/ (load.py builds 1-min data 12-22 Oct; sim.py = textbook
 - Tested: 17 offline checks (test-sip.mjs, also on GitHub), replay of 22 Oct's 3.07 million real ticks (replay-sip.mjs) = same 7 trades as the research. If the feed starts after 09:15:20 the day is skipped (no full opening range).
 - The old v4.2 app paper trades + alerts continue for comparison (~2 weeks).
 
+## 🔬 22 Oct night — first big variation test of STOCKS IN PLAY (62,208 versions, 13-22 Oct, 494 stocks, costs incl.)
+Code: tools/backtest/v5/search.py + analyse.py. Build days 13-16, check days 19-22.
+- The family is broadly profitable: 78% of all 62,208 versions made money overall (88% on build days, 51% on check days).
+- KEEP (good): 5-min opening range (3 min alone worse on 19 Oct; 10 min worse), rvol >= 3, trailing stop 1R behind after +1R (no trail: check days +0.2R vs +6.1R), exit 15:15, no market filter.
+- HURTS (reject): max stop 1.0% (-6.5R day), skipping gap-against stocks, 30-min time stop, top 5 only, 10-min range.
+- No effect: no-loss step at 1R, last entry 9:45 vs 10:15 (all entries come before 9:45).
+- BEST SMALL CHANGES (each improves BOTH halves): max stop 1.5% instead of 2% -> +21.3R, ZERO losing days; top 15 instead of 10 -> +21.0R. Both together -> 68 trades, 63% winners, +27.4R (vs +16.8R now), 0 losing days, worst day +0.3R, build +15.0 / check +12.4.
+- Warning seen: versions picked only by the best build-day result (e.g. OR3/K15/stop1%) fell from +35R to +2-7R on check days = over-fitting. So only small, consistent changes are proposed.
+- PROPOSAL to owner: stopMaxPct 2 -> 1.5 and topK 10 -> 15 (laptop only, sip-engine.mjs SIP_RULES). Needs "do it".
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
