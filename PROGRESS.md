@@ -80,6 +80,21 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 ---
 
 ## 📋 CURRENT RULES — quick list (give this to the owner IMMEDIATELY whenever he asks for the rules; keep it up to date)
+
+### 🟢 MAIN STRATEGY from 23 Oct: STOCKS IN PLAY (laptop, live ticks, paper)
+**ENTRY**
+E1. 09:15:00-09:19:59 = opening range (OR) of every stock: open, high, low, last price, volume traded.
+E2. Liquidity: only stocks with median turnover >= Rs25 crore/day.
+E3. Relative volume (rvol) = OR volume / the stock's own average OR volume (last 10 days). Must be >= 3x.
+E4. At 09:20 rank by rvol, keep the TOP 10 (proposed 15). Direction = OR close above open -> BUY; below -> SELL.
+E5. Entry window 09:20-10:15: BUY when the price trades ABOVE the OR high; SELL when it trades BELOW the OR low. Fill on the tick at the offer (BUY) / bid (SELL) + 0.02%. One trade per stock per day.
+**EXIT**
+X1. Stop loss = other side of the OR, kept between 0.5% and 2% (proposed 1.5%) of entry. Size = Rs1,000 risk per trade (1R).
+X2. No fixed target - winners run.
+X3. Trailing stop: once the trade is +1R, the stop follows 1R behind the best price (at +2R the stop is at +1R, etc.).
+X4. Everything still open is closed at 15:15.
+X5. Costs 0.106% + slippage counted on every trade. Alerts on ntfy for picks, entries, exits, day summary.
+*(The v4.2 rules below keep running in the app for comparison only.)*
 *Rule set v4.2, live from 22 Oct 2026 (paper trading only, no real money). "ON TRIAL" = being tested, owner reviews with full numbers.*
 
 **A. Which stocks are scanned**
