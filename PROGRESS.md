@@ -5,6 +5,7 @@
 > self-improve towards this goal without being reminded, test every idea on data (must beat costs), owner approves live changes.
 
 > **Owner's definition (22 Oct 20:50):** this is a DIRECTION, not a fixed target — always move towards ZERO loss and towards UNLIMITED profit. Never answer with "it doesn't exist"; every day push further: fewer/smaller losing trades, bigger/more winning trades. Measure the direction daily: losing-trade %, average and biggest loss, losing days, net profit after costs — each must improve over time.
+> **Owner (22 Oct 21:18):** do NOT limit the app to what human traders could do. Use what AI can do that people cannot: watch all stocks on every tick, test thousands of rule variants on all days every night, learn from every trade, combine all data at once. Aim beyond human limits, step by step, proven on data.
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
 **Last updated:** 2026-10-16
