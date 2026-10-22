@@ -135,6 +135,15 @@ Script: scratchpad rev.py (recomputed warnings from the laptop's 1-min candles; 
 - 20 of 22 stop-outs got NO warning (only CANHLIFE, PARADEEP did): most went against us within 3-15 min. No exit rule helps those -> the problem is ENTRY (yesterday-based direction, entering at the market low).
 - Verdict: keep the warning as an alert only; do NOT make it an exit rule. Retest on more days. Fix entry first ("today only" direction).
 
+## 🧪 22 Oct (night) — Owner: "use everything we have, act as the expert" → full re-think, tested on 8 days / 494 stocks (1-min)
+Code: tools/backtest/v5/ (load.py builds 1-min data 12-22 Oct; sim.py = textbook pullback rules; sip.py = STOCKS IN PLAY). Costs 0.106% + slippage 0.02%/side, Rs1,000 risk per trade (1R).
+**1. Textbook "today-only" pullback rules (day type from Nifty, strength since open, sector, VWAP pullback, candle + volume check, structure stop, half at 1R, time stop):** -16.6R (58 trades). Each ingredient helped (no market filter -29.5R, chasing -24.2R, no candle check -26R) but BEFORE costs only +3.4R: costs ate 20R because stops were tiny (median 0.47%). Lesson: with ~0.15% round-trip cost, small-move setups cannot win.
+**2. STOCKS IN PLAY (what day-trading desks do; Zarattini & Aziz ORB research):** each morning rank liquid stocks (>= Rs25 cr/day) by RELATIVE VOLUME of the first 5 minutes vs their own normal; take the top 10 with rvol >= 3; direction = first 5-min candle; enter on the break of the 5-min opening range (until 10:15); stop = other side of the range (0.5-2%); after +1R trail 1R behind the best price; else exit 15:15.
+   Result 13-22 Oct (7 days): **47 trades, 64% winners, +16.9R (~+Rs16,900), +0.36R per trade; build days 13-16 +10.7R, check days 19-22 +6.2R; 5 of 7 days positive, worst day -0.9R.** Still positive with slippage 0.10%/side (+12.7R). Market filter HURT (in-play stocks move on their own news). Spot-checked HINDZINC 21 Oct against raw candles: correct.
+   Same days, live app: 21 Oct +Rs4,794, 22 Oct -Rs16,475; stocks-in-play: 21 Oct +6.5R, 22 Oct -0.9R.
+   Caveats: 7 days / 47 trades = promising, not proof; entries 09:20-09:45 need tick-level speed; order-book filter not yet tested (only 3 days of book data).
+**Claude's recommendation:** run STOCKS IN PLAY as the new paper strategy alongside (not mixed with) v4.2 for 3-4 weeks, then decide on numbers. Owner decides.
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
