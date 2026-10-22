@@ -132,7 +132,7 @@ Script: scratchpad rev.py (recomputed warnings from the laptop's 1-min candles; 
 - Warning (2 signs) fired on 7/30 trades. Closing at the warning: total -Rs20,621 vs actual -Rs16,473 (**worse by Rs4,148**): it cut 2 winners (ABCAPITAL +1041 -> -312, SUZLON +308 -> -437) and closed 2 square-offs at worse prices; saved only Rs135-251 on 3 losers.
 - 1-sign version: 13 warnings, total -Rs16,657 (about the same as actual, -Rs184): saves on 9, but cuts AARTIIND/ABCAPITAL winners to ~0.
 - Market-turn exit (Nifty 0.3% off its extreme + stock back through VWAP): -Rs17,803 (worse by Rs1,330): saved ~Rs3,000 on the 10:00 batch of shorts, lost it on ABCAPITAL, ACMESOLAR, INDHOTEL, SUZLON.
-- 16 of 22 stop-outs got NO warning: they went against us within 3-15 min. No exit rule helps those -> the problem is ENTRY (yesterday-based direction, entering at the market low).
+- 20 of 22 stop-outs got NO warning (only CANHLIFE, PARADEEP did): most went against us within 3-15 min. No exit rule helps those -> the problem is ENTRY (yesterday-based direction, entering at the market low).
 - Verdict: keep the warning as an alert only; do NOT make it an exit rule. Retest on more days. Fix entry first ("today only" direction).
 
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
