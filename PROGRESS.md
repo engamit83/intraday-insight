@@ -6,6 +6,12 @@
 
 > **Owner's definition (22 Oct 20:50):** this is a DIRECTION, not a fixed target — always move towards ZERO loss and towards UNLIMITED profit. Never answer with "it doesn't exist"; every day push further: fewer/smaller losing trades, bigger/more winning trades. Measure the direction daily: losing-trade %, average and biggest loss, losing days, net profit after costs — each must improve over time.
 > **Owner (22 Oct 21:18):** do NOT limit the app to what human traders could do. Use what AI can do that people cannot: watch all stocks on every tick, test thousands of rule variants on all days every night, learn from every trade, combine all data at once. Aim beyond human limits, step by step, proven on data.
+> **RULE 0b — HOW Claude works, ALWAYS (owner 22 Oct 21:21, "make it your rule, keep improving for the best result"):**
+> 1. Watch EVERYTHING at once: all stocks, every tick, buyers/sellers, volume, Nifty + sectors, our trades.
+> 2. Test THOUSANDS of ideas: every night run large rule-variation tests on ALL days (walk-forward: build on earlier days, check on later days), keep only what holds on unseen days and beats costs.
+> 3. Learn from EVERY trade: each win, loss and missed move analysed daily.
+> 4. Act exactly and without emotion: entries/exits on live ticks, precise timing.
+> Keep improving every day towards Rule 0. The owner decides; live changes only with his "do it".
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
 **Last updated:** 2026-10-16
