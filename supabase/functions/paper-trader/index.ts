@@ -213,6 +213,7 @@ Deno.serve(async (req) => {
     await supabase.from('simulated_trades').update({ details: t.details }).eq('id', t.id)
   }
 
+  const OLD_REVERSAL_ALERTS = false
   // ---- 1c) REVERSAL WARNING (owner 21 Oct, ALERT-ONLY trial): 2+ signs on a closed 1-minute candle -> ntfy warning + record.
   //          The trade is NOT closed; after ~2 weeks we check what happened after each warning and the owner decides.
   for (const t of trades.filter((x) => x.status === 'OPEN')) {
@@ -234,7 +235,8 @@ Deno.serve(async (req) => {
         if (!r.warn) continue
         const w = { at: b.startIso, price: b.close, signs: r.signs, profitPct: Math.round(r.profitPct * 100) / 100, bestPct: Math.round(r.bestPct * 100) / 100 }
         if (rev.warnings.length < 20) rev.warnings.push(w)
-        await notify(supabase, `⚠️ Reversal warning (test only, trade NOT closed): paper ${t.direction} ${t.symbol} at ₹${b.close} - ${describeSigns(r.signs)}. Now ${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(2)}% (best +${r.bestPct.toFixed(2)}%).`, { key: `rev-${t.id}`, everyMin: 15 })
+        // 23 Oct 12:05 owner: old warning's phone alert REMOVED (replaced by the smart exit warning on the laptop); still recorded for research
+        if (OLD_REVERSAL_ALERTS) await notify(supabase, `⚠️ Reversal warning (test only, trade NOT closed): paper ${t.direction} ${t.symbol} at ₹${b.close} - ${describeSigns(r.signs)}. Now ${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(2)}% (best +${r.bestPct.toFixed(2)}%).`, { key: `rev-${t.id}`, everyMin: 15 })
       }
       if (changed) {
         t.details = { ...t.details, rev }
