@@ -1,6 +1,6 @@
 # v5 intraday rules simulator on 1-minute bars (paper research, 22 Oct). Parameters fixed BEFORE looking at results.
 import pickle,csv,collections,numpy as np,sys,json
-DAYS=['2026-10-12','2026-10-13','2026-10-14','2026-10-15','2026-10-16','2026-10-19','2026-10-21','2026-10-22']
+DAYS=['2026-10-12','2026-10-13','2026-10-14','2026-10-15','2026-10-16','2026-10-19','2026-10-21','2026-10-22','2026-10-23']
 N50=open('n50.txt').read().split()[:49]
 SECTOR=dict(l.split() for l in open('sectors.txt'))
 COST=0.10628; SLIP=0.02; RISK_RS=1000; SQ=360  # 15:15
