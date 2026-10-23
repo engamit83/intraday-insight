@@ -202,6 +202,13 @@ Exit when the evidence says the move has turned against our trade (e.g. SELL tra
 6. Combine into an exit-evidence score; exit only when several agree. Judge on ALL trades: loss saved on losers vs profit cut on winners (today the simple warning cut J&KBANK/NAM-INDIA -> must avoid early-wobble exits).
 Data: ticks 22-23 Oct (+ every new day), per-minute book 19/21/22/23 Oct.
 
+## ⚠️ SMART EXIT WARNING — live from 23 Oct 12:33 (owner "do it now, keep as warning, remove old warning")
+- tools/live-feed/smart-warn.mjs (logic) + smart-watch.mjs (live watcher, own window INTRADAY-SMARTWARN, follows ticks/book/sip-state files; ALERT ONLY).
+- 6 signs: aggressive counter-trades (tick flow), order book turned, counter-move on rising volume, back through VWAP, structure turning, Nifty turning. Before +1R: needs 4 signs incl. flow/book; after +1R: 3 signs (protect profit). Not in the first 3 minutes; once per 10 min per trade.
+- Replay 23 Oct morning: total about equal to actual (-Rs66) vs old warning -Rs4,853; tuned on these 9 trades -> must be verified on more days.
+- Old app reversal warning: phone alert OFF (paper-trader OLD_REVERSAL_ALERTS=false, deployed 12:31), still recorded.
+- 23 Oct: started by hand (Claude via File Explorer). TODO 16:10: feed.mjs starts it automatically every morning.
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
