@@ -192,6 +192,16 @@ Code: tools/backtest/v5/search.py + analyse.py. Build days 13-16, check days 19-
 - Warning seen: versions picked only by the best build-day result (e.g. OR3/K15/stop1%) fell from +35R to +2-7R on check days = over-fitting. So only small, consistent changes are proposed.
 - PROPOSAL to owner: stopMaxPct 2 -> 1.5 and topK 10 -> 15 (laptop only, sip-engine.mjs SIP_RULES). Needs "do it".
 
+## 🎯 23 Oct 11:59 — Owner: build a SMART EXIT (separate from the trailing stop, which is good and stays)
+Exit when the evidence says the move has turned against our trade (e.g. SELL trade but buying pressure rising). Factors to build + test on ticks/book:
+1. Order flow: total buy vs sell quantity waiting (book) turning against us; best bid/offer quantities; upticks vs downticks weighted by volume (who is aggressive).
+2. Counter-move volume: the move against us on rising volume vs our move on falling volume.
+3. Momentum fading: no new extreme for N minutes, smaller swings in our direction, longer pullbacks.
+4. Price structure: back inside the opening range, VWAP reclaimed against us, higher lows (SELL) / lower highs (BUY).
+5. Market + sector: Nifty / sector index turning against us at the same time.
+6. Combine into an exit-evidence score; exit only when several agree. Judge on ALL trades: loss saved on losers vs profit cut on winners (today the simple warning cut J&KBANK/NAM-INDIA -> must avoid early-wobble exits).
+Data: ticks 22-23 Oct (+ every new day), per-minute book 19/21/22/23 Oct.
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
