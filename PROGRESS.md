@@ -207,7 +207,8 @@ Data: ticks 22-23 Oct (+ every new day), per-minute book 19/21/22/23 Oct.
 - 6 signs: aggressive counter-trades (tick flow), order book turned, counter-move on rising volume, back through VWAP, structure turning, Nifty turning. Before +1R: needs 4 signs incl. flow/book; after +1R: 3 signs (protect profit). Not in the first 3 minutes; once per 10 min per trade.
 - Replay 23 Oct morning: total about equal to actual (-Rs66) vs old warning -Rs4,853; tuned on these 9 trades -> must be verified on more days.
 - Old app reversal warning: phone alert OFF (paper-trader OLD_REVERSAL_ALERTS=false, deployed 12:31), still recorded.
-- 23 Oct: started by hand (Claude via File Explorer). TODO 16:10: feed.mjs starts it automatically every morning.
+- 23 Oct: started by hand (Claude via File Explorer). From 26 Oct the feed starts it every morning by itself (feed.mjs, one copy per day via logs\smart-warn-DATE.alive).
+- Test on both tick days (live SIP trades 22 + 23 Oct, 16 trades): 9 warnings, 5 helped (+317, +1453, +199, +431, +200), 3 hurt (-344, -1418, -728). Net if exited at first warning: +Rs110 = NO real edge yet. Verdict: stays ALERT ONLY; re-test as tick days accumulate (needs ~50+ warnings).
 
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
