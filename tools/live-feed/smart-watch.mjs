@@ -76,6 +76,11 @@ const followTicks = follower(path.join(dataDir, `ticks-${day}.csv`), (p) => {
     if (live || process.env.SMART_ALERT_PAST === '1') ntfy(txt)
   }
 })
+// only one copy per day: if another copy touched the alive-file in the last 30 s, this one exits (feed restarts must not double the alerts)
+const alive = path.join(logDir, `smart-warn-${day}.alive`)
+try { if (Date.now() - fs.statSync(alive).mtimeMs < 30_000) { console.log('smart exit warning already running - this copy exits'); process.exit(0) } } catch {}
+const touch = () => { try { fs.writeFileSync(alive, String(process.pid)) } catch {} }
+touch(); setInterval(touch, 10_000)
 say(`smart exit warning started for ${day} (alert only)`)
 await getTopic()
 loadTrades()

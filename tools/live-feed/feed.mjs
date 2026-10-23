@@ -306,7 +306,7 @@ async function runSession() {
         const seen = builder.symbolsSeen()
         const ago = stats.lastMessageAt ? Math.round((Date.now() - stats.lastMessageAt) / 1000) : '?'
         say(`status: ${stats.messages} messages, ${builder.accepted} prices used, ${seen}/${codes.length} stocks seen, ${savedRows} candle saves, last message ${ago}s ago`)
-        if (stats.messages > 200 && builder.accepted === 0 && istMinuteOfDay(Date.now()) >= 9 * 60 + 15) {
+        if (stats.messages > 200 && builder.accepted === 0 && istMinuteOfDay(Date.now()) >= 9 * 60 + 16) { // 23 Oct: from 09:16 (at 09:15:00 trading has not started yet)
           say('! Messages are arriving but none could be read as prices. Send me the file raw_ticks.log and I will fix the reader.')
         }
         if (Date.now() - stats.lastMessageAt > SILENCE_WARN_MS && istMinuteOfDay(Date.now()) >= 9 * 60 + 15) {
@@ -393,6 +393,19 @@ async function main() {
   console.log('\n=== intraday-insight live feed ===')
   if (TEST_IGNORE_MARKET_HOURS) console.log('!!! TEST MODE: market-hours filter is OFF. Never use this on a real day. !!!')
   say('Starting. Press Ctrl+C to stop.')
+  // 23 Oct: start the smart exit warning (alert only, smart-watch.mjs) in its own window every market day, so it runs without a click.
+  // Its own window title (INTRADAY-SMARTWARN) - the 15:40 stop task closes only the feed window; smart-watch stops itself at 15:31.
+  try {
+    const nowIst = new Date(Date.now() + 330 * 60_000), wd = nowIst.getUTCDay(), hm = nowIst.toISOString().slice(11, 16)
+    if (!TEST_IGNORE_MARKET_HOURS && process.env.SMART_WARN !== '0' && wd >= 1 && wd <= 5 && hm < '15:30') {
+      const { spawn } = await import('node:child_process')
+      const child = process.platform === 'win32'
+        ? spawn('cmd.exe', ['/c', 'start', '"INTRADAY-SMARTWARN"', '/min', 'cmd', '/c', 'node', 'smart-watch.mjs'], { cwd: here, detached: true, stdio: 'ignore', windowsVerbatimArguments: true })
+        : spawn(process.execPath, ['smart-watch.mjs'], { cwd: here, detached: true, stdio: 'ignore' })
+      child.unref()
+      say('smart exit warning started in its own window (INTRADAY-SMARTWARN)')
+    }
+  } catch (e) { say(`! smart exit warning could not start: ${e.message}`) }
   let wait = 3_000
 
   while (true) {
