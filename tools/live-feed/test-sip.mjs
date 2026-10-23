@@ -26,8 +26,8 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   ok(e.onTick('UP', { price: 102, bid: 101.95, ask: 102.05 }, at(9, 21)).length === 0, 'no entry at exactly the OR high')
   const en = e.onTick('UP', { price: 102.1, bid: 102.05, ask: 102.15 }, at(9, 22)).find((x) => x.kind === 'entry')
   ok(en && Math.abs(en.trade.entry - 102.15 * 1.0002) < 0.011, 'BUY fills at the offer + 0.02%')
-  ok(en && en.trade.riskPct === 2, 'stop clamped to 2% when the range is wider')
-  ok(en && en.trade.qty === Math.floor(1000 / (en.trade.entry * 0.02)), 'size = Rs1,000 risk')
+  ok(en && en.trade.riskPct === 1.5, 'stop clamped to 1.5% when the range is wider')
+  ok(en && en.trade.qty === Math.floor(1000 / (en.trade.entry * 0.015)), 'size = Rs1,000 risk')
   // trail: at +1.5R the stop moves to +0.5R
   const t = e.trades.get('UP'); const p15 = t.entry + 1.5 * t.risk
   e.onTick('UP', { price: p15, bid: p15, ask: p15 }, at(10, 0))

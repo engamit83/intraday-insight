@@ -5,13 +5,13 @@
 //  2. At 09:20 rank liquid stocks (median turnover >= Rs25 cr/day) by RELATIVE VOLUME = OR volume / its own average OR volume
 //     (baseline file data\sip-baseline.json, last 10 days). Keep the top 10 with rvol >= 3. Direction = OR close vs open.
 //  3. Entry until 10:15 when the price breaks the OR high (BUY) / OR low (SELL): fill at the offer (BUY) / bid (SELL) + 0.02% slippage.
-//  4. Stop = other side of the opening range, clamped to 0.5%-2% of the entry. Size = Rs1,000 risk (1R).
+//  4. Stop = other side of the opening range, clamped to 0.5%-1.5% of the entry (owner "do it" 23 Oct 08:49; was 2%). Top 15 (was 10). Size = Rs1,000 risk (1R).
 //  5. After +1R the stop trails 1R behind the best price. Otherwise exit at 15:15. Costs 0.10628% + slippage counted.
 import fs from 'node:fs'
 import path from 'node:path'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 2, riskRs: 1000, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
+  topK: 15, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
