@@ -210,6 +210,19 @@ Data: ticks 22-23 Oct (+ every new day), per-minute book 19/21/22/23 Oct.
 - 23 Oct: started by hand (Claude via File Explorer). From 26 Oct the feed starts it every morning by itself (feed.mjs, one copy per day via logs\smart-warn-DATE.alive).
 - Test on both tick days (live SIP trades 22 + 23 Oct, 16 trades): 9 warnings, 5 helped (+317, +1453, +199, +431, +200), 3 hurt (-344, -1418, -728). Net if exited at first warning: +Rs110 = NO real edge yet. Verdict: stays ALERT ONLY; re-test as tick days accumulate (needs ~50+ warnings).
 
+## 📅 WEEKLY REVIEW Sat 24 Oct (stocks in play, 9 days 12-23 Oct, 76 research trades with live rules; laptop offline -> 20 Oct history not added yet)
+Winners vs losers (R per trade):
+- GAP is the strongest factor: stocks that GAPPED AGAINST our trade direction and then turned (with 3x+ volume) = 30 trades, ~80% winners, +25.7R. Stocks that gapped >1% IN our direction = 32 trades, ~0R (no edge) in BOTH halves (build +1.0R, check -1.2R). Expert reading: the edge is the opening REVERSAL after a gap (trapped traders), not chasing a gap.
+- Against Nifty's first 5 min: 37 trades +27.2R; with Nifty: 39 trades +1.4R (same story - reversal stocks). A "trade with Nifty" filter is wrong (-7.5R).
+- rvol 5-10x best (+0.49R/trade); entry 9:21-9:24 best; opening-range width: no clear pattern.
+- Order book (4 days, 39 trades): when MORE buyers waiting in our favour (>1.25) trades LOST (-0.16R avg, 33% win) - crowd already positioned; small sample, watch.
+Tests (filter applied before the top-K ranking):
+- skip gap >1% with us + top 10: 46 trades, 74% winners, +31.7R (vs live 76 trades, 62%, +28.6R), build +18.0 / check +13.7, but 1 small losing day (-1.2R on 22 Oct). Fewer losing trades (12 vs 29).
+- skip gap >1% with us, top 15: +26.2R (slots refilled with weaker stocks) - so K10 + gap filter go together.
+- re-entry once after a stop (Fri): +35.3R vs +28.6R. Combination with the gap filter: test next.
+Proposals to owner (needs "do it"): (1) one re-entry after a stop; (2) skip stocks gapped >1% in the trade direction + top 10.
+Old v4.2 this week (app): 21 Oct +Rs4,794, 22 Oct -Rs16,475, 23 Oct -Rs9,306.
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
