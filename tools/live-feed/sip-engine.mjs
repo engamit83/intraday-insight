@@ -1,5 +1,7 @@
 // sip-engine.mjs - STOCKS IN PLAY paper strategy on live ticks (owner "do it from tomorrow", 22 Oct 2026; research: tools/backtest/v5/sip.py,
 // 13-22 Oct x 494 stocks: 47 trades, 64% winners, +16.9R after costs). PAPER ONLY - no orders are ever placed.
+// ENTRY BASE RULES (owner 25 Oct 15:33): a watch-list stock that breaks its level is entered only when the 6 favour signs agree
+// (entryMinSigns of 6, incl. aggressive buyers/sellers when entryNeedFlow) - see smart-warn.mjs favourFor(). Otherwise wait.
 // Rules (fixed, same as the research):
 //  1. Opening range = 09:15:00-09:19:59. For every stock: open, high, low, last price, volume traded in those 5 minutes.
 //  2. At 09:20 rank liquid stocks (median turnover >= Rs25 cr/day) by RELATIVE VOLUME = OR volume / its own average OR volume
@@ -21,7 +23,7 @@ import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 15, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
+  topK: 15, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -75,6 +77,7 @@ export class SipEngine {
       if (!o) { o = { open: p, high: p, low: p, last: p, v0: Number.isFinite(tick.cum) ? tick.cum : null, v1: null }; this.or.set(sym, o) }
       o.high = Math.max(o.high, p); o.low = Math.min(o.low, p); o.last = p
       if (Number.isFinite(tick.cum)) { if (o.v0 === null) o.v0 = tick.cum; o.v1 = tick.cum }
+      if (this.r.smartExit || this.r.entryBase) { this.sw.onTick(sym, istHM(ts), p, tick.cum); if (tick.totBuy > 0 && tick.totSell > 0) { this.bookNow.set(sym, tick.totBuy / tick.totSell); this.sw.st(sym).book = tick.totBuy / tick.totSell } }
       return ev
     }
     ev.push(...this.onTimer(ts))
@@ -112,19 +115,24 @@ export class SipEngine {
       if (rvol >= this.r.minRvol) cand.push({ sym, dir: o.last > o.open ? 'BUY' : 'SELL', rvol: +rvol.toFixed(1), high: o.high, low: o.low })
     }
     cand.sort((a, b) => b.rvol - a.rvol)
-    this.picks = cand.slice(0, this.r.topK); this.status = 'picked'; this.save()
+    this.picks = cand.slice(0, this.r.topK).map((p) => ({ ...p, book0: this.bookNow.get(p.sym) ?? null })); this.status = 'picked'; this.save()
     return [{ kind: 'picks', picks: this.picks, ts }]
   }
   tryEntry(pk, tick, ts) {
     const B = pk.dir === 'BUY', sg = B ? 1 : -1, lvl = B ? pk.high : pk.low
     if (B ? tick.price <= lvl : tick.price >= lvl) return []   // strictly beyond the range
+    if (this.r.entryBase) { // BASE RULES (owner 25 Oct): enter only if the favour signs agree; otherwise wait (price must still be beyond the level)
+      const f = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0)
+      if (!f || f.score < this.r.entryMinSigns || (this.r.entryNeedFlow && !f.signs.flow)) { pk.waited = (pk.waited ?? 0) + 1; return [] }
+      pk.entrySigns = Object.keys(f.signs).filter((k) => f.signs[k])
+    }
     const quote = B ? (tick.ask > 0 ? tick.ask : tick.price) : (tick.bid > 0 ? tick.bid : tick.price)
     const entry = +(quote * (1 + sg * this.r.slipPct / 100)).toFixed(2)
     const opp = B ? pk.low : pk.high
     const riskPct = Math.min(Math.max(Math.abs(entry - opp) / entry * 100, this.r.stopMinPct), this.r.stopMaxPct)
     const risk = entry * riskPct / 100
     const qty = Math.max(1, Math.floor(this.r.riskRs / risk))
-    const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, bookAtEntry: this.bookNow.get(pk.sym) ?? null, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
+    const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, entrySigns: pk.entrySigns ?? null, waitedTicks: pk.waited ?? 0, bookAtEntry: this.bookNow.get(pk.sym) ?? null, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
     this.trades.set(pk.sym, t); this.save()
     return [{ kind: 'entry', trade: t, ts }]
   }

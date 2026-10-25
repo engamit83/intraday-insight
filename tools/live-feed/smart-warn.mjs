@@ -56,6 +56,30 @@ export class SmartWarn {
     const best = Math.max(0, ...bars.map((b) => ((sg > 0 ? b.h : b.l) - t.entry) * sg / t.risk))
     return { signs, score, R, best, last }
   }
+  // ENTRY BASE RULES (owner 25 Oct): the 6 FAVOUR signs for a BUY (SELL = mirror), on the bars since 09:15 + the current price.
+  // refBook = buyers/sellers ratio at selection (09:20). Returns { signs, score } or null if fewer than 3 bars.
+  favourFor(sym, dir, price, refBook) {
+    const x = this.sym.get(sym); if (!x) return null
+    const sg = dir === 'BUY' ? 1 : -1
+    const bars = x.bars; if (bars.length < 3) return null
+    const l5 = bars.slice(-5), l3 = bars.slice(-3)
+    const upV = l5.reduce((a, b) => a + b.up, 0), dnV = l5.reduce((a, b) => a + b.dn, 0)
+    const withUs = sg > 0 ? upV : dnV, against = sg > 0 ? dnV : upV
+    const avgV = bars.reduce((a, b) => a + b.v, 0) / bars.length
+    const l3move = (l3.at(-1).c - l3[0].o) * sg
+    const vwap = x.v > 0 ? x.pv / x.v : price
+    const signs = {
+      flow: withUs >= this.r.flowX * Math.max(against, 1),                                    // 1 aggressive buyers
+      book: refBook && x.book ? (sg > 0 ? x.book >= refBook / this.r.bookX : x.book <= refBook * this.r.bookX) : false, // 2 buyers not draining
+      volume: l3move > 0 && l3.reduce((a, b) => a + b.v, 0) / 3 > avgV,                    // 3 move our way on rising volume
+      vwap: (price - vwap) * sg > 0,                                                          // 4 price on our side of VWAP
+      lows: sg > 0 ? l3[0].l < l3[1].l && l3[1].l < l3[2].l : l3[0].h > l3[1].h && l3[1].h > l3[2].h, // 5 higher lows / lower highs
+      market: true,                                                                           // 6 Nifty not against us
+    }
+    const n = this.sym.get('NIFTY')
+    if (n && n.bars.length >= 6) { const nb = n.bars.slice(-6); signs.market = !(((nb.at(-1).c / nb[0].c - 1) * 100) * sg <= -this.r.niftyPct) }
+    return { signs, score: Object.values(signs).filter(Boolean).length }
+  }
   evaluate(t, minute) {
     const x = this.signsFor(t); if (!x) return null
     const { signs, score, R, best, last } = x
