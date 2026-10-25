@@ -71,8 +71,8 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   for (const p of [195, 194, 193, 192.5, 192.2, 192]) { cum += 1000; e.onTick('DN', { price: p, cum }, at(9, i)); e.onTick('DN', { price: p - 0.05, cum: cum + 500 }, at(9, i, 30)); i++ }
   const best = t.best
   let ev = []
-  for (const p of [192.4, 192.8, 193.2, 193.4]) { cum += 6000; ev.push(...e.onTick('DN', { price: p - 0.1, cum }, at(9, i))); ev.push(...e.onTick('DN', { price: p, cum: cum + 4000 }, at(9, i, 30))); i++ }
-  ev.push(...e.onTick('DN', { price: 193.4, cum: cum + 100 }, at(9, i)))
+  for (const p of [192.6, 193.4, 194.2, 195]) { cum += 30000; ev.push(...e.onTick('DN', { price: p - 0.1, cum }, at(9, i))); ev.push(...e.onTick('DN', { price: p, cum: cum + 20000 }, at(9, i, 30))); i++ }
+  ev.push(...e.onTick('DN', { price: 195, cum: cum + 100 }, at(9, i)))
   const w = ev.find((x) => x.kind === 'warn')
   ok(en && best >= 1 && w && w.tightened, 'smart warning on a winner tightens the trailing stop')
   ok(t.exit || Math.abs(t.stop - (t.entry - (t.best - 0.3) * t.risk)) < 0.02, 'tightened stop sits 0.3R behind the best price (or the trade closed on it)')
