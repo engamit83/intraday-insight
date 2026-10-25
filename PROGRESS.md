@@ -224,6 +224,11 @@ Tests (filter applied before the top-K ranking):
 Proposals to owner (needs "do it"): (1) one re-entry after a stop; (2) skip stocks gapped >1% in the trade direction + top 10.
 Old v4.2 this week (app): 21 Oct +Rs4,794, 22 Oct -Rs16,475, 23 Oct -Rs9,306.
 
+## ⏸ ENTRY WORK PARKED (owner 25 Oct 14:26): "first let me complete the EXIT, then we work on ENTRY - when I say let's do entry, remind me"
+When the owner says "let's do entry": remind him of the pending entry proposals from the 24 Oct weekly review:
+A = one re-entry after a stop-out (+Rs35,300 vs +Rs28,600 on 9 days); B = skip stocks gapped >1% in the trade direction + top 10 + re-entry (47 trades, 74% winners, +Rs32,200, 12 losing trades vs 29) - Claude recommends B. Also the order-book finding (crowd already on our side -> trades lost).
+Until then: no entry changes; focus = exit rule "trailing stop + smart warning".
+
 ## 📝 LATER WORK LIST — Claude must remind the owner of these (added 17 Oct)
 | # | Item | When / trigger |
 |---|---|---|
