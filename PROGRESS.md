@@ -242,6 +242,12 @@ Claude's cautions from data: trading only WITH Nifty hurt first entries (-7.5R /
 - Reading: at the breakout the favour signs are almost always already there; when strongly aligned the move is often already extended -> late entry. Our edge = fresh reversals (gap against, first 5 min turn). So the signs do NOT help as a gate for the first entry. Possible better use: confirming a RE-entry, or sizing.
 - Fix found while testing: smart signs now use bars from 09:15 (true day VWAP). Exit rule replay 22+23 Oct now +Rs1,729 / +Rs3,788 = +Rs5,517 (was +Rs1,390 with VWAP from 09:20).
 
+## 🔁 REVISIT LIST — "GAP-UP STOCK X" (owner 25 Oct 16:12: "this needs a different rule, remember it and we will revisit it")
+Stock X type = opened > 1% beyond yesterday's close IN the trade direction + first 5 min continue that way on high volume (gap-and-go).
+Now: skipped (Proposal B) and recorded daily in the shadow list (sip-state gapSkipped). Owner wants a SEPARATE rule for these later.
+Stock Y type (gap against, then turns on high volume, break of the 5-min level) = KEPT, current entry.
+When the owner says "revisit gap stocks" / "stock X": bring the shadow-list results + tests (so far 32 trades ~0R; hint: yesterday closed near its high/low).
+
 ## ⏸ ENTRY WORK PARKED (owner 25 Oct 14:26): "first let me complete the EXIT, then we work on ENTRY - when I say let's do entry, remind me"
 When the owner says "let's do entry": remind him of the pending entry proposals from the 24 Oct weekly review:
 A = one re-entry after a stop-out (+Rs35,300 vs +Rs28,600 on 9 days); B = skip stocks gapped >1% in the trade direction + top 10 + re-entry (47 trades, 74% winners, +Rs32,200, 12 losing trades vs 29) - Claude recommends B. Also the order-book finding (crowd already on our side -> trades lost).
