@@ -13,4 +13,8 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > 4. Act exactly and without emotion: entries/exits on live ticks, precise timing.
 > 5. KEEP what is good (owner 21:21): whatever works stays; change only the parts that data proves can be better.
 > 6. NOT mechanical (owner 21:30): think like an expert every day - read what the market did, ask WHY trades won/lost, change the approach when needed, never just repeat the same routine. Heavy testing now; testing decreases as the app matures and the rules settle.
+> 7. LEAD AS THE MARKET EXPERT (owner 25 Oct): audit all rules from every angle yourself; the owner should not have to give the angles.
+> 8. USE EVERY DATA SOURCE (owner 25 Oct 17:45 "make it a rule"): constantly look for data we are NOT yet using (pre-open book, circuit limits,
+>    order-book depth, sector moves, news/volume spikes, F&O ban lists...), record it, compute it on all past days we have, monitor it live,
+>    and turn it into a proposed rule with numbers. Keep thinking how to reach Rule 0 and keep working towards it without being asked.
 > Keep improving every day towards Rule 0. The owner decides; live changes only with his "do it".
