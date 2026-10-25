@@ -119,11 +119,11 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   e.sw.favourFor = () => ({ score: 1, signs: { flow: false, book: false, volume: false, vwap: true, lows: false, market: false } })
   ok(e.onTick('UP', { price: 100.8, cum: 70000 }, at(9, 30)).every((x) => x.kind !== 'entry'), 'weak signs -> no re-entry')
 }
-{ // owner 25 Oct 16:30: aggressive buyers/sellers are a MUST for re-entry
+{ // owner 25 Oct 16:35: 3 of 6 is enough (aggressive buyers NOT a must) - 5 signs without flow -> re-entry
   const { e } = mk()
   feedOR(e, 'UP', 100, 100.6, 99.9, 100.5, 8000); e.onTimer(at(9, 20))
   e.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60000 }, at(9, 21)); e.onTick('UP', { price: 99.8, cum: 61000 }, at(9, 22)); e.onTick('UP', { price: 100.4, cum: 62000 }, at(9, 23))
   e.sw.favourFor = () => ({ score: 5, signs: { flow: false, book: true, volume: true, vwap: true, lows: true, market: true } })
-  ok(e.onTick('UP', { price: 100.8, cum: 70000 }, at(9, 30)).every((x) => x.kind !== 'entry'), '5 signs but no aggressive buyers -> no re-entry')
+  ok(e.onTick('UP', { price: 100.8, bid: 100.79, ask: 100.81, cum: 70000 }, at(9, 30)).some((x) => x.kind === 'entry'), '5 signs without aggressive buyers -> re-entry allowed')
 }
 console.log(`${pass}/${pass + fail} stocks-in-play checks passed`); process.exit(fail ? 1 : 0)
