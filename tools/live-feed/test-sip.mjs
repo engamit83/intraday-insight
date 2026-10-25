@@ -90,4 +90,12 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   e.onTick('DN', { price: t.entry - 3.5 * t.risk, cum: 100300 }, at(9, 41, 20))
   ok(Math.abs(t.stop - (t.entry - 2.5 * t.risk)) < 0.02, 'then trails 1R behind the new best')
 }
+{ // PROPOSAL B: a stock that opened > 1% beyond yesterday's close in the trade direction is skipped (shadow list)
+  const b2 = JSON.parse(JSON.stringify(base)); b2.lastClose = { UP: 98, DN: 199 }
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sipg-')); const e = new SipEngine({ dataDir: dir, baseline: b2 })
+  feedOR(e, 'UP', 100, 102, 99.5, 101.5, 8000)   // opened 100 vs close 98 = +2.04% gap with a BUY -> skip
+  feedOR(e, 'DN', 200, 200.5, 196, 197, 5000)    // opened 200 vs close 199 = gap AGAINST a SELL -> keep
+  const pk = e.onTimer(at(9, 20)).find((x) => x.kind === 'picks')?.picks ?? []
+  ok(pk.length === 1 && pk[0].sym === 'DN' && e.gapSkipped.length === 1 && e.gapSkipped[0].sym === 'UP', 'gap-chaser skipped, reversal kept')
+}
 console.log(`${pass}/${pass + fail} stocks-in-play checks passed`); process.exit(fail ? 1 : 0)

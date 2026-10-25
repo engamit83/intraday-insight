@@ -86,7 +86,8 @@ stock list sync → real price data (Sharekhan primary / Alpha Vantage fallback)
 E1. 09:15:00-09:19:59 = opening range (OR) of every stock: open, high, low, last price, volume traded.
 E2. Liquidity: only stocks with median turnover >= Rs25 crore/day.
 E3. Relative volume (rvol) = OR volume / the stock's own average OR volume (last 10 days). Must be >= 3x.
-E4. At 09:20 rank by rvol, keep the TOP 15 (was 10; owner "do it" 23 Oct 08:49). Direction = OR close above open -> BUY; below -> SELL.
+E4. At 09:20 rank by rvol, keep the TOP 10 (owner 25 Oct: Proposal B; was 15). Direction = OR close above open -> BUY; below -> SELL.
+E4b. **PROPOSAL B (owner 25 Oct 15:59): skip gap-chasers** - a stock that opened > 1% beyond yesterday's close IN the trade direction is not traded (9 days: those 32 trades made ~0). Skipped gap stocks go to a SHADOW LIST (sip-state gapSkipped) - every review tests checks on them (owner: gap-up can still be strong; find the extra check that proves a good gap trade). Tested so far (32 trades): gap held, gap size, 10x volume, Nifty/yesterday direction - none clearly separates; best hint "yesterday closed near its high/low" (+2.5R vs -2.6R) - not proven. Yesterday's close per stock is stored in sip-baseline.json lastClose every evening. Direction = OR close above open -> BUY; below -> SELL.
 E5. Entry window 09:20-10:15: BUY when the price trades ABOVE the OR high; SELL when it trades BELOW the OR low. Fill on the tick at the offer (BUY) / bid (SELL) + 0.02%. One trade per stock per day.
 **EXIT**
 X1. Stop loss = other side of the OR, kept between 0.5% and 1.5% (was 2%; owner "do it" 23 Oct 08:49) of entry. Size = Rs1,000 risk per trade (1R).
