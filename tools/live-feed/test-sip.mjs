@@ -132,4 +132,18 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   ok(e.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60000, upCkt: 101.5, loCkt: 90 }, at(9, 21)).every((x) => x.kind !== 'entry'), 'no BUY with the upper circuit 0.8% away')
   ok(e.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60100, upCkt: 110, loCkt: 90 }, at(9, 22)).some((x) => x.kind === 'entry'), 'BUY when the circuit is far')
 }
+{ // SIZE BY QUALITY: gap against us + rvol >= 5 -> 1.5x risk; gapped 0-1% our way -> 0.5x
+  const b2 = JSON.parse(JSON.stringify(base)); b2.lastClose = { UP: 101, DN: 199.5 }
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sipq-')); const e = new SipEngine({ dataDir: dir, baseline: b2 })
+  feedOR(e, 'UP', 100, 100.6, 99.9, 100.5, 8000)   // opened 100 vs close 101 = gap AGAINST a BUY, rvol 8 -> 1.5x
+  feedOR(e, 'DN', 200, 200.5, 196, 197, 5000)      // opened 200 vs close 199.5 = +0.25% our way? no: SELL, opened ABOVE close = against -> rvol 5 -> 1.5x
+  e.onTimer(at(9, 20))
+  const en = e.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60000 }, at(9, 21)).find((x) => x.kind === 'entry')
+  ok(en && en.trade.sizeMult === 1.5 && Math.abs(en.trade.qty * en.trade.risk - 1500) < en.trade.risk + 1, 'strong setup gets 1.5x risk (Rs1,500)')
+  const b3 = JSON.parse(JSON.stringify(base)); b3.lastClose = { UP: 99.5 }
+  const e3 = new SipEngine({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'sipq3-')), baseline: b3 })
+  feedOR(e3, 'UP', 100, 100.6, 99.9, 100.5, 8000); e3.onTimer(at(9, 20))   // opened 100 vs close 99.5 = +0.5% our way -> 0.5x
+  const en3 = e3.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60000 }, at(9, 21)).find((x) => x.kind === 'entry')
+  ok(en3 && en3.trade.sizeMult === 0.5, 'weaker setup (gapped 0-1% our way) gets 0.5x risk')
+}
 console.log(`${pass}/${pass + fail} stocks-in-play checks passed`); process.exit(fail ? 1 : 0)

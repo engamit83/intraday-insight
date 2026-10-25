@@ -251,7 +251,10 @@ Deno.serve(async (req) => {
   const used = new Set(trades.map((t) => t.signal_id))
   const { data: sigs } = await supabase.from('signals').select('id, symbol, signal_type, entry_price, stoploss_price, target_price, indicators, created_at')
     .gte('created_at', dayStartIso).order('created_at', { ascending: true })
-  const fresh = ((sigs ?? []) as Row[]).filter((s) => s.indicators?.rules === 'v4' && !used.has(s.id))
+  // 25 Oct owner "do it": OLD v4.2 paper trading switched OFF (the stocks-in-play engine on the laptop is the strategy now).
+  // Feed / Sharekhan health alerts above stay on. Set V42_PAPER = true to switch it back on.
+  const V42_PAPER = (globalThis as { __V42_PAPER__?: boolean }).__V42_PAPER__ ?? false // tests switch it on
+  const fresh = V42_PAPER ? ((sigs ?? []) as Row[]).filter((s) => s.indicators?.rules === 'v4' && !used.has(s.id)) : []
   let opened = 0, skippedLoss = 0
   for (const s of fresh) {
     if (realised <= -PAPER.dailyLossLimitRs) { skippedLoss++; continue }
@@ -307,7 +310,7 @@ Deno.serve(async (req) => {
   if (nowMin >= 15 * 60 + 30) {
     const { data: done } = await supabase.from('system_logs').select('id').eq('source', 'paper-trader').eq('level', 'INFO')
       .gte('created_at', dayStartIso).like('message', 'Paper day summary%').limit(1)
-    if (!done?.length) {
+    if (!done?.length && trades.length) {
       const r = report(trades)
       await supabase.from('system_logs').insert({ level: 'INFO', source: 'paper-trader',
         message: `Paper day summary ${today}: ${r.closedCount} trades, ${r.wins} wins, net Rs ${r.netRs}`, metadata: r })

@@ -28,7 +28,7 @@ import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, circuitSafety: false, minCircuitRoomPct: 2, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -160,11 +160,15 @@ export class SipEngine {
     const opp = B ? pk.low : pk.high
     const riskPct = Math.min(Math.max(Math.abs(entry - opp) / entry * 100, this.r.stopMinPct), this.r.stopMaxPct)
     const risk = entry * riskPct / 100
-    const qty = Math.max(1, Math.floor(this.r.riskRs / risk))
+    // SIZE BY QUALITY (owner 25 Oct "do it"): 1.5x risk for the strongest setup (gapped AGAINST us, then turned on >= 5x volume),
+    // 0.5x for the weakest kept setup (gapped 0-1% our way), 1x otherwise. 9 days: +Rs39,900 vs +Rs31,700, worst day -600 vs -1,200.
+    const mult = !this.r.qualitySize || pk.gapWith == null ? 1 : (pk.gapWith < 0 && pk.rvol >= 5 ? 1.5 : (pk.gapWith > 0 ? 0.5 : 1))
+    const riskRs = this.r.riskRs * mult
+    const qty = Math.max(1, Math.floor(riskRs / risk))
     // record the 6 favour signs at EVERY entry (owner 25 Oct 16:35: compare the trades that went up with the ones that went down)
     const fs6 = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0)
     const signsAtEntry = fs6 ? Object.keys(fs6.signs).filter((k) => fs6.signs[k]) : []
-    const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, gapWith: pk.gapWith ?? null, signsAtEntry, entrySigns: pk.entrySigns ?? null, waitedTicks: pk.waited ?? 0, bookAtEntry: this.bookNow.get(pk.sym) ?? null, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
+    const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, gapWith: pk.gapWith ?? null, riskRs, sizeMult: mult, signsAtEntry, entrySigns: pk.entrySigns ?? null, waitedTicks: pk.waited ?? 0, bookAtEntry: this.bookNow.get(pk.sym) ?? null, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
     this.trades.set(pk.sym, t); this.save()
     return [{ kind: 'entry', trade: t, ts }]
   }

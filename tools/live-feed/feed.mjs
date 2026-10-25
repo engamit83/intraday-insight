@@ -207,7 +207,7 @@ async function onSipEvent(ev) {
         : '🟢 STOCKS IN PLAY: no stock qualified today (no paper trades)'
     } else if (ev.kind === 'entry') {
       const t = ev.trade
-      text = `🟢 NEW ${t.dir} ${t.sym} at ₹${t.entry} (${sipClock(ev.ts)}), stop ₹${t.stop} (${t.riskPct}%), qty ${t.qty}, risk ₹1,000 - stocks in play (paper money)`
+      text = `🟢 NEW ${t.dir} ${t.sym} at ₹${t.entry} (${sipClock(ev.ts)}), stop ₹${t.stop} (${t.riskPct}%), qty ${t.qty}, risk ₹${Math.round(t.riskRs ?? 1000).toLocaleString('en-IN')}${t.sizeMult && t.sizeMult !== 1 ? ` (${t.sizeMult}x - ${t.sizeMult > 1 ? 'strong setup' : 'weaker setup'})` : ''} - stocks in play (paper money)`
     } else if (ev.kind === 'exit') {
       const t = ev.trade, why = { stop: 'stop loss', trail: 'trailing stop (profit kept)', squareoff: '15:15 close' }[t.reason] ?? t.reason
       text = `${t.netRs >= 0 ? '✅' : '🔻'} NEW ${t.dir} ${t.sym} closed: ${why} at ₹${t.exit} (${sipClock(ev.ts)}), net ₹${t.netRs} (${t.R}R) - stocks in play (paper money)`
