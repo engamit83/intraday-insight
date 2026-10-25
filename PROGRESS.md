@@ -92,6 +92,7 @@ E5. Entry window 09:20-10:15: BUY when the price trades ABOVE the OR high; SELL 
 X1. Stop loss = other side of the OR, kept between 0.5% and 1.5% (was 2%; owner "do it" 23 Oct 08:49) of entry. Size = Rs1,000 risk per trade (1R).
 X2. No fixed target - winners run.
 X3. Trailing stop: once the trade is +1R, the stop follows 1R behind the best price (at +2R the stop is at +1R, etc.).
+X3b. **EXIT RULE "TRAILING STOP + SMART WARNING" (owner 25 Oct 14:11, live from Mon 26 Oct):** the smart warning runs inside the engine on 1-minute bars. If it fires on a trade that has been >= +1R, the trailing stop TIGHTENS from 1R to **0.3R behind the best price** (phone alert "⚠️ SMART EXIT ... stop tightened"). If it fires before +1R: phone alert only, the stop does not move. Signs (SELL; BUY = mirror): aggressive counter-trades, order book turned against us, counter-move on rising volume, through VWAP, structure turning, Nifty turning; 3 signs once in profit, 4 incl. flow/book before; not in the first 3 minutes; max once per 10 min. Replay 22+23 Oct: +Rs4,527 vs +Rs3,685 with the trailing stop alone (16 trades - keep checking daily).
 X4. Everything still open is closed at 15:15.
 X5. Costs 0.106% + slippage counted on every trade. Alerts on ntfy for picks, entries, exits, day summary.
 *(The v4.2 rules below keep running in the app for comparison only.)*

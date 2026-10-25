@@ -211,6 +211,11 @@ async function onSipEvent(ev) {
     } else if (ev.kind === 'exit') {
       const t = ev.trade, why = { stop: 'stop loss', trail: 'trailing stop (profit kept)', squareoff: '15:15 close' }[t.reason] ?? t.reason
       text = `${t.netRs >= 0 ? '✅' : '🔻'} NEW ${t.dir} ${t.sym} closed: ${why} at ₹${t.exit} (${sipClock(ev.ts)}), net ₹${t.netRs} (${t.R}R) - stocks in play (paper money)`
+    } else if (ev.kind === 'warn') {
+      const t = ev.trade, w = ev.w, SIGN = { flow: 'aggressive counter-trades', book: 'order book turned against us', volume: 'counter-move on rising volume', vwap: 'through VWAP', lows: 'structure turning', market: 'Nifty turning against us' }
+      text = ev.tightened
+        ? `⚠️ SMART EXIT: NEW ${t.dir} ${t.sym} at ₹${w.price} - ${w.signs.map((k) => SIGN[k]).join(', ')}. Trailing stop TIGHTENED to ₹${t.stop} (0.3R behind best +${w.best}R) - stocks in play (paper)`
+        : `⚠️ SMART WARNING (alert only, trade kept): NEW ${t.dir} ${t.sym} at ₹${w.price}, now ${w.R >= 0 ? '+' : ''}${w.R}R - ${w.signs.map((k) => SIGN[k]).join(', ')}`
     } else if (ev.kind === 'note') text = `🟢 ${ev.text}`
     if (!text) return
     say(`SIP ${text}`)
@@ -220,7 +225,7 @@ async function onSipEvent(ev) {
 }
 function sipTick(symbol, t, now) {
   if (!sip) return
-  try { for (const ev of sip.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask, cum: t.cumulativeVolume }, now)) onSipEvent(ev) }
+  try { for (const ev of sip.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask, cum: t.cumulativeVolume, totBuy: t.totBuy, totSell: t.totSell }, now)) onSipEvent(ev) }
   catch (e) { say(`! stocks-in-play error (feed continues): ${e.message}`); sip = null }
 }
 function sipTimer() {
@@ -397,7 +402,7 @@ async function main() {
   // Its own window title (INTRADAY-SMARTWARN) - the 15:40 stop task closes only the feed window; smart-watch stops itself at 15:31.
   try {
     const nowIst = new Date(Date.now() + 330 * 60_000), wd = nowIst.getUTCDay(), hm = nowIst.toISOString().slice(11, 16)
-    if (!TEST_IGNORE_MARKET_HOURS && process.env.SMART_WARN !== '0' && wd >= 1 && wd <= 5 && hm < '15:30') {
+    if (!TEST_IGNORE_MARKET_HOURS && process.env.SMART_WARN === '1' && wd >= 1 && wd <= 5 && hm < '15:30') { // 25 Oct: off by default - the warning now runs INSIDE the stocks-in-play engine (exit rule)
       const { spawn } = await import('node:child_process')
       const child = process.platform === 'win32'
         ? spawn('cmd.exe', ['/c', 'start', '"INTRADAY-SMARTWARN"', '/min', 'cmd', '/c', 'node', 'smart-watch.mjs'], { cwd: here, detached: true, stdio: 'ignore', windowsVerbatimArguments: true })

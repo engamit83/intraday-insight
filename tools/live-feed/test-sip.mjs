@@ -61,4 +61,20 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   const ev = e.onTimer(at(9, 20))
   ok(ev[0]?.kind === 'note' && /after 09:15/.test(ev[0].text) && e.picks.length === 0, 'feed started late -> no picks')
 }
+{ // EXIT RULE trailing stop + smart warning: a warning on a trade that has been >= +1R tightens the trail to 0.3R
+  const { e } = mk()
+  feedOR(e, 'DN', 200, 200.5, 196, 197, 5000); e.onTimer(at(9, 20))
+  const en = e.onTick('DN', { price: 195.9, bid: 195.85, ask: 195.95, cum: 100000 }, at(9, 21)).find((x) => x.kind === 'entry')
+  const t = e.trades.get('DN')
+  // run down to +2R, then three 1-minute bars up on rising volume with higher lows (structure + volume) and aggressive buyers
+  let cum = 100000, i = 22
+  for (const p of [195, 194, 193, 192.5, 192.2, 192]) { cum += 1000; e.onTick('DN', { price: p, cum }, at(9, i)); e.onTick('DN', { price: p - 0.05, cum: cum + 500 }, at(9, i, 30)); i++ }
+  const best = t.best
+  let ev = []
+  for (const p of [192.4, 192.8, 193.2, 193.4]) { cum += 6000; ev.push(...e.onTick('DN', { price: p - 0.1, cum }, at(9, i))); ev.push(...e.onTick('DN', { price: p, cum: cum + 4000 }, at(9, i, 30))); i++ }
+  ev.push(...e.onTick('DN', { price: 193.4, cum: cum + 100 }, at(9, i)))
+  const w = ev.find((x) => x.kind === 'warn')
+  ok(en && best >= 1 && w && w.tightened, 'smart warning on a winner tightens the trailing stop')
+  ok(t.exit || Math.abs(t.stop - (t.entry - (t.best - 0.3) * t.risk)) < 0.02, 'tightened stop sits 0.3R behind the best price (or the trade closed on it)')
+}
 console.log(`${pass}/${pass + fail} stocks-in-play checks passed`); process.exit(fail ? 1 : 0)

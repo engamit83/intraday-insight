@@ -7,15 +7,19 @@
 //  3. Entry until 10:15 when the price breaks the OR high (BUY) / OR low (SELL): fill at the offer (BUY) / bid (SELL) + 0.02% slippage.
 //  4. Stop = other side of the opening range, clamped to 0.5%-1.5% of the entry (owner "do it" 23 Oct 08:49; was 2%). Top 15 (was 10). Size = Rs1,000 risk (1R).
 //  5. After +1R the stop trails 1R behind the best price. Otherwise exit at 15:15. Costs 0.10628% + slippage counted.
+//  6. EXIT RULE 'trailing stop + smart warning' (owner 25 Oct 14:11): when the smart warning (smart-warn.mjs) fires on a trade that
+//     has been >= +1R, the trail tightens from 1R to 0.3R behind the best price. A warning before +1R = phone alert only.
 import fs from 'node:fs'
 import path from 'node:path'
+import { SmartWarn } from './smart-warn.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 15, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
+  topK: 15, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
 const istClock = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(11, 19)
+const istHM = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(11, 16)
 const mean = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0
 const median = (a) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] }
 
@@ -30,6 +34,8 @@ export class SipEngine {
     this.closed = []
     this.firstTickSec = null
     this.status = 'waiting'
+    this.sw = new SmartWarn()
+    this.bookNow = new Map()
   }
   static loadBaseline(dataDir) {
     try { return JSON.parse(fs.readFileSync(path.join(dataDir, 'sip-baseline.json'), 'utf8')) } catch { return { first5: {}, turnover: {}, days: [] } }
@@ -66,6 +72,8 @@ export class SipEngine {
     }
     ev.push(...this.onTimer(ts))
     const t = this.trades.get(sym)
+    if (tick.totBuy > 0 && tick.totSell > 0) this.bookNow.set(sym, tick.totBuy / tick.totSell)
+    if (this.r.smartExit && sec < this.r.squareOff) ev.push(...this.smart(sym, tick, ts, t))
     if (t && !t.exit) ev.push(...this.manage(t, tick, ts, sec))
     else if (!t && this.picks && sec < this.r.lastEntry) {
       const pk = this.picks.find((x) => x.sym === sym)
@@ -109,9 +117,29 @@ export class SipEngine {
     const riskPct = Math.min(Math.max(Math.abs(entry - opp) / entry * 100, this.r.stopMinPct), this.r.stopMaxPct)
     const risk = entry * riskPct / 100
     const qty = Math.max(1, Math.floor(this.r.riskRs / risk))
-    const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
+    const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, bookAtEntry: this.bookNow.get(pk.sym) ?? null, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
     this.trades.set(pk.sym, t); this.save()
     return [{ kind: 'entry', trade: t, ts }]
+  }
+  // smart warning on 1-minute bars (all stocks, so VWAP is the day's VWAP); on a closed bar of an open trade, evaluate
+  smart(sym, tick, ts, t) {
+    const m = istHM(ts)
+    const closed = this.sw.onTick(sym, m, tick.price, tick.cum)
+    const bk = this.bookNow.get(sym); if (bk) this.sw.st(sym).book = bk
+    if (!closed || !t || t.exit) return []
+    const inMin = istHM(t.inTs)
+    if (m <= inMin) return []
+    const w = this.sw.evaluate({ sym, dir: t.dir, entry: t.entry, risk: t.risk, inMin, bookAtEntry: t.bookAtEntry ?? null }, m)
+    if (!w) return []
+    let tightened = false
+    if (t.best >= 1) {
+      const sg = t.dir === 'BUY' ? 1 : -1
+      t.tight = true
+      const ns = +(t.entry + sg * (t.best - this.r.warnTightR) * t.risk).toFixed(2)
+      if ((ns - t.stop) * sg > 0) { t.stop = ns; tightened = true }
+      this.save()
+    }
+    return [{ kind: 'warn', trade: t, w, tightened, ts }]
   }
   manage(t, tick, ts, sec) {
     const B = t.dir === 'BUY', sg = B ? 1 : -1, p = tick.price
@@ -125,7 +153,7 @@ export class SipEngine {
     if (r > t.best) {
       t.best = r
       if (t.best >= 1) {
-        const ns = +(t.entry + sg * (t.best - 1) * t.risk).toFixed(2)
+        const ns = +(t.entry + sg * (t.best - (t.tight ? this.r.warnTightR : 1)) * t.risk).toFixed(2)
         if ((ns - t.stop) * sg > 0) { t.stop = ns; this.dirty = true }
       }
     }
