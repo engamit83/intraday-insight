@@ -1,5 +1,8 @@
 // sip-engine.mjs - STOCKS IN PLAY paper strategy on live ticks (owner "do it from tomorrow", 22 Oct 2026; research: tools/backtest/v5/sip.py,
 // 13-22 Oct x 494 stocks: 47 trades, 64% winners, +16.9R after costs). PAPER ONLY - no orders are ever placed.
+// RE-ENTRY (owner 25 Oct 16:23 "do it"): after a losing exit (trade never reached +1R) the stock re-arms when the price is back inside the
+// opening range; if it breaks the level again before 10:15 AND the base favour signs confirm (reMinSigns of 6, incl. aggressive
+// buyers/sellers when reNeedFlow), enter once more with the same stop/size rules. Without confirmation: no re-entry.
 // PROPOSAL B (owner 25 Oct 15:59): skip stocks that opened > 1% beyond yesterday's close IN the trade direction (gap-chasers),
 // trade the top 10. Skipped gap stocks are kept in state.gapSkipped (shadow list) for the daily review.
 // ENTRY BASE RULES (owner 25 Oct 15:33): a watch-list stock that breaks its level is entered only when the 6 favour signs agree
@@ -25,7 +28,7 @@ import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -87,9 +90,21 @@ export class SipEngine {
     if (tick.totBuy > 0 && tick.totSell > 0) this.bookNow.set(sym, tick.totBuy / tick.totSell)
     if (this.r.smartExit && sec < this.r.squareOff) ev.push(...this.smart(sym, tick, ts, t))
     if (t && !t.exit) ev.push(...this.manage(t, tick, ts, sec))
-    else if (!t && this.picks && sec < this.r.lastEntry) {
+    else if (this.picks && sec < this.r.lastEntry) {
       const pk = this.picks.find((x) => x.sym === sym)
-      if (pk) ev.push(...this.tryEntry(pk, tick, ts))
+      if (pk && !t) ev.push(...this.tryEntry(pk, tick, ts))
+      else if (pk && t && t.exit && t.best < 1 && (t.re ?? 0) < this.r.reentries) { // RE-ENTRY with base-sign confirmation
+        const B = pk.dir === 'BUY', lvl = B ? pk.high : pk.low
+        if (!t.rearmed) { if (B ? tick.price <= lvl : tick.price >= lvl) { t.rearmed = true; this.save() } }
+        else if (B ? tick.price > lvl : tick.price < lvl) {
+          const f = this.sw.favourFor(sym, pk.dir, tick.price, pk.book0)
+          if (f && f.score >= this.r.reMinSigns && (!this.r.reNeedFlow || f.signs.flow)) {
+            const signs = Object.keys(f.signs).filter((k) => f.signs[k])
+            const e2 = this.tryEntry({ ...pk, waited: 0 }, tick, ts, true)
+            if (e2.length) { const nt = this.trades.get(sym); nt.re = (t.re ?? 0) + 1; nt.entrySigns = signs; e2[0].reentry = true; e2[0].signs = signs; this.save(); ev.push(...e2) }
+          }
+        }
+      }
     }
     return ev
   }
@@ -126,10 +141,10 @@ export class SipEngine {
     this.picks = cand.slice(0, this.r.topK).map((p) => ({ ...p, book0: this.bookNow.get(p.sym) ?? null })); this.status = 'picked'; this.save()
     return [{ kind: 'picks', picks: this.picks, ts }]
   }
-  tryEntry(pk, tick, ts) {
+  tryEntry(pk, tick, ts, confirmed = false) {
     const B = pk.dir === 'BUY', sg = B ? 1 : -1, lvl = B ? pk.high : pk.low
     if (B ? tick.price <= lvl : tick.price >= lvl) return []   // strictly beyond the range
-    if (this.r.entryBase) { // BASE RULES (owner 25 Oct): enter only if the favour signs agree; otherwise wait (price must still be beyond the level)
+    if (this.r.entryBase && !confirmed) { // BASE RULES (owner 25 Oct): enter only if the favour signs agree; otherwise wait (price must still be beyond the level)
       const f = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0)
       if (!f || f.score < this.r.entryMinSigns || (this.r.entryNeedFlow && !f.signs.flow)) { pk.waited = (pk.waited ?? 0) + 1; return [] }
       pk.entrySigns = Object.keys(f.signs).filter((k) => f.signs[k])

@@ -98,4 +98,25 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   const pk = e.onTimer(at(9, 20)).find((x) => x.kind === 'picks')?.picks ?? []
   ok(pk.length === 1 && pk[0].sym === 'DN' && e.gapSkipped.length === 1 && e.gapSkipped[0].sym === 'UP', 'gap-chaser skipped, reversal kept')
 }
+{ // RE-ENTRY with base-sign confirmation: after a stop-out, back inside the range, break again + 3 favour signs -> one re-entry
+  const { e } = mk()
+  feedOR(e, 'UP', 100, 100.6, 99.9, 100.5, 8000); e.onTimer(at(9, 20))
+  e.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60000 }, at(9, 21))
+  e.onTick('UP', { price: 99.8, bid: 99.79, ask: 99.81, cum: 61000 }, at(9, 22))           // stopped out
+  ok(e.trades.get('UP').exit && e.trades.get('UP').best < 1, 'first trade stopped out')
+  e.onTick('UP', { price: 100.4, cum: 62000 }, at(9, 23))                                  // back inside the range -> re-armed
+  e.sw.favourFor = () => ({ score: 4, signs: { flow: true, book: false, volume: true, vwap: true, lows: true, market: false } })
+  const ev = e.onTick('UP', { price: 100.8, bid: 100.79, ask: 100.81, cum: 70000 }, at(9, 30))
+  const re = ev.find((x) => x.kind === 'entry')
+  ok(re && re.reentry && e.trades.get('UP').re === 1, 're-entry when the price breaks again and the base signs confirm')
+  e.trades.get('UP').exit = 99; e.trades.get('UP').best = 0; e.trades.get('UP').rearmed = true
+  ok(e.onTick('UP', { price: 100.9, cum: 71000 }, at(9, 40)).every((x) => x.kind !== 'entry'), 'only one re-entry per stock')
+}
+{ // no confirmation -> no re-entry
+  const { e } = mk()
+  feedOR(e, 'UP', 100, 100.6, 99.9, 100.5, 8000); e.onTimer(at(9, 20))
+  e.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60000 }, at(9, 21)); e.onTick('UP', { price: 99.8, cum: 61000 }, at(9, 22)); e.onTick('UP', { price: 100.4, cum: 62000 }, at(9, 23))
+  e.sw.favourFor = () => ({ score: 1, signs: { flow: false, book: false, volume: false, vwap: true, lows: false, market: false } })
+  ok(e.onTick('UP', { price: 100.8, cum: 70000 }, at(9, 30)).every((x) => x.kind !== 'entry'), 'weak signs -> no re-entry')
+}
 console.log(`${pass}/${pass + fail} stocks-in-play checks passed`); process.exit(fail ? 1 : 0)
