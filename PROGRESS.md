@@ -244,7 +244,7 @@ Claude's cautions from data: trading only WITH Nifty hurt first entries (-7.5R /
 - Reading: at the breakout the favour signs are almost always already there; when strongly aligned the move is often already extended -> late entry. Our edge = fresh reversals (gap against, first 5 min turn). So the signs do NOT help as a gate for the first entry. Possible better use: confirming a RE-entry, or sizing.
 - Fix found while testing: smart signs now use bars from 09:15 (true day VWAP). Exit rule replay 22+23 Oct now +Rs1,729 / +Rs3,788 = +Rs5,517 (was +Rs1,390 with VWAP from 09:20).
 
-## 🔁 ### PRE-OPEN STUDY (owner 25 Oct 17:45: "super important data - all data + analysis, compute past weeks, monitor next week, decide next weekend")
+### PRE-OPEN STUDY (owner 25 Oct 17:45: "super important data - all data + analysis, compute past weeks, monitor next week, decide next weekend")
 - LIVE from 26 Oct: recorder writes data\preopen-DATE.csv 09:00-09:15 (price = indicated open, day volume, bid/offer, TOTAL BUY / SELL qty, circuits, prev close).
   Mon 09:22 check: confirm the file exists and has rows (does Sharekhan stream in pre-open? if not -> fix).
 - PAST days (never recorded) -> proxy study tools/backtest/v5/preopen_proxy.py on 9 days, using what the pre-open leaves behind (opening price = auction
@@ -259,7 +259,7 @@ Claude's cautions from data: trading only WITH Nifty hurt first entries (-7.5R /
   (c) losers vs winners among picks (imbalance against our direction?). Candidate rules to test next weekend: skip/size-down a pick whose pre-open
   imbalance is strongly against; size-up when gap-against + imbalance agrees with the turn; earlier entry list at 09:15. Owner decides.
 
-REVISIT LIST — "GAP-UP STOCK X" (owner 25 Oct 16:12: "this needs a different rule, remember it and we will revisit it")
+## 🔁 REVISIT LIST — "GAP-UP STOCK X" (owner 25 Oct 16:12: "this needs a different rule, remember it and we will revisit it")
 Stock X type = opened > 1% beyond yesterday's close IN the trade direction + first 5 min continue that way on high volume (gap-and-go).
 Now: skipped (Proposal B) and recorded daily in the shadow list (sip-state gapSkipped). Owner wants a SEPARATE rule for these later.
 Stock Y type (gap against, then turns on high volume, break of the 5-min level) = KEPT, current entry.
