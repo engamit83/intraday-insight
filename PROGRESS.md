@@ -254,12 +254,12 @@ NEXT WEEK (26-30 Oct) focus: (1) run Proposal B live on paper; (2) monitor WHERE
 
 ## 🧠 EXPERT AUDIT (Claude, 25 Oct 16:40) - standing work list (status updated in reviews)
 1. DATA: only 9 days of 1-min -> results uncertain. Get months of history (Zerodha Kite Connect), keep daily recording. [todo: sign-up steps]
-2. PRE-OPEN 09:00-09:08 (auction volume, indicative open) not used or recorded - strong stocks-in-play signal. [todo: record from Monday]
+2. PRE-OPEN 09:00-09:15 [DONE 25 Oct: recorder writes data\preopen-DATE.csv from Mon 26 Oct - price, volume, bid/offer, buy/sell waiting, circuits, yesterday close]. Study once a few days are recorded.
 3. POSITION SIZE by setup quality. [TESTED 25 Oct, tools/backtest/v5/audit.py, 9 days, live entry B+top10, trail 1R] base +31.7R (46 trades, worst day -1.2R). 1.5x risk for gap-reversal stocks with rvol>=5x, 0.5x for stocks gapped 0-1% our way, 1x others: +39.9R, per-R-risked +0.79 vs +0.69, worst day -0.6R; better on build days (+20.6 vs +17.9) AND check days (+19.3 vs +13.7). -> PROPOSED. (1.5x all reversals: +44.5R but more risk.)
 4. EXPOSURE CAP per direction. [TESTED] max 3 open same direction: +27.0R (worse); max 5: no change. -> rejected for now.
-5. Only 09:20-10:15 window: afternoon setups (second wave, VWAP reclaim after 13:30). [test]
+5. AFTERNOON setups [TESTED 25 Oct, afternoon.py]: day high/low break after 13:30 -1.6R, 11:30-13:30 range break -3.1R, VWAP reclaim -7.2R (all lose, 33-43% winners) -> rejected; stay morning-only.
 6. PARTIAL PROFIT booking. [TESTED] half at +1.5R: +27.3R, +2R: +30.6R, +3R: +32.0R vs +31.7R -> no gain, rejected.
-7. Watch-list / liquidity safety: circuit limits, ASM/GSM, F&O ban, spread/depth for our size (L2). [todo]
+7. SAFETY: circuit limits now read from the feed (parse.mjs upCkt/loCkt/prevClose). Engine rule circuitSafety (skip entry if the circuit in our direction is < 2% away) BUILT, OFF - proposal. ASM/GSM/F&O-ban lists: need a daily NSE source - todo. Spread/depth check: todo.
 8. Old v4.2 still running in the app, losing - propose switch-off. [proposal]
 
 ## 🔍 SIGNS-AT-ENTRY STUDY (owner 25 Oct 16:35) - for pruning entry + re-entry

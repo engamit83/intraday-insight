@@ -101,7 +101,9 @@ function walk(node, out, depth) {
 
 // Order-book summary that Sharekhan sends with every price (verified on real ticks 7 Oct):
 // best bid / offer price and quantity, and the total quantity waiting to buy / sell.
-const BOOK_FIELDS = { bid: 'bidPrice', bidQty: 'bidQty', ask: 'offPrice', askQty: 'offQty', totBuy: 'totalBuyQty', totSell: 'totalSellQty' }
+const BOOK_FIELDS = { bid: 'bidPrice', bidQty: 'bidQty', ask: 'offPrice', askQty: 'offQty', totBuy: 'totalBuyQty', totSell: 'totalSellQty',
+  // 25 Oct (expert audit): circuit limits and yesterday's close, sent by Sharekhan with every price but not read before
+  upCkt: 'upperCkt', loCkt: 'lowerCkt', prevClose: 'close' }
 function addBook(tick, node) {
   for (const [k, f] of Object.entries(BOOK_FIELDS)) {
     if (f in node) { const n = num(node[f]); if (Number.isFinite(n) && n >= 0) tick[k] = n }

@@ -28,7 +28,7 @@ import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, circuitSafety: false, minCircuitRoomPct: 2, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -50,6 +50,7 @@ export class SipEngine {
     this.status = 'waiting'
     this.sw = new SmartWarn()
     this.bookNow = new Map()
+    this.ckt = new Map() // circuit limits from the feed (25 Oct)
   }
   static loadBaseline(dataDir) {
     try { return JSON.parse(fs.readFileSync(path.join(dataDir, 'sip-baseline.json'), 'utf8')) } catch { return { first5: {}, turnover: {}, days: [] } }
@@ -88,6 +89,7 @@ export class SipEngine {
     ev.push(...this.onTimer(ts))
     const t = this.trades.get(sym)
     if (tick.totBuy > 0 && tick.totSell > 0) this.bookNow.set(sym, tick.totBuy / tick.totSell)
+    if (tick.upCkt > 0 || tick.loCkt > 0) this.ckt.set(sym, { up: tick.upCkt, lo: tick.loCkt })
     if (this.r.smartExit && sec < this.r.squareOff) ev.push(...this.smart(sym, tick, ts, t))
     if (t && !t.exit) ev.push(...this.manage(t, tick, ts, sec))
     else if (this.picks && sec < this.r.lastEntry) {
@@ -150,6 +152,10 @@ export class SipEngine {
       pk.entrySigns = Object.keys(f.signs).filter((k) => f.signs[k])
     }
     const quote = B ? (tick.ask > 0 ? tick.ask : tick.price) : (tick.bid > 0 ? tick.bid : tick.price)
+    if (this.r.circuitSafety) { // CIRCUIT SAFETY (expert audit, proposal): skip if the circuit limit in our direction is too close (no room to profit / frozen exit)
+      const c = this.ckt.get(pk.sym), lim = c ? (B ? c.up : c.lo) : 0
+      if (lim > 0 && Math.abs(lim - quote) / quote * 100 < this.r.minCircuitRoomPct) { pk.circuitSkip = true; return [] }
+    }
     const entry = +(quote * (1 + sg * this.r.slipPct / 100)).toFixed(2)
     const opp = B ? pk.low : pk.high
     const riskPct = Math.min(Math.max(Math.abs(entry - opp) / entry * 100, this.r.stopMinPct), this.r.stopMaxPct)

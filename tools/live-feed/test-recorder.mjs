@@ -47,4 +47,11 @@ check('a recording error never throws (bad folder)', () => {
   bad.onTick('TCS', { price: 1 }, ist(10, 0))
   assert.equal(bad.writeBook(ist(10, 1)), 0); assert.equal(bad.writeCandles(b, ist(10, 1)), 0); assert.equal(bad.errors, 2)
 })
+check('pre-open 09:00-09:15 is recorded with circuit limits and yesterday close', () => {
+  const r = new DayRecorder(path.join(dir, 'pre'))
+  r.preOpen('TCS', { price: 3000, cumulativeVolume: 500, upCkt: 3300, loCkt: 2700, prevClose: 2990 }, ist(9, 5))
+  r.flushTicks(ist(9, 5))
+  const lines = fs.readFileSync(path.join(dir, 'pre', 'preopen-2026-10-19.csv'), 'utf8').trim().split('\n')
+  assert.equal(lines.length, 2); assert.ok(lines[1].includes(',TCS,3000,500,') && lines[1].endsWith(',3300,2700,2990'))
+})
 console.log(`\nAll ${ok} recorder checks passed.`)

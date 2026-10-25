@@ -5,6 +5,8 @@
 //                           quantity waiting (tells us whether buyers or sellers are stronger)
 //   ticks-YYYY-MM-DD.csv    EVERY price tick (added 21 Oct, owner: everything at tick level) - time to the millisecond,
 //                           price, day volume, best bid/offer and sizes. Written every 2 seconds. ~150-250 MB per day.
+//   preopen-YYYY-MM-DD.csv  every message 09:00-09:15 (pre-open auction + gap to the open; added 25 Oct, expert audit):
+//                           price, day volume, bid/offer, total buy/sell waiting, circuit limits, yesterday's close.
 // Recording problems are reported but can never stop the feed.
 
 import fs from 'node:fs'
@@ -21,6 +23,14 @@ export class DayRecorder {
     this.errors = 0
     this.tickBuf = []
     this.ticksWritten = 0
+    this.preBuf = []
+  }
+
+  // 09:00-09:15 (pre-open): record everything Sharekhan sends, for the pre-open study
+  preOpen(symbol, t, ts) {
+    if (!symbol) return
+    this.preBuf.push([`${istTime(ts)}.${String(ts % 1000).padStart(3, '0')}`, symbol, t.price ?? '', t.cumulativeVolume ?? '', t.bid ?? '', t.ask ?? '', t.totBuy ?? '', t.totSell ?? '', t.upCkt ?? '', t.loCkt ?? '', t.prevClose ?? ''].join(','))
+    if (this.preBuf.length > 200000) this.flushTicks(ts)
   }
 
   onTick(symbol, t, ts) {
@@ -40,6 +50,14 @@ export class DayRecorder {
 
   // append buffered ticks to today's tick file; returns the number of ticks written
   flushTicks(nowMs = Date.now()) {
+    if (this.preBuf.length) {
+      const pl = this.preBuf; this.preBuf = []
+      try {
+        fs.mkdirSync(this.dir, { recursive: true })
+        const pf = path.join(this.dir, `preopen-${istDay(nowMs)}.csv`)
+        fs.appendFileSync(pf, (fs.existsSync(pf) ? '' : 'time,symbol,price,day_volume,bid,offer,total_buy_qty,total_sell_qty,upper_circuit,lower_circuit,prev_close\n') + pl.join('\n') + '\n')
+      } catch (e) { this.errors++ }
+    }
     if (this.tickBuf.length === 0) return 0
     const lines = this.tickBuf; this.tickBuf = []
     try {

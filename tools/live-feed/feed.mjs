@@ -352,6 +352,7 @@ async function runSession() {
         if (!symbol) continue
         builder.addTick({ symbol, price: t.price, volume: t.volume, cumulativeVolume: t.cumulativeVolume, ts: now })
         if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) recorder.onTick(symbol, t, now)
+        else { const mm = istMinuteOfDay(now); if (mm >= 9 * 60 && mm < 9 * 60 + 15) recorder.preOpen(symbol, t, now) } // 25 Oct: pre-open study
         stats.symbolLastTick.set(symbol, now)
         if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) sipTick(symbol, t, now)
         stats.lastPriceAt = now

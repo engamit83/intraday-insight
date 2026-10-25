@@ -126,4 +126,10 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   e.sw.favourFor = () => ({ score: 5, signs: { flow: false, book: true, volume: true, vwap: true, lows: true, market: true } })
   ok(e.onTick('UP', { price: 100.8, bid: 100.79, ask: 100.81, cum: 70000 }, at(9, 30)).some((x) => x.kind === 'entry'), '5 signs without aggressive buyers -> re-entry allowed')
 }
+{ // circuit safety (proposal, off by default): BUY skipped when the upper circuit is less than 2% away
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sipc-')); const e = new SipEngine({ dataDir: dir, baseline: JSON.parse(JSON.stringify(base)), rules: { ...SIP_RULES, circuitSafety: true } })
+  feedOR(e, 'UP', 100, 100.6, 99.9, 100.5, 8000); e.onTimer(at(9, 20))
+  ok(e.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60000, upCkt: 101.5, loCkt: 90 }, at(9, 21)).every((x) => x.kind !== 'entry'), 'no BUY with the upper circuit 0.8% away')
+  ok(e.onTick('UP', { price: 100.7, bid: 100.69, ask: 100.71, cum: 60100, upCkt: 110, loCkt: 90 }, at(9, 22)).some((x) => x.kind === 'entry'), 'BUY when the circuit is far')
+}
 console.log(`${pass}/${pass + fail} stocks-in-play checks passed`); process.exit(fail ? 1 : 0)
