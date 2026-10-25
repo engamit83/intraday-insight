@@ -260,7 +260,7 @@ NEXT WEEK (26-30 Oct) focus: (1) run Proposal B live on paper; (2) monitor WHERE
 5. AFTERNOON setups [TESTED 25 Oct, afternoon.py]: day high/low break after 13:30 -1.6R, 11:30-13:30 range break -3.1R, VWAP reclaim -7.2R (all lose, 33-43% winners) -> rejected; stay morning-only.
 6. PARTIAL PROFIT booking. [TESTED] half at +1.5R: +27.3R, +2R: +30.6R, +3R: +32.0R vs +31.7R -> no gain, rejected.
 7. SAFETY: circuit limits now read from the feed (parse.mjs upCkt/loCkt/prevClose). Engine rule circuitSafety (skip entry if the circuit in our direction is < 2% away) LIVE from 26 Oct (owner yes 16:51). ASM/GSM/F&O-ban lists: need a daily NSE source - todo. Spread/depth check: todo.
-8. Old v4.2 paper trading SWITCHED OFF (owner yes 16:51; paper-trader V42_PAPER=false, redeploy 25 Oct). Feed/Sharekhan health alerts stay.
+8. Old v4.2 paper trading SWITCHED OFF (owner yes 16:51; paper-trader V42_PAPER=false, redeployed by Lovable 25 Oct 16:55 from 18fff76, 1 credit; verify Mon 26 Oct: no new v4.2 paper trades). Feed/Sharekhan health alerts stay.
 9. LATE STOCK IN PLAY (owner question 16:51): a stock whose 5-min volume suddenly spikes to 5-10x at any time of day (news) - not caught now (picks only at 09:20). [test next]
 
 ## 🔍 SIGNS-AT-ENTRY STUDY (owner 25 Oct 16:35) - for pruning entry + re-entry
