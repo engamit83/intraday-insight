@@ -27,9 +27,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
 import { LateShadow } from './late-shadow.mjs'
+import { PreopenShadow } from './preopen-shadow.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true }
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -76,6 +77,7 @@ export class SipEngine {
     const ev = []
     if (!this.day) { this.day = istDay(ts); this.restore() }
     if (this.r.lateShadow && this.shadow === undefined) { try { this.shadow = new LateShadow({ dataDir: this.dataDir, sw: this.sw, baseline: this.baseline, day: this.day }) } catch { this.shadow = null } }
+    this.makePre()
     const sec = istSec(ts), p = tick.price
     if (!(p > 0)) return ev
     if (Number.isFinite(tick.cum)) this.cum.set(sym, { cum: tick.cum, price: p })
@@ -86,6 +88,7 @@ export class SipEngine {
       o.high = Math.max(o.high, p); o.low = Math.min(o.low, p); o.last = p
       if (Number.isFinite(tick.cum)) { if (o.v0 === null) o.v0 = tick.cum; o.v1 = tick.cum }
       if (this.r.smartExit || this.r.entryBase) { this.sw.onTick(sym, istHM(ts), p, tick.cum); if (tick.totBuy > 0 && tick.totSell > 0) { this.bookNow.set(sym, tick.totBuy / tick.totSell); this.sw.st(sym).book = tick.totBuy / tick.totSell } }
+      this.preTick(sym, tick, ts, sec, ev)
       return ev
     }
     ev.push(...this.onTimer(ts))
@@ -110,9 +113,21 @@ export class SipEngine {
         }
       }
     }
+    this.preTick(sym, tick, ts, sec, ev)
     // SHADOW monitor for later entries (owner 25 Oct 17:19) - records virtual trades only; can never affect live trades
     if (this.shadow && sec >= this.r.lastEntry) { try { this.shadow.onTick(sym, tick, ts, istHM(ts), sec >= this.r.squareOff) } catch (e) { this.shadow = null; ev.push({ kind: 'note', text: `late-entry shadow monitor stopped (live trading unaffected): ${e.message}` }) } }
     return ev
+  }
+  // PRE-OPEN virtual trades (owner 25 Oct 17:57) - monitoring only, can never affect live trades
+  makePre() { if (this.r.preopenShadow && this.pre === undefined && this.day) { try { this.pre = new PreopenShadow({ dataDir: this.dataDir, sw: this.sw, baseline: this.baseline, day: this.day }) } catch { this.pre = null } } }
+  onPreOpen(sym, tick, ts) { // 09:00-09:15 ticks from the feed
+    if (!this.day) { this.day = istDay(ts); this.restore() }
+    this.makePre()
+    if (this.pre) { try { this.pre.onPre(sym, tick) } catch { this.pre = null } }
+  }
+  preTick(sym, tick, ts, sec, ev) {
+    if (!this.pre || sec < this.r.orStart) return
+    try { this.pre.onTick(sym, tick, ts, istHM(ts), sec >= this.r.squareOff) } catch (e) { this.pre = null; ev.push({ kind: 'note', text: `pre-open shadow stopped (live trading unaffected): ${e.message}` }) }
   }
   // called every second by the feed (and from onTick): selection at 09:20, square-off at 15:15
   onTimer(ts) {
@@ -121,6 +136,7 @@ export class SipEngine {
     if (this.picks === null && sec >= this.r.orEnd && sec < this.r.squareOff) ev.push(...this.select(ts))
     if (sec >= this.r.squareOff) for (const t of this.trades.values()) if (!t.exit) ev.push(this.close(t, t.lastPrice ?? t.entry, 'squareoff', ts))
     if (sec >= this.r.squareOff && this.shadow) { try { this.shadow.closeAll(ts) } catch {} }
+    if (sec >= this.r.squareOff && this.pre) { try { this.pre.closeAll(ts) } catch {} }
     if (this.dirty && ts - (this.savedAt ?? 0) >= 10_000) { this.dirty = false; this.savedAt = ts; this.save() } // trailing-stop moves saved at most every 10 s
     return ev
   }
@@ -251,8 +267,9 @@ export class SipEngine {
   }
   summary() {
     const n = this.closed.length, net = this.closed.reduce((a, t) => a + t.netRs, 0), w = this.closed.filter((t) => t.netRs > 0).length
-    let late = null; try { late = this.shadow ? this.shadow.summary() : null } catch {}
-    return { n, net, wins: w, picks: this.picks?.length ?? 0, status: this.status, late }
+    let late = null, pre = null; try { late = this.shadow ? this.shadow.summary() : null } catch {}
+    try { pre = this.pre ? this.pre.summary() : null } catch {}
+    return { n, net, wins: w, picks: this.picks?.length ?? 0, status: this.status, late, pre }
   }
   // after the close: add today's opening-range volume and turnover to the baseline (keeps the last 10 days)
   updateBaseline() {

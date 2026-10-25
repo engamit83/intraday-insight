@@ -352,7 +352,7 @@ async function runSession() {
         if (!symbol) continue
         builder.addTick({ symbol, price: t.price, volume: t.volume, cumulativeVolume: t.cumulativeVolume, ts: now })
         if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) recorder.onTick(symbol, t, now)
-        else { const mm = istMinuteOfDay(now); if (mm >= 9 * 60 && mm < 9 * 60 + 15) recorder.preOpen(symbol, t, now) } // 25 Oct: pre-open study
+        else { const mm = istMinuteOfDay(now); if (mm >= 9 * 60 && mm < 9 * 60 + 15) { recorder.preOpen(symbol, t, now); if (sip) { try { sip.onPreOpen(symbol, { price: t.price, totBuy: t.totBuy, totSell: t.totSell, prevClose: t.prevClose, cum: t.cumulativeVolume }, now) } catch {} } } } // 25 Oct: pre-open study + virtual trades
         stats.symbolLastTick.set(symbol, now)
         if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) sipTick(symbol, t, now)
         stats.lastPriceAt = now
@@ -436,7 +436,7 @@ async function main() {
           for (const ev of sip.onTimer(Date.now())) await onSipEvent(ev)
           const sm = sip.summary()
           if (sip.updateBaseline()) {
-            const txt = `🟢 STOCKS IN PLAY day: ${sm.n} paper trades, ${sm.wins} winners, net ₹${sm.net}${sm.status.startsWith('skipped') ? ` (${sm.status})` : ''}${sm.late ? ` | shadow later entries (monitoring only): ${sm.late.n} virtual, signs-agree ${sm.late.okN} (${sm.late.okWins} won) net ₹${sm.late.okNet}` : ''}`
+            const txt = `🟢 STOCKS IN PLAY day: ${sm.n} paper trades, ${sm.wins} winners, net ₹${sm.net}${sm.status.startsWith('skipped') ? ` (${sm.status})` : ''}${sm.late ? ` | shadow later entries (monitoring only): ${sm.late.n} virtual, signs-agree ${sm.late.okN} (${sm.late.okWins} won) net ₹${sm.late.okNet}` : ''}${sm.pre ? ` | shadow pre-open: ${sm.pre.gotData ? `${sm.pre.n} virtual, ${sm.pre.wins} won, net ₹${sm.pre.net}` : 'NO pre-open data received'}` : ''}`
             say(txt); if (!ntfyTopic) await refreshOpenTrades(); await ntfy(txt)
           }
         }

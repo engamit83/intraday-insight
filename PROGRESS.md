@@ -254,6 +254,11 @@ Claude's cautions from data: trading only WITH Nifty hurt first entries (-7.5R /
     opening minute moved against us 82% won (not a reason to skip); mid opening volume best (81%, +17.2R), very high (>=8.3x) weakest (67%, +5.6R);
     opening minute >= 34% of the 5-min volume 83% won +19.3R vs 65% +12.4R. NO group loses -> no skip rule from the proxy; possible SIZE ideas only.
   * Older weeks: only 5-min candles for 49 Nifty stocks (28 Sep-6 Oct) - no pre-open, no 1-min opening print -> not usable for this.
+- PRE-OPEN VIRTUAL TRADES (owner 25 Oct 17:57 "do it", MONITORING ONLY): tools/live-feed/preopen-shadow.mjs, SIP_RULES.preopenShadow=true.
+  At 09:15 from the last pre-open snapshot: liquid stocks with buyers >= 2x sellers (BUY) / sellers >= 2x buyers (SELL), top 10 by imbalance -> virtual
+  entry at the first tick from 09:15, stop 1%, Rs1,000 risk, same exit rule as live. Files data\preopen-picks-DATE.csv (every candidate >= 1.5x, with
+  indicated gap), data\preopen-shadow-DATE.csv; ntfy day-summary line (says 'NO pre-open data received' if Sharekhan sends nothing in pre-open).
+  Live trades proven identical on/off (23 Oct replay). Review daily; compare with the 09:20 picks; owner decides next weekend.
 - NEXT WEEK (live pre-open, every day in the 15:45 review): for every stock at 09:14:59: indicated gap, buy/sell imbalance, pre-open volume vs normal,
   change 09:07 -> 09:14. Test: (a) does the imbalance predict the 09:15-09:20 direction? (b) predict which stocks are in play (watch list ready at 09:15)?
   (c) losers vs winners among picks (imbalance against our direction?). Candidate rules to test next weekend: skip/size-down a pick whose pre-open
