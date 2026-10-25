@@ -247,6 +247,8 @@ Stock X type = opened > 1% beyond yesterday's close IN the trade direction + fir
 Now: skipped (Proposal B) and recorded daily in the shadow list (sip-state gapSkipped). Owner wants a SEPARATE rule for these later.
 Stock Y type (gap against, then turns on high volume, break of the 5-min level) = KEPT, current entry.
 When the owner says "revisit gap stocks" / "stock X": bring the shadow-list results + tests (so far 32 trades ~0R; hint: yesterday closed near its high/low).
+Owner 25 Oct 16:18 - DAILY in the 15:45 review, for every X stock: simulate the trade our rules would have made; for the ones that WORKED, list everything that was in their favour (gap held, yesterday's close position + trend, volume 5-min/10x, Nifty + sector direction, aggressive buyers/sellers at the breakout, order book, VWAP, time of breakout, news-like volume) and compare with the X stocks that failed -> build the X rule from that.
+NEXT WEEK (26-30 Oct) focus: (1) run Proposal B live on paper; (2) monitor WHERE B FAILS (every losing B trade: why - entry fault / market turned / false alarm) to prune it further; (3) the X-stock study above. Report both in every daily review and the Saturday review.
 
 ## ⏸ ENTRY WORK PARKED (owner 25 Oct 14:26): "first let me complete the EXIT, then we work on ENTRY - when I say let's do entry, remind me"
 When the owner says "let's do entry": remind him of the pending entry proposals from the 24 Oct weekly review:
