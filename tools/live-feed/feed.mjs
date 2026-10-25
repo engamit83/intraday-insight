@@ -436,7 +436,7 @@ async function main() {
           for (const ev of sip.onTimer(Date.now())) await onSipEvent(ev)
           const sm = sip.summary()
           if (sip.updateBaseline()) {
-            const txt = `🟢 STOCKS IN PLAY day: ${sm.n} paper trades, ${sm.wins} winners, net ₹${sm.net}${sm.status.startsWith('skipped') ? ` (${sm.status})` : ''}`
+            const txt = `🟢 STOCKS IN PLAY day: ${sm.n} paper trades, ${sm.wins} winners, net ₹${sm.net}${sm.status.startsWith('skipped') ? ` (${sm.status})` : ''}${sm.late ? ` | shadow later entries (monitoring only): ${sm.late.n} virtual, signs-agree ${sm.late.okN} (${sm.late.okWins} won) net ₹${sm.late.okNet}` : ''}`
             say(txt); if (!ntfyTopic) await refreshOpenTrades(); await ntfy(txt)
           }
         }

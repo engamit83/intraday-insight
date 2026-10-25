@@ -29,3 +29,4 @@ for await (const line of rl) {
 }
 for (const ev of eng.onTimer(base + (15 * 3600 + 15 * 60) * 1000)) if (ev.kind === 'exit') console.log('EXIT  15:15', ev.trade.sym, ev.trade.reason, ev.trade.exit, 'net Rs', ev.trade.netRs, `${ev.trade.R}R`)
 console.log('ticks', n, 'summary', JSON.stringify(eng.summary()))
+for (const f of fs.readdirSync(dir).filter((f) => f.startsWith('late-shadow-') && f.endsWith('.csv'))) process.stdout.write('LATE SHADOW ' + f + '\n' + fs.readFileSync(path.join(dir, f), 'utf8'))
