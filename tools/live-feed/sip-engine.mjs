@@ -13,12 +13,15 @@
 //     back to trailing 1R behind the best price. The stop NEVER moves down: the tightened stop stays as the floor until 1R behind the
 //     new best is higher. Every warning is recorded in data\sip-warnings-DATE.csv for the daily review (in-loss warnings are classified
 //     there: entry fault / market turned / false alarm).
+//  8. (owner 25 Oct 14:55) Warning while the trade has NOT reached +1R (e.g. in loss): stop moves to 0.3R below/above the CURRENT price
+//     (never down) -> if the move continues we exit with a small loss. (Claude advised 0.5R: on 22-23 Oct 0.5R = +Rs5,438, 0.3R = +Rs1,390;
+//     owner chose 0.3R - each such exit is reviewed: entry fault vs sudden market turn.)
 import fs from 'node:fs'
 import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 15, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
+  topK: 15, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20 }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -141,6 +144,11 @@ export class SipEngine {
     const w = this.sw.evaluate({ sym, dir: t.dir, entry: t.entry, risk: t.risk, inMin, bookAtEntry: t.bookAtEntry ?? null }, m)
     if (!w) return ev
     let tightened = false
+    if (t.best < 1 && this.r.lossTightR) { // rule 8: warning before +1R -> stop 0.3R from the current price (never down)
+      const sg = t.dir === 'BUY' ? 1 : -1
+      const ns = +(w.price - sg * this.r.lossTightR * t.risk).toFixed(2)
+      if ((ns - t.stop) * sg > 0) { t.stop = ns; tightened = true; this.save() }
+    }
     if (t.best >= 1) {
       const sg = t.dir === 'BUY' ? 1 : -1
       t.tight = true
@@ -155,7 +163,7 @@ export class SipEngine {
     try {
       const f = path.join(this.dataDir, `sip-warnings-${this.day}.csv`)
       const head = fs.existsSync(f) ? '' : 'day,minute,symbol,dir,price,R,best,mode,score,signs,action\n'
-      fs.appendFileSync(f, head + [this.day, w.minute, t.sym, t.dir, w.price, w.R, w.best, w.mode, w.score, w.signs.join('+'), tightened ? 'stop tightened' : (t.best >= 1 ? 'already tight' : (w.R < 0 ? 'alert only (in loss)' : 'alert only'))].join(',') + '\n')
+      fs.appendFileSync(f, head + [this.day, w.minute, t.sym, t.dir, w.price, w.R, w.best, w.mode, w.score, w.signs.join('+'), tightened ? (t.best >= 1 ? 'stop tightened 0.3R behind best' : (w.R < 0 ? 'IN LOSS: stop 0.3R from price' : 'early: stop 0.3R from price')) : 'no change'].join(',') + '\n')
     } catch {}
   }
   manage(t, tick, ts, sec) {

@@ -214,7 +214,7 @@ async function onSipEvent(ev) {
     } else if (ev.kind === 'warn') {
       const t = ev.trade, w = ev.w, SIGN = { flow: 'aggressive counter-trades', book: 'order book turned against us', volume: 'counter-move on rising volume', vwap: 'through VWAP', lows: 'structure turning', market: 'Nifty turning against us' }
       text = ev.tightened
-        ? `⚠️ SMART EXIT: NEW ${t.dir} ${t.sym} at ₹${w.price} - ${w.signs.map((k) => SIGN[k]).join(', ')}. Trailing stop TIGHTENED to ₹${t.stop} (0.3R behind best +${w.best}R) - stocks in play (paper)`
+        ? `⚠️ SMART EXIT: NEW ${t.dir} ${t.sym} at ₹${w.price} - ${w.signs.map((k) => SIGN[k]).join(', ')}. Stop TIGHTENED to ₹${t.stop} (${w.best >= 1 ? `0.3R behind best +${w.best}R` : `0.3R from price, now ${w.R}R - check entry`}) - stocks in play (paper)`
         : `⚠️ SMART WARNING (alert only, trade kept): NEW ${t.dir} ${t.sym} at ₹${w.price}, now ${w.R >= 0 ? '+' : ''}${w.R}R - ${w.signs.map((k) => SIGN[k]).join(', ')}`
     } else if (ev.kind === 'untight') {
       const t = ev.trade
