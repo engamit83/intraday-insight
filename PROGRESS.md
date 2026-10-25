@@ -227,6 +227,13 @@ Tests (filter applied before the top-K ranking):
 Proposals to owner (needs "do it"): (1) one re-entry after a stop; (2) skip stocks gapped >1% in the trade direction + top 10.
 Old v4.2 this week (app): 21 Oct +Rs4,794, 22 Oct -Rs16,475, 23 Oct -Rs9,306.
 
+## 🧭 ENTRY DIRECTION (owner 25 Oct 15:14) - step by step, one change at a time
+Owner: the 6 "favour signs" are the BASE for ENTRY and RE-ENTRY ("they tell us the market and our stock may go up"):
+1 aggressive buyers (more volume on upticks), 2 book: buyers not draining away, 3 move up on rising volume, 4 price above day VWAP,
+5 higher lows, 6 Nifty not falling against us (BUY; SELL = mirror). Entry and exit rules stay SEPARATE (exit uses the warning signs).
+Next step: mix these with the current stocks-in-play entry, test each change on all tick days + 1-min days, one at a time, owner approves each.
+Claude's cautions from data: trading only WITH Nifty hurt first entries (-7.5R / 9 days); crowd already waiting in the book (>1.25) went with losers.
+
 ## ⏸ ENTRY WORK PARKED (owner 25 Oct 14:26): "first let me complete the EXIT, then we work on ENTRY - when I say let's do entry, remind me"
 When the owner says "let's do entry": remind him of the pending entry proposals from the 24 Oct weekly review:
 A = one re-entry after a stop-out (+Rs35,300 vs +Rs28,600 on 9 days); B = skip stocks gapped >1% in the trade direction + top 10 + re-entry (47 trades, 74% winners, +Rs32,200, 12 losing trades vs 29) - Claude recommends B. Also the order-book finding (crowd already on our side -> trades lost).
