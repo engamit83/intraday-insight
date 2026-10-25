@@ -234,6 +234,13 @@ Owner: the 6 "favour signs" are the BASE for ENTRY and RE-ENTRY ("they tell us t
 Next step: mix these with the current stocks-in-play entry, test each change on all tick days + 1-min days, one at a time, owner approves each.
 Claude's cautions from data: trading only WITH Nifty hurt first entries (-7.5R / 9 days); crowd already waiting in the book (>1.25) went with losers.
 
+## 🔬 25 Oct — ENTRY BASE RULES (favour signs) tested as an entry gate
+- Built in the engine (entryBase, smart-warn.mjs favourFor), OFF pending the owner's decision.
+- 9 days (76 trades), the 4 signs measurable on 1-min data at the breakout: trades WITH >=3 of 4 signs = +6.7R (48 trades); trades with fewer = +21.8R (28 trades). "Higher lows" present: +0.21R/trade vs absent +0.72R. "Nifty not against" present +0.31R vs absent +0.89R. VWAP: always present at a breakout (no filter).
+- Tick days 22-23 Oct (all 6 signs): 3 of 6 any = no change (+10); 3 of 6 incl. aggressive buyers = -Rs2,073 (late entries, CYIENT turned loser).
+- Reading: at the breakout the favour signs are almost always already there; when strongly aligned the move is often already extended -> late entry. Our edge = fresh reversals (gap against, first 5 min turn). So the signs do NOT help as a gate for the first entry. Possible better use: confirming a RE-entry, or sizing.
+- Fix found while testing: smart signs now use bars from 09:15 (true day VWAP). Exit rule replay 22+23 Oct now +Rs1,729 / +Rs3,788 = +Rs5,517 (was +Rs1,390 with VWAP from 09:20).
+
 ## ⏸ ENTRY WORK PARKED (owner 25 Oct 14:26): "first let me complete the EXIT, then we work on ENTRY - when I say let's do entry, remind me"
 When the owner says "let's do entry": remind him of the pending entry proposals from the 24 Oct weekly review:
 A = one re-entry after a stop-out (+Rs35,300 vs +Rs28,600 on 9 days); B = skip stocks gapped >1% in the trade direction + top 10 + re-entry (47 trades, 74% winners, +Rs32,200, 12 losing trades vs 29) - Claude recommends B. Also the order-book finding (crowd already on our side -> trades lost).
