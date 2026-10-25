@@ -77,4 +77,17 @@ function feedOR(e, sym, open, hi, lo, close, vol) {
   ok(en && best >= 1 && w && w.tightened, 'smart warning on a winner tightens the trailing stop')
   ok(t.exit || Math.abs(t.stop - (t.entry - (t.best - 0.3) * t.risk)) < 0.02, 'tightened stop sits 0.3R behind the best price (or the trade closed on it)')
 }
+{ // rule 7: trend back in our favour -> trail 1R again, stop never moves down
+  const { e } = mk()
+  feedOR(e, 'DN', 200, 200.5, 196, 197, 5000); e.onTimer(at(9, 20))
+  e.onTick('DN', { price: 195.9, bid: 195.85, ask: 195.95, cum: 100000 }, at(9, 21))
+  const t = e.trades.get('DN')
+  t.best = 2; t.tight = true; t.stop = +(t.entry - 1.7 * t.risk).toFixed(2); const floor = t.stop
+  e.sw.signsFor = () => ({ score: 0, signs: {}, R: 1.8, best: 2 })   // no warning signs on the next closed bar
+  const ev = [...e.onTick('DN', { price: t.entry - 1.8 * t.risk, cum: 100100 }, at(9, 40)), ...e.onTick('DN', { price: t.entry - 1.8 * t.risk, cum: 100200 }, at(9, 41))]
+  ok(ev.some((x) => x.kind === 'untight') && !t.tight, 'trend back in favour -> back to 1R trailing')
+  ok(t.stop === floor, 'stop does not move down when switching back to 1R')
+  e.onTick('DN', { price: t.entry - 3.5 * t.risk, cum: 100300 }, at(9, 41, 20))
+  ok(Math.abs(t.stop - (t.entry - 2.5 * t.risk)) < 0.02, 'then trails 1R behind the new best')
+}
 console.log(`${pass}/${pass + fail} stocks-in-play checks passed`); process.exit(fail ? 1 : 0)

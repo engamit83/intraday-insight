@@ -9,6 +9,10 @@
 //  5. After +1R the stop trails 1R behind the best price. Otherwise exit at 15:15. Costs 0.10628% + slippage counted.
 //  6. EXIT RULE 'trailing stop + smart warning' (owner 25 Oct 14:11): when the smart warning (smart-warn.mjs) fires on a trade that
 //     has been >= +1R, the trail tightens from 1R to 0.3R behind the best price. A warning before +1R = phone alert only.
+//  7. (owner 25 Oct 14:43) When the trend turns back in our favour (NO warning sign on a closed 1-minute bar), a tightened trade goes
+//     back to trailing 1R behind the best price. The stop NEVER moves down: the tightened stop stays as the floor until 1R behind the
+//     new best is higher. Every warning is recorded in data\sip-warnings-DATE.csv for the daily review (in-loss warnings are classified
+//     there: entry fault / market turned / false alarm).
 import fs from 'node:fs'
 import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
@@ -127,10 +131,15 @@ export class SipEngine {
     const closed = this.sw.onTick(sym, m, tick.price, tick.cum)
     const bk = this.bookNow.get(sym); if (bk) this.sw.st(sym).book = bk
     if (!closed || !t || t.exit) return []
+    const ev = []
+    if (t.tight) { // rule 7: trend back in our favour -> trail 1R again (stop stays where it is)
+      const x = this.sw.signsFor({ sym, dir: t.dir, entry: t.entry, risk: t.risk, inMin: istHM(t.inTs), bookAtEntry: t.bookAtEntry ?? null })
+      if (x && x.score === 0) { t.tight = false; this.save(); ev.push({ kind: 'untight', trade: t, ts }) }
+    }
     const inMin = istHM(t.inTs)
-    if (m <= inMin) return []
+    if (m <= inMin) return ev
     const w = this.sw.evaluate({ sym, dir: t.dir, entry: t.entry, risk: t.risk, inMin, bookAtEntry: t.bookAtEntry ?? null }, m)
-    if (!w) return []
+    if (!w) return ev
     let tightened = false
     if (t.best >= 1) {
       const sg = t.dir === 'BUY' ? 1 : -1
@@ -139,7 +148,15 @@ export class SipEngine {
       if ((ns - t.stop) * sg > 0) { t.stop = ns; tightened = true }
       this.save()
     }
-    return [{ kind: 'warn', trade: t, w, tightened, ts }]
+    this.logWarn(t, w, tightened)
+    return [...ev, { kind: 'warn', trade: t, w, tightened, ts }]
+  }
+  logWarn(t, w, tightened) {
+    try {
+      const f = path.join(this.dataDir, `sip-warnings-${this.day}.csv`)
+      const head = fs.existsSync(f) ? '' : 'day,minute,symbol,dir,price,R,best,mode,score,signs,action\n'
+      fs.appendFileSync(f, head + [this.day, w.minute, t.sym, t.dir, w.price, w.R, w.best, w.mode, w.score, w.signs.join('+'), tightened ? 'stop tightened' : (t.best >= 1 ? 'already tight' : (w.R < 0 ? 'alert only (in loss)' : 'alert only'))].join(',') + '\n')
+    } catch {}
   }
   manage(t, tick, ts, sec) {
     const B = t.dir === 'BUY', sg = B ? 1 : -1, p = tick.price

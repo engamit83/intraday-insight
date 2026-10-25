@@ -30,7 +30,8 @@ export class SmartWarn {
   }
   onBook(s, totBuy, totSell) { if (totBuy > 0 && totSell > 0) this.st(s).book = totBuy / totSell }
   // trade: { sym, dir, entry, risk, inMin:'HH:MM', bookAtEntry }
-  evaluate(t, minute) {
+  // the 6 signs right now (no thresholds, no throttle); null if not enough bars yet
+  signsFor(t) {
     const x = this.sym.get(t.sym); if (!x) return null
     const sg = t.dir === 'BUY' ? 1 : -1
     const bars = x.bars.filter((b) => b.m >= t.inMin)
@@ -53,6 +54,11 @@ export class SmartWarn {
     const score = Object.values(signs).filter(Boolean).length
     const R = (last.c - t.entry) * sg / t.risk
     const best = Math.max(0, ...bars.map((b) => ((sg > 0 ? b.h : b.l) - t.entry) * sg / t.risk))
+    return { signs, score, R, best, last }
+  }
+  evaluate(t, minute) {
+    const x = this.signsFor(t); if (!x) return null
+    const { signs, score, R, best, last } = x
     const inProfit = best >= 1
     if (inProfit ? score < this.r.minScore : (score < this.r.minScoreEarly || !(signs.flow || signs.book))) return null
     const lw = this.lastWarn.get(t.sym)

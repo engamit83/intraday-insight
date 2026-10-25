@@ -216,6 +216,9 @@ async function onSipEvent(ev) {
       text = ev.tightened
         ? `⚠️ SMART EXIT: NEW ${t.dir} ${t.sym} at ₹${w.price} - ${w.signs.map((k) => SIGN[k]).join(', ')}. Trailing stop TIGHTENED to ₹${t.stop} (0.3R behind best +${w.best}R) - stocks in play (paper)`
         : `⚠️ SMART WARNING (alert only, trade kept): NEW ${t.dir} ${t.sym} at ₹${w.price}, now ${w.R >= 0 ? '+' : ''}${w.R}R - ${w.signs.map((k) => SIGN[k]).join(', ')}`
+    } else if (ev.kind === 'untight') {
+      const t = ev.trade
+      text = `🟢 TREND BACK in our favour: NEW ${t.dir} ${t.sym} - trailing 1R again, stop stays at ₹${t.stop} (stocks in play, paper)`
     } else if (ev.kind === 'note') text = `🟢 ${ev.text}`
     if (!text) return
     say(`SIP ${text}`)
