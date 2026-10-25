@@ -13,6 +13,7 @@
 > 4. Act exactly and without emotion: entries/exits on live ticks, precise timing.
 > 5. KEEP what is good (owner 21:21): whatever works stays; change only the parts that data proves can be better.
 > 6. NOT mechanical (owner 21:30): think like an expert every day - read what the market did, ask WHY trades won/lost, change the approach when needed, never just repeat the same routine. Heavy testing now; testing decreases as the app matures and the rules settle.
+> 7. LEAD AS THE MARKET EXPERT (owner 25 Oct 16:38): "our rules were basic and weak; you are not acting as a market expert". Claude must PROACTIVELY audit all rules from every angle, mix/match/test, and bring improvements - the owner should not have to give the angles.
 > Keep improving every day towards Rule 0. The owner decides; live changes only with his "do it".
 **Repo:** github.com/engamit83/intraday-insight (branch: `main`)
 **Backend:** Lovable Cloud (Supabase-based), project `emxhhxvtbjsjtjacbike`
@@ -250,6 +251,16 @@ Stock Y type (gap against, then turns on high volume, break of the 5-min level) 
 When the owner says "revisit gap stocks" / "stock X": bring the shadow-list results + tests (so far 32 trades ~0R; hint: yesterday closed near its high/low).
 Owner 25 Oct 16:18 - DAILY in the 15:45 review, for every X stock: simulate the trade our rules would have made; for the ones that WORKED, list everything that was in their favour (gap held, yesterday's close position + trend, volume 5-min/10x, Nifty + sector direction, aggressive buyers/sellers at the breakout, order book, VWAP, time of breakout, news-like volume) and compare with the X stocks that failed -> build the X rule from that.
 NEXT WEEK (26-30 Oct) focus: (1) run Proposal B live on paper; (2) monitor WHERE B FAILS (every losing B trade: why - entry fault / market turned / false alarm) to prune it further; (3) the X-stock study above. Report both in every daily review and the Saturday review.
+
+## 🧠 EXPERT AUDIT (Claude, 25 Oct 16:40) - standing work list (status updated in reviews)
+1. DATA: only 9 days of 1-min -> results uncertain. Get months of history (Zerodha Kite Connect), keep daily recording. [todo: sign-up steps]
+2. PRE-OPEN 09:00-09:08 (auction volume, indicative open) not used or recorded - strong stocks-in-play signal. [todo: record from Monday]
+3. POSITION SIZE by setup quality (gap reversal, rvol 5-10x, signs) instead of flat Rs1,000. [test]
+4. EXPOSURE CAP per direction / sector (6 SELLs at 09:20 = one market bet). [test]
+5. Only 09:20-10:15 window: afternoon setups (second wave, VWAP reclaim after 13:30). [test]
+6. PARTIAL PROFIT booking (e.g. half at +2R) vs full trail. [test]
+7. Watch-list / liquidity safety: circuit limits, ASM/GSM, F&O ban, spread/depth for our size (L2). [todo]
+8. Old v4.2 still running in the app, losing - propose switch-off. [proposal]
 
 ## 🔍 SIGNS-AT-ENTRY STUDY (owner 25 Oct 16:35) - for pruning entry + re-entry
 Every trade (first entry AND re-entry) now records the 6 favour signs present at entry (data\sip-trades-DATE.csv: signs_at_entry, reentry, gap_with_pct, tightened). Daily review: compare trades that went UP (winners, best R) with those that went DOWN - which signs (or other factors: gap, rvol, time, range width, market, sector) were present in each group; especially re-entries that matched 3 signs and still failed. Goal: prune the rule (which signs must be present). Weekly review: the table across all days.
