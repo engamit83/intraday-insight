@@ -212,7 +212,7 @@ async function onSipEvent(ev) {
       const t = ev.trade, why = { stop: 'stop loss', trail: 'trailing stop (profit kept)', squareoff: '15:15 close' }[t.reason] ?? t.reason
       text = `${t.netRs >= 0 ? '✅' : '🔻'} NEW ${t.dir} ${t.sym} closed: ${why} at ₹${t.exit} (${sipClock(ev.ts)}), net ₹${t.netRs} (${t.R}R) - stocks in play (paper money)`
     } else if (ev.kind === 'warn') {
-      const t = ev.trade, w = ev.w, SIGN = { flow: 'aggressive counter-trades', book: 'order book turned against us', volume: 'counter-move on rising volume', vwap: 'through VWAP', lows: 'structure turning', market: 'Nifty turning against us' }
+      const t = ev.trade, w = ev.w, SIGN = { flow: 'aggressive counter-trades', book: 'order book turned against us', volume: 'counter-move on rising volume', vwap: 'through VWAP', lows: 'structure turning', market: 'Nifty turning against us', fade: 'volume dried up, no progress' }
       text = ev.tightened
         ? `⚠️ SMART EXIT: NEW ${t.dir} ${t.sym} at ₹${w.price} - ${w.signs.map((k) => SIGN[k]).join(', ')}. Stop TIGHTENED to ₹${t.stop} (${w.best >= 1 ? `0.3R behind best +${w.best}R` : `0.3R from price, now ${w.R}R - check entry`}) - stocks in play (paper)`
         : `⚠️ SMART WARNING (alert only, trade kept): NEW ${t.dir} ${t.sym} at ₹${w.price}, now ${w.R >= 0 ? '+' : ''}${w.R}R - ${w.signs.map((k) => SIGN[k]).join(', ')}`
