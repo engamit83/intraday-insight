@@ -28,9 +28,10 @@ import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
 import { LateShadow } from './late-shadow.mjs'
 import { PreopenShadow } from './preopen-shadow.mjs'
+import { BreadthShadow } from './breadth-shadow.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true }
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true, withBreadth: true, breadthBuyMin: 45, breadthSellMax: 55 }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -53,6 +54,7 @@ export class SipEngine {
     this.sw = new SmartWarn()
     this.bookNow = new Map()
     this.ckt = new Map() // circuit limits from the feed (25 Oct)
+    this.bUp = new Map(); this.bN = 0; this.bCount = 0; this.liqCache = new Map() // live market breadth (rule E6, 27 Oct)
   }
   static loadBaseline(dataDir) {
     try { return JSON.parse(fs.readFileSync(path.join(dataDir, 'sip-baseline.json'), 'utf8')) } catch { return { first5: {}, turnover: {}, days: [] } }
@@ -95,11 +97,14 @@ export class SipEngine {
     const t = this.trades.get(sym)
     if (tick.totBuy > 0 && tick.totSell > 0) this.bookNow.set(sym, tick.totBuy / tick.totSell)
     if (tick.upCkt > 0 || tick.loCkt > 0) this.ckt.set(sym, { up: tick.upCkt, lo: tick.loCkt })
+    if (this.r.withBreadth) this.updBreadth(sym, p)
+    if (this.r.withBreadth && this.bshadow === undefined) { try { this.bshadow = new BreadthShadow({ dataDir: this.dataDir, sw: this.sw, baseline: this.baseline, day: this.day }) } catch { this.bshadow = null } }
+    if (this.bshadow) { try { this.bshadow.onTick(sym, tick, ts, istHM(ts), sec >= this.r.squareOff) } catch { this.bshadow = null } }
     if (this.r.smartExit && sec < this.r.squareOff) ev.push(...this.smart(sym, tick, ts, t))
     if (t && !t.exit) ev.push(...this.manage(t, tick, ts, sec))
     else if (this.picks && sec < this.r.lastEntry) {
       const pk = this.picks.find((x) => x.sym === sym)
-      if (pk && !t) ev.push(...this.tryEntry(pk, tick, ts))
+      if (pk && !t && !pk.breadthSkip) ev.push(...this.tryEntry(pk, tick, ts))
       else if (pk && t && t.exit && t.best < 1 && (t.re ?? 0) < this.r.reentries) { // RE-ENTRY with base-sign confirmation
         const B = pk.dir === 'BUY', lvl = B ? pk.high : pk.low
         if (!t.rearmed) { if (B ? tick.price <= lvl : tick.price >= lvl) { t.rearmed = true; this.save() } }
@@ -131,6 +136,19 @@ export class SipEngine {
     if (!this.pre || sec < this.r.orStart) return
     try { this.pre.onTick(sym, tick, ts, istHM(ts), sec >= this.r.squareOff) } catch (e) { this.pre = null; ev.push({ kind: 'note', text: `pre-open shadow stopped (live trading unaffected): ${e.message}` }) }
   }
+  // RULE E6 TRADE WITH BREADTH (owner 26 Oct 23:45 + 27 Oct): breadth = % of liquid stocks (median turnover >= Rs25 cr) trading above their
+  // 09:15 open, kept live on every tick. BUY only if breadth >= breadthBuyMin (45), SELL only if <= breadthSellMax (55); 45-55 = mixed, both allowed.
+  // 9 days (1-min sim): same profit (+31.8R vs +31.7R), losing trades 12 -> 6. Skipped first entries become virtual trades (breadth-shadow.mjs).
+  updBreadth(sym, p) {
+    const o = this.or.get(sym); if (!o || sym.startsWith('NIFTY')) return
+    let liq = this.liqCache.get(sym)
+    if (liq === undefined) { liq = median(this.baseline.turnover?.[sym] ?? []) >= this.r.minTurnoverCr; this.liqCache.set(sym, liq) }
+    if (!liq) return
+    const up = p > o.open, prev = this.bUp.get(sym)
+    if (prev === undefined) { this.bN++; if (up) this.bCount++ } else if (prev !== up) this.bCount += up ? 1 : -1
+    this.bUp.set(sym, up)
+  }
+  breadth() { return this.bN >= 50 ? +(this.bCount / this.bN * 100).toFixed(1) : null }
   // called every second by the feed (and from onTick): selection at 09:20, square-off at 15:15
   onTimer(ts) {
     const ev = [], sec = istSec(ts)
@@ -139,6 +157,7 @@ export class SipEngine {
     if (sec >= this.r.squareOff) for (const t of this.trades.values()) if (!t.exit) ev.push(this.close(t, t.lastPrice ?? t.entry, 'squareoff', ts))
     if (sec >= this.r.squareOff && this.shadow) { try { this.shadow.closeAll(ts) } catch {} }
     if (sec >= this.r.squareOff && this.pre) { try { this.pre.closeAll(ts) } catch {} }
+    if (sec >= this.r.squareOff && this.bshadow) { try { this.bshadow.closeAll(ts) } catch {} }
     if (this.dirty && ts - (this.savedAt ?? 0) >= 10_000) { this.dirty = false; this.savedAt = ts; this.save() } // trailing-stop moves saved at most every 10 s
     return ev
   }
@@ -179,6 +198,8 @@ export class SipEngine {
       const c = this.ckt.get(pk.sym), lim = c ? (B ? c.up : c.lo) : 0
       if (lim > 0 && Math.abs(lim - quote) / quote * 100 < this.r.minCircuitRoomPct) { pk.circuitSkip = true; return [] }
     }
+    const br = this.breadth()
+    const againstBreadth = this.r.withBreadth && br != null && (B ? br < this.r.breadthBuyMin : br > this.r.breadthSellMax)
     const entry = +(quote * (1 + sg * this.r.slipPct / 100)).toFixed(2)
     const opp = B ? pk.low : pk.high
     const riskPct = Math.min(Math.max(Math.abs(entry - opp) / entry * 100, this.r.stopMinPct), this.r.stopMaxPct)
@@ -194,6 +215,11 @@ export class SipEngine {
     // ENTRY MONITOR (owner 26 Oct 18:05): would this entry pass the re-entry rule (sign 3 must + 3 of the other 5)? recorded only, not used
     const reRuleOk = !!(fs6 && fs6.signs.volume && fs6.score - 1 >= this.r.reMinSigns)
     const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, gapWith: pk.gapWith ?? null, riskRs, sizeMult: mult, signsAtEntry, reRuleOk, slowVolume: fs6 ? fs6.slowVolume : null, entrySigns: pk.entrySigns ?? null, waitedTicks: pk.waited ?? 0, bookAtEntry: this.bookNow.get(pk.sym) ?? null, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
+    t.breadth = br
+    if (againstBreadth) { // E6: not taken. First entry -> virtual trade for the monitoring list; re-entry attempt -> simply not taken now
+      if (!confirmed) { pk.breadthSkip = true; try { this.bshadow?.add(t, br, ts) } catch {} this.save(); return [{ kind: 'note', text: `SIP: ${pk.dir} ${pk.sym} broke its level but NOT taken - against market breadth (${br}% of stocks up; rule: buy only >= ${this.r.breadthBuyMin}%, sell only <= ${this.r.breadthSellMax}%). Recorded as virtual trade.` }] }
+      return []
+    }
     this.trades.set(pk.sym, t); this.save()
     return [{ kind: 'entry', trade: t, ts }]
   }
@@ -265,15 +291,16 @@ export class SipEngine {
   logTrade(t) {
     try {
       const f = path.join(this.dataDir, `sip-trades-${this.day}.csv`)
-      const head = fs.existsSync(f) ? '' : 'day,symbol,dir,rvol,gap_with_pct,reentry,signs_at_entry,entry_time,entry,stop0,risk_pct,qty,exit_time,exit,reason,best_R,net_rs,R,tightened,sign3_burst_plus3\n'
-      fs.appendFileSync(f, head + [this.day, t.sym, t.dir, t.rvol, t.gapWith ?? '', t.re ? 'yes' : 'no', (t.signsAtEntry ?? []).join('+'), istClock(t.inTs), t.entry, t.stop0, t.riskPct, t.qty, istClock(t.outTs), t.exit, t.reason, t.best.toFixed(2), t.netRs, t.R, t.tight ? 'yes' : 'no', t.reRuleOk ? 'yes' : 'no'].join(',') + '\n')
+      const head = fs.existsSync(f) ? '' : 'day,symbol,dir,rvol,gap_with_pct,reentry,signs_at_entry,entry_time,entry,stop0,risk_pct,qty,exit_time,exit,reason,best_R,net_rs,R,tightened,sign3_burst_plus3,breadth_at_entry\n'
+      fs.appendFileSync(f, head + [this.day, t.sym, t.dir, t.rvol, t.gapWith ?? '', t.re ? 'yes' : 'no', (t.signsAtEntry ?? []).join('+'), istClock(t.inTs), t.entry, t.stop0, t.riskPct, t.qty, istClock(t.outTs), t.exit, t.reason, t.best.toFixed(2), t.netRs, t.R, t.tight ? 'yes' : 'no', t.reRuleOk ? 'yes' : 'no', t.breadth ?? ''].join(',') + '\n')
     } catch {}
   }
   summary() {
     const n = this.closed.length, net = this.closed.reduce((a, t) => a + t.netRs, 0), w = this.closed.filter((t) => t.netRs > 0).length
     let late = null, pre = null; try { late = this.shadow ? this.shadow.summary() : null } catch {}
     try { pre = this.pre ? this.pre.summary() : null } catch {}
-    return { n, net, wins: w, picks: this.picks?.length ?? 0, status: this.status, late, pre }
+    let bsk = null; try { bsk = this.bshadow ? this.bshadow.summary() : null } catch {}
+    return { n, net, wins: w, picks: this.picks?.length ?? 0, status: this.status, late, pre, breadthSkipped: bsk }
   }
   // after the close: add today's opening-range volume and turnover to the baseline (keeps the last 10 days)
   updateBaseline() {

@@ -436,7 +436,7 @@ async function main() {
           for (const ev of sip.onTimer(Date.now())) await onSipEvent(ev)
           const sm = sip.summary()
           if (sip.updateBaseline()) {
-            const txt = `🟢 STOCKS IN PLAY day: ${sm.n} paper trades, ${sm.wins} winners, net ₹${sm.net}${sm.status.startsWith('skipped') ? ` (${sm.status})` : ''}${sm.late ? ` | shadow later entries (monitoring only): ${sm.late.n} virtual, signs-agree ${sm.late.okN} (${sm.late.okWins} won) net ₹${sm.late.okNet}` : ''}${sm.pre ? ` | shadow pre-open: ${sm.pre.gotData ? `${sm.pre.n} virtual, ${sm.pre.wins} won, net ₹${sm.pre.net}` : 'NO pre-open data received'}` : ''}`
+            const txt = `🟢 STOCKS IN PLAY day: ${sm.n} paper trades, ${sm.wins} winners, net ₹${sm.net}${sm.status.startsWith('skipped') ? ` (${sm.status})` : ''}${sm.late ? ` | shadow later entries (monitoring only): ${sm.late.n} virtual, signs-agree ${sm.late.okN} (${sm.late.okWins} won) net ₹${sm.late.okNet}` : ''}${sm.pre ? ` | shadow pre-open: ${sm.pre.gotData ? `${sm.pre.n} virtual, ${sm.pre.wins} won, net ₹${sm.pre.net}` : 'NO pre-open data received'}` : ''}${sm.breadthSkipped ? ` | skipped against breadth (virtual): ${sm.breadthSkipped.n}, ${sm.breadthSkipped.wins} would have won, net ₹${sm.breadthSkipped.net}` : ''}`
             say(txt); if (!ntfyTopic) await refreshOpenTrades(); await ntfy(txt)
           }
         }
