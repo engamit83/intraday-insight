@@ -298,6 +298,7 @@ their open; >=50% = buyers' market) 29 trades 83% won +29.4R vs AGAINST 17 trade
 (81-85% vs 38%). 26 Oct: breadth 46% at 09:20 -> our 5 buys were AGAINST it and lost. Candidate (test, not live): size 0.5x against breadth. NOTE the old Nifty-direction
 filter (-7.5R) was a different, rejected rule - breadth must be proven separately. (4) breadth at 10:15 matches the close direction on most days (21: 18% -> down,
 23: 1% -> down, 26: 89% -> up, 13: 64% -> up).
+LONG HISTORY (owner 'do it' 26 Oct 21:27): Sharekhan API = intraday only ~7 days, DAILY candles since listing (FAQ). feed-gateway now allows 3/15/30/60-minute + daily (commit 7dc55e0, Lovable redeploy 21:33, 1 credit). Laptop: pull-long.bat -> node pull-run.mjs daily 60minute 30minute 15minute. First run 21:38 failed: NO_VALID_SHAREKHAN_TOKEN (token expires after the day) -> scheduled to run Tue 27 Oct 15:37 while Sharekhan is still logged in.
 INFORMATION LIST to extract (daily, for rules later): day type label; gap (median N50 stock gap); Nifty move at 09:20/09:30/10:15; breadth at 09:20/09:30/10:15 (all
 liquid stocks, also by sector); 1st-15-min reversal flag; first-hour range size; VWAP crosses (choppiness); pre-open market-wide buy/sell imbalance; India VIX if in the
 extras; our result by day type and by direction vs breadth; best/worst stocks of the day and whether we had them (missed moves).
