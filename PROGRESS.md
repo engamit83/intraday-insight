@@ -21,6 +21,18 @@
 
 ---
 
+## ✅ DAILY + WEEKLY REVIEW CHECKLIST (owner 26 Oct 21:20 - every 15:45 review and every Saturday review MUST do all of this)
+Besides trades / B failures / Stock X / shadows / rule-0 metrics, check the 6 RULE CANDIDATES **separately, every day**, with numbers (tool: tools/backtest/v5/daytype.py,
+breadth_test.py; live day from data\candles-DATE.csv + sip-trades-DATE.csv), and report each one in its own line:
+- R1 BREADTH 09:20: breadth % up at 09:20; each trade with/against it; result of with vs against; what 0.5x size against breadth would have changed (Rs).
+- R2 BREADTH 10:15: breadth at 10:15 vs close direction (did it call the day?); open trades with/against it at 10:15 and what happened after.
+- R3 RE-ENTRY vs BREADTH: each re-entry with/against 09:20 / re-entry-time breadth and its result.
+- R4 LATER ENTRIES on trend days: day type; late-shadow trades in the trend direction vs against (n, won, Rs).
+- R5 PRE-OPEN market-wide: total buy vs sell across all stocks at 09:14 + indicated gap -> did the day go gap-and-go or gap-fill?
+- R6 CHOPPY detector: VWAP crosses, opening reversal (09:15-09:30 direction vs 10:15), first-hour range -> day type; our result.
+Also add the day to the DAY-TYPE STUDY table. WEEKLY (Saturday): running totals per candidate across all days (build vs check days) + verdict
+(keep watching / propose with numbers / drop). Plus the fade-exit check (every fade exit: did the stock recover after?) and re-entry v2 (burst) check.
+
 ## 🎯 The Bigger Goal
 
 An intraday trading assistant for Indian (NSE) stocks, integrated with the **Sharekhan** broker. Intended pipeline:
