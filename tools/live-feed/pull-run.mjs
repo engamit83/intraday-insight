@@ -31,7 +31,11 @@ try {
   if (!GATEWAY_URL || !FEED_TOKEN) throw new Error('settings missing in .env')
   say('history pull started (separate window)')
   const info = await gateway('token')
-  const symbols = Object.keys(info.symbols || {})
-  const intervals = process.argv.slice(2).length ? process.argv.slice(2) : undefined // e.g. node pull-run.mjs daily 60minute 15minute
-  await pullHistory(gateway, symbols, path.join(here, 'data'), day, say, intervals)
+  const args = process.argv.slice(2), indices = args.includes('indices') // node pull-run.mjs indices daily 60minute -> index history (27 Oct)
+  const INDICES = ['NIFTY', 'NIFTYBANK', 'NIFTYIT', 'NIFTYFMCG', 'NIFTYENERGY', 'NIFTYPHARMA', 'NIFTYAUTO', 'NIFTYMETAL', 'NIFTYREALTY', 'NIFTYPSUBANK', 'NIFTYPVTBANK',
+    'NIFTYFINSERV', 'NIFTYINFRA', 'NIFTYMEDIA', 'NIFTYCONSUMPTION', 'NIFTYOILGAS', 'NIFTYHEALTHCARE', 'NIFTYCONSDURABLE', 'NIFTYCHEMICALS', 'NIFTYCEMENT', 'NIFTYPOWER',
+    'NIFTY500', 'NIFTYMIDCAP150', 'NIFTYSMALLCAP250', 'INDIAVIX']
+  const symbols = indices ? INDICES : Object.keys(info.symbols || {})
+  const iv = args.filter((a) => a !== 'indices')
+  await pullHistory(gateway, symbols, path.join(here, 'data'), day, say, iv.length ? iv : undefined, indices ? 'idx' : 'hist')
 } catch (e) { say(`! history pull failed: ${e.message}`) }

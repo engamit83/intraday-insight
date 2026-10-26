@@ -5,12 +5,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import zlib from 'node:zlib'
 
-export async function pullHistory(gateway, symbols, dataDir, day, say = console.log, intervals = ['5minute', '1minute']) {
+export async function pullHistory(gateway, symbols, dataDir, day, say = console.log, intervals = ['5minute', '1minute'], prefix = 'hist') {
   const dir = path.join(dataDir, 'history')
   fs.mkdirSync(dir, { recursive: true })
   const summary = []
   for (const interval of intervals) {
-    const file = path.join(dir, `hist-${interval}-${day}.json.gz`)
+    const file = path.join(dir, `${prefix}-${interval}-${day}.json.gz`)
     if (fs.existsSync(file)) { summary.push(`${interval}: already pulled`); continue }
     const out = { interval, fetchedAt: new Date().toISOString(), results: {} }
     let errors = 0

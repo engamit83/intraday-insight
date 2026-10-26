@@ -29,6 +29,11 @@ import { FULL_UNIVERSE as STARTER_UNIVERSE } from '../_shared/universe.ts' // 21
 const MAX_ROWS = 600
 const TIMEFRAMES = new Set(['1min', '5min'])
 const ALLOWED_SYMBOLS = new Set(STARTER_UNIVERSE)
+// 27 Oct (owner): index history (Nifty, sectors, India VIX) for the day-type / breadth research - read-only candles, fixed list of NSE index codes
+const INDEX_CODES: Record<string, number> = { NIFTY: 20000, NIFTYBANK: 26009, NIFTYIT: 26008, NIFTYFMCG: 26024, NIFTYENERGY: 26025, NIFTYPHARMA: 26028,
+  NIFTYAUTO: 26033, NIFTYMETAL: 26034, NIFTYREALTY: 26021, NIFTYPSUBANK: 26027, NIFTYPVTBANK: 26057, NIFTYFINSERV: 26039, NIFTYINFRA: 26022,
+  NIFTYMEDIA: 26035, NIFTYCONSUMPTION: 26040, NIFTYOILGAS: 26067, NIFTYHEALTHCARE: 26068, NIFTYCONSDURABLE: 26066, NIFTYCHEMICALS: 26160,
+  NIFTYCEMENT: 26172, NIFTYPOWER: 26174, NIFTY500: 26002, NIFTYMIDCAP150: 26076, NIFTYSMALLCAP250: 26080, INDIAVIX: 26017 }
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -183,13 +188,14 @@ Deno.serve(async (req) => {
   if (body.action === 'history') {
     // 26 Oct (owner 'do it'): also longer intervals - Sharekhan keeps intraday ~7 days but daily candles since listing
     const interval = ['1minute', '3minute', '5minute', '15minute', '30minute', '60minute', 'daily'].includes(body.interval) ? body.interval : '5minute'
-    const symbols = [...new Set((Array.isArray(body.symbols) ? body.symbols : []).filter((x: unknown) => typeof x === 'string' && ALLOWED_SYMBOLS.has(x as string)))].slice(0, 10) as string[]
+    const symbols = [...new Set((Array.isArray(body.symbols) ? body.symbols : []).filter((x: unknown) => typeof x === 'string' && (ALLOWED_SYMBOLS.has(x as string) || (x as string) in INDEX_CODES)))].slice(0, 10) as string[]
     if (!symbols.length) return json({ error: 'No valid symbols' }, 400)
     const apiKey = Deno.env.get('SHAREKHAN_API_KEY')
     if (!apiKey) return json({ error: 'SHAREKHAN_API_KEY is not configured' }, 500)
     const token = await loadStoredSharekhanToken(supabase)
     if (!token) return json({ error: 'NO_VALID_SHAREKHAN_TOKEN' }, 409)
-    const { codes } = await resolveScripCodes(supabase, symbols)
+    const { codes } = await resolveScripCodes(supabase, symbols.filter((s) => !(s in INDEX_CODES)))
+    for (const s of symbols) if (s in INDEX_CODES) codes[s] = INDEX_CODES[s]
     const results: Record<string, unknown> = {}
     for (const sym of symbols) {
       if (!codes[sym]) continue
