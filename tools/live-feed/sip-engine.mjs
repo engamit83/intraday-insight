@@ -30,7 +30,7 @@ import { LateShadow } from './late-shadow.mjs'
 import { PreopenShadow } from './preopen-shadow.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true }
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true }
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -104,8 +104,10 @@ export class SipEngine {
         const B = pk.dir === 'BUY', lvl = B ? pk.high : pk.low
         if (!t.rearmed) { if (B ? tick.price <= lvl : tick.price >= lvl) { t.rearmed = true; this.save() } }
         else if (B ? tick.price > lvl : tick.price < lvl) {
-          const f = this.sw.favourFor(sym, pk.dir, tick.price, pk.book0)
-          if (f && f.score >= this.r.reMinSigns && (!this.r.reNeedFlow || f.signs.flow)) {
+          const f = this.sw.favourFor(sym, pk.dir, tick.price, pk.book0, ts)
+          // RE-ENTRY RULE (owner 26 Oct 18:05): sign 3 (volume burst, on time) is a MUST + at least reMinSigns of the other 5 signs
+          const others = f ? f.score - (f.signs.volume ? 1 : 0) : 0
+          if (f && (this.r.reNeedVolume ? f.signs.volume && others >= this.r.reMinSigns : f.score >= this.r.reMinSigns) && (!this.r.reNeedFlow || f.signs.flow)) {
             const signs = Object.keys(f.signs).filter((k) => f.signs[k])
             const e2 = this.tryEntry({ ...pk, waited: 0 }, tick, ts, true)
             if (e2.length) { const nt = this.trades.get(sym); nt.re = (t.re ?? 0) + 1; nt.entrySigns = signs; e2[0].reentry = true; e2[0].signs = signs; this.save(); ev.push(...e2) }
@@ -168,7 +170,7 @@ export class SipEngine {
     const B = pk.dir === 'BUY', sg = B ? 1 : -1, lvl = B ? pk.high : pk.low
     if (B ? tick.price <= lvl : tick.price >= lvl) return []   // strictly beyond the range
     if (this.r.entryBase && !confirmed) { // BASE RULES (owner 25 Oct): enter only if the favour signs agree; otherwise wait (price must still be beyond the level)
-      const f = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0)
+      const f = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0, ts)
       if (!f || f.score < this.r.entryMinSigns || (this.r.entryNeedFlow && !f.signs.flow)) { pk.waited = (pk.waited ?? 0) + 1; return [] }
       pk.entrySigns = Object.keys(f.signs).filter((k) => f.signs[k])
     }
@@ -187,9 +189,11 @@ export class SipEngine {
     const riskRs = this.r.riskRs * mult
     const qty = Math.max(1, Math.floor(riskRs / risk))
     // record the 6 favour signs at EVERY entry (owner 25 Oct 16:35: compare the trades that went up with the ones that went down)
-    const fs6 = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0)
+    const fs6 = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0, ts)
     const signsAtEntry = fs6 ? Object.keys(fs6.signs).filter((k) => fs6.signs[k]) : []
-    const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, gapWith: pk.gapWith ?? null, riskRs, sizeMult: mult, signsAtEntry, entrySigns: pk.entrySigns ?? null, waitedTicks: pk.waited ?? 0, bookAtEntry: this.bookNow.get(pk.sym) ?? null, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
+    // ENTRY MONITOR (owner 26 Oct 18:05): would this entry pass the re-entry rule (sign 3 must + 3 of the other 5)? recorded only, not used
+    const reRuleOk = !!(fs6 && fs6.signs.volume && fs6.score - 1 >= this.r.reMinSigns)
+    const t = { sym: pk.sym, dir: pk.dir, rvol: pk.rvol, gapWith: pk.gapWith ?? null, riskRs, sizeMult: mult, signsAtEntry, reRuleOk, slowVolume: fs6 ? fs6.slowVolume : null, entrySigns: pk.entrySigns ?? null, waitedTicks: pk.waited ?? 0, bookAtEntry: this.bookNow.get(pk.sym) ?? null, entry, stop: +(entry - sg * risk).toFixed(2), stop0: +(entry - sg * risk).toFixed(2), risk, riskPct: +riskPct.toFixed(2), qty, best: 0, inTs: ts, lastPrice: tick.price }
     this.trades.set(pk.sym, t); this.save()
     return [{ kind: 'entry', trade: t, ts }]
   }
@@ -261,8 +265,8 @@ export class SipEngine {
   logTrade(t) {
     try {
       const f = path.join(this.dataDir, `sip-trades-${this.day}.csv`)
-      const head = fs.existsSync(f) ? '' : 'day,symbol,dir,rvol,gap_with_pct,reentry,signs_at_entry,entry_time,entry,stop0,risk_pct,qty,exit_time,exit,reason,best_R,net_rs,R,tightened\n'
-      fs.appendFileSync(f, head + [this.day, t.sym, t.dir, t.rvol, t.gapWith ?? '', t.re ? 'yes' : 'no', (t.signsAtEntry ?? []).join('+'), istClock(t.inTs), t.entry, t.stop0, t.riskPct, t.qty, istClock(t.outTs), t.exit, t.reason, t.best.toFixed(2), t.netRs, t.R, t.tight ? 'yes' : 'no'].join(',') + '\n')
+      const head = fs.existsSync(f) ? '' : 'day,symbol,dir,rvol,gap_with_pct,reentry,signs_at_entry,entry_time,entry,stop0,risk_pct,qty,exit_time,exit,reason,best_R,net_rs,R,tightened,sign3_burst_plus3\n'
+      fs.appendFileSync(f, head + [this.day, t.sym, t.dir, t.rvol, t.gapWith ?? '', t.re ? 'yes' : 'no', (t.signsAtEntry ?? []).join('+'), istClock(t.inTs), t.entry, t.stop0, t.riskPct, t.qty, istClock(t.outTs), t.exit, t.reason, t.best.toFixed(2), t.netRs, t.R, t.tight ? 'yes' : 'no', t.reRuleOk ? 'yes' : 'no'].join(',') + '\n')
     } catch {}
   }
   summary() {

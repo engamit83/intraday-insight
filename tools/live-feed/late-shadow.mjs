@@ -73,7 +73,7 @@ export class LateShadow {
     this.armed.delete(sym)
     if (this.trades.size >= this.r.maxTrades) return
     const B = a.dir === 'BUY', sg = B ? 1 : -1
-    const f = this.sw.favourFor(sym, a.dir, tick.price, a.book0)
+    const f = this.sw.favourFor(sym, a.dir, tick.price, a.book0, ts)
     const signs = f ? Object.keys(f.signs).filter((k) => f.signs[k]) : [], score = f ? f.score : 0
     const quote = B ? (tick.ask > 0 ? tick.ask : tick.price) : (tick.bid > 0 ? tick.bid : tick.price)
     const entry = +(quote * (1 + sg * this.r.slipPct / 100)).toFixed(2)

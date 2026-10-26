@@ -9,7 +9,7 @@
 //  6 market : Nifty moved >= 0.15% against us over the last 5 minutes
 // WARN: once the trade has been >= +1R, 3 signs are enough (protect profit). Before that, early dips are normal: need 4 signs AND real
 // order-flow evidence (flow or book). Never in the first 3 minutes. At most once per trade per 10 minutes.
-export const SMART = { minScore: 3, minScoreEarly: 4, graceMin: 3, flowX: 1.5, bookX: 1.3, niftyPct: 0.15, repeatMin: 10 }
+export const SMART = { minScore: 3, minScoreEarly: 4, graceMin: 3, flowX: 1.5, bookX: 1.3, niftyPct: 0.15, repeatMin: 10, burstX: 1.5 }
 
 export class SmartWarn {
   constructor(rules = SMART) { this.r = rules; this.sym = new Map(); this.lastWarn = new Map() }
@@ -58,7 +58,22 @@ export class SmartWarn {
   }
   // ENTRY BASE RULES (owner 25 Oct): the 6 FAVOUR signs for a BUY (SELL = mirror), on the bars since 09:15 + the current price.
   // refBook = buyers/sellers ratio at selection (09:20). Returns { signs, score } or null if fewer than 3 bars.
-  favourFor(sym, dir, price, refBook) {
+  // SIGN 3 ON TIME (owner 26 Oct 18:05): volume burst measured NOW - the last 60 s (the minute in progress + the rest of the last
+  // closed minute) vs the stock's NORMAL minute volume since 09:20 (median; the opening minutes no longer inflate the yardstick),
+  // AND the price moved our way over the last ~2 minutes. Before 09:23 (too few normal minutes) the median of all minutes after 09:15 is used.
+  burstFor(x, sg, price, ts) {
+    const bars = x.bars, last = bars.at(-1), cur = x.cur
+    if (!last) return false
+    const sec = Number.isFinite(ts) ? new Date(ts + 330 * 60_000).getUTCSeconds() : 0
+    const win = (cur ? cur.v : 0) + last.v * (1 - sec / 60)
+    let pool = bars.filter((b) => b.m >= '09:20').map((b) => b.v)
+    if (pool.length < 3) pool = bars.slice(1).map((b) => b.v)
+    if (!pool.length) return false
+    const sorted = [...pool].sort((a, b) => a - b), normal = sorted[Math.floor(sorted.length / 2)]
+    const from = bars.length >= 2 ? bars.at(-2).o : last.o
+    return normal > 0 && win >= this.r.burstX * normal && (price - from) * sg > 0
+  }
+  favourFor(sym, dir, price, refBook, ts) {
     const x = this.sym.get(sym); if (!x) return null
     const sg = dir === 'BUY' ? 1 : -1
     const bars = x.bars; if (bars.length < 3) return null
@@ -71,14 +86,15 @@ export class SmartWarn {
     const signs = {
       flow: withUs >= this.r.flowX * Math.max(against, 1),                                    // 1 aggressive buyers
       book: refBook && x.book ? (sg > 0 ? x.book >= refBook / this.r.bookX : x.book <= refBook * this.r.bookX) : false, // 2 buyers not draining
-      volume: l3move > 0 && l3.reduce((a, b) => a + b.v, 0) / 3 > avgV,                    // 3 move our way on rising volume
+      volume: this.burstFor(x, sg, price, ts),                                               // 3 volume burst our way NOW (on time, 26 Oct)
       vwap: (price - vwap) * sg > 0,                                                          // 4 price on our side of VWAP
       lows: sg > 0 ? l3[0].l < l3[1].l && l3[1].l < l3[2].l : l3[0].h > l3[1].h && l3[1].h > l3[2].h, // 5 higher lows / lower highs
       market: true,                                                                           // 6 Nifty not against us
     }
     const n = this.sym.get('NIFTY')
     if (n && n.bars.length >= 6) { const nb = n.bars.slice(-6); signs.market = !(((nb.at(-1).c / nb[0].c - 1) * 100) * sg <= -this.r.niftyPct) }
-    return { signs, score: Object.values(signs).filter(Boolean).length }
+    const slowVolume = l3move > 0 && l3.reduce((a, b) => a + b.v, 0) / 3 > avgV // old sign 3 (kept for comparison)
+    return { signs, score: Object.values(signs).filter(Boolean).length, slowVolume }
   }
   evaluate(t, minute) {
     const x = this.signsFor(t); if (!x) return null
