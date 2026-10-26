@@ -265,6 +265,35 @@ Claude's cautions from data: trading only WITH Nifty hurt first entries (-7.5R /
   (c) losers vs winners among picks (imbalance against our direction?). Candidate rules to test next weekend: skip/size-down a pick whose pre-open
   imbalance is strongly against; size-up when gap-against + imbalance agrees with the turn; earlier entry list at 09:15. Owner decides.
 
+## 📅 DAY-TYPE STUDY (owner 26 Oct 19:14: "bifurcate days, find what else can be extracted, make a list, revisit for rules later; act as market expert all the time")
+Tool: tools/backtest/v5/daytype.py (+ breadth_test.py). Terms: TREND UP/DOWN day (close in top/bottom 25% of range, |move| >= 0.5%), NORMAL/RANGE (stays in 1st-hour range),
+NORMAL VARIATION (1st-hour range broken one side), NEUTRAL (both sides, closes middle), REVERSAL (V / inverted V), GAP-AND-GO / GAP-FILL, CHOPPY (many VWAP crosses), INSIDE day.
+| Day | Type | Nifty open->close | 1st-hr range | breadth up 09:30 / 10:15 / close | VWAP crosses | Our SIP (sim; 26 = live) |
+|---|---|---|---|---|---|---|
+| 12 Oct | TREND DOWN | -0.98% | 0.59% | 73 / 60 / 42% | 4 | (no baseline) |
+| 13 Oct | TREND UP | +1.85% | 1.18% | 48 / 64 / 76% | 18 | 4 tr, 100%, +3.8R |
+| 14 Oct | NORMAL VARIATION (quiet, 0.82% range) | -0.06% | 0.40% | 45 / 54 / 49% | 18 | 5 tr, 80%, +2.5R |
+| 15 Oct | NORMAL VARIATION up | +0.82% | 0.83% | 39 / 58 / 47% | 9 | 9 tr, 89%, +9.1R |
+| 16 Oct | TREND UP (after weak open) | +0.60% | 0.74% | 27 / 46 / 45% | 13 | 7 tr, 57%, +2.5R (buys +3.0, sells -0.5) |
+| 19 Oct | TREND DOWN | -1.09% | 0.83% | 21 / 40 / 19% | 10 | 7 tr, 71%, +4.2R (sells +4.9, buys -0.8) |
+| 21 Oct | REVERSAL down (up 0.36% at 9:30 -> -0.88%) | -0.88% | 0.83% | 52 / 18 / 13% | 1 | 8 tr, 75%, +7.6R (sells +9.4, buys -1.9) |
+| 22 Oct | NEUTRAL / CHOPPY (-0.8% then flat) | -0.01% | 0.50% | 20 / 51 / 48% | 22 | 1 tr, -1.2R |
+| 23 Oct | down day (-1.08% by 10:15) | -0.65% | 1.21% | 15 / 1 / 7% | 11 | 5 tr, 60%, +3.1R (live +Rs3,968) |
+| 26 Oct | GAP-DOWN V-REVERSAL -> TREND UP | +1.09% | 1.41% | 46 / 89 / 82% | 19 | live 9 tr, 33%, -4.9R (buys -4.8R) |
+FINDINGS so far: (1) we make money on trend and normal-variation days; losses come on choppy/V-reversal days (22, 26 Oct). (2) trades in the direction the market turns
+make the money (sells on down days +4.9/+9.4/+4.2R, buys lose there). (3) BREADTH CLUE (strongest so far): trade WITH the 09:20 breadth (share of liquid stocks above
+their open; >=50% = buyers' market) 29 trades 83% won +29.4R vs AGAINST 17 trades 59% +2.3R; build days with +12.0 / against +6.0, check days with +17.4 / against -3.7R
+(81-85% vs 38%). 26 Oct: breadth 46% at 09:20 -> our 5 buys were AGAINST it and lost. Candidate (test, not live): size 0.5x against breadth. NOTE the old Nifty-direction
+filter (-7.5R) was a different, rejected rule - breadth must be proven separately. (4) breadth at 10:15 matches the close direction on most days (21: 18% -> down,
+23: 1% -> down, 26: 89% -> up, 13: 64% -> up).
+INFORMATION LIST to extract (daily, for rules later): day type label; gap (median N50 stock gap); Nifty move at 09:20/09:30/10:15; breadth at 09:20/09:30/10:15 (all
+liquid stocks, also by sector); 1st-15-min reversal flag; first-hour range size; VWAP crosses (choppiness); pre-open market-wide buy/sell imbalance; India VIX if in the
+extras; our result by day type and by direction vs breadth; best/worst stocks of the day and whether we had them (missed moves).
+RULE CANDIDATES to test when we revisit: R1 size 0.5x (or skip) trades against 09:20 breadth; R2 manage open trades with 10:15 breadth (let with-breadth winners trail
+wider, tighten against-breadth trades); R3 re-entry only in breadth direction; R4 later entries only on trend days in the trend direction (late shadow data);
+R5 pre-open market-wide imbalance -> gap-fill vs gap-and-go day; R6 choppy-day detector (VWAP crosses / opening reversal) -> trade smaller.
+DAILY: add each new day to the table in the 15:45 review.
+
 ## 🔁 REVISIT LIST — "GAP-UP STOCK X" (owner 25 Oct 16:12: "this needs a different rule, remember it and we will revisit it")
 Stock X type = opened > 1% beyond yesterday's close IN the trade direction + first 5 min continue that way on high volume (gap-and-go).
 Now: skipped (Proposal B) and recorded daily in the shadow list (sip-state gapSkipped). Owner wants a SEPARATE rule for these later.
