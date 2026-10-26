@@ -14,7 +14,7 @@
 //   { action: 'open_trades' }           -> { trades: [today's OPEN paper trades with their current stop/target], ntfyTopic }
 //   { action: 'tick_stop', moves: [{ id, stop, atBreakeven, locked, bestExc }] } -> stop raised on the tick (never loosened)
 //   { action: 'tick_close', id, reason, price, ts } -> closes the trade at that tick price (only if still OPEN)
-//   { action: 'history', symbols: [<=10], interval: '1minute'|'5minute' } -> Sharekhan's past candles (weekly pull by the laptop, 21 Oct);
+//   { action: 'history', symbols: [<=10], interval: '1minute'|'3minute'|'5minute'|'15minute'|'30minute'|'60minute'|'daily' } -> Sharekhan's past candles (weekly pull by the laptop, 21 Oct);
 //     the Sharekhan API key stays here on the server, only candles are returned
 //
 // The Sharekhan token is only ever returned to a caller holding the feed token,
@@ -181,7 +181,8 @@ Deno.serve(async (req) => {
 
   // ---- weekly history pull by the laptop (owner 21 Oct): Sharekhan's past 1/5-minute candles, 10 stocks per call ----
   if (body.action === 'history') {
-    const interval = ['1minute', '5minute'].includes(body.interval) ? body.interval : '5minute'
+    // 26 Oct (owner 'do it'): also longer intervals - Sharekhan keeps intraday ~7 days but daily candles since listing
+    const interval = ['1minute', '3minute', '5minute', '15minute', '30minute', '60minute', 'daily'].includes(body.interval) ? body.interval : '5minute'
     const symbols = [...new Set((Array.isArray(body.symbols) ? body.symbols : []).filter((x: unknown) => typeof x === 'string' && ALLOWED_SYMBOLS.has(x as string)))].slice(0, 10) as string[]
     if (!symbols.length) return json({ error: 'No valid symbols' }, 400)
     const apiKey = Deno.env.get('SHAREKHAN_API_KEY')

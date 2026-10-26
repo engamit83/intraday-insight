@@ -32,5 +32,6 @@ try {
   say('history pull started (separate window)')
   const info = await gateway('token')
   const symbols = Object.keys(info.symbols || {})
-  await pullHistory(gateway, symbols, path.join(here, 'data'), day, say)
+  const intervals = process.argv.slice(2).length ? process.argv.slice(2) : undefined // e.g. node pull-run.mjs daily 60minute 15minute
+  await pullHistory(gateway, symbols, path.join(here, 'data'), day, say, intervals)
 } catch (e) { say(`! history pull failed: ${e.message}`) }
