@@ -108,7 +108,7 @@ export class SmartWarn {
     const { signs, score, R, best, last } = x
     const inProfit = best >= 1
     const orderFlow = signs.flow || signs.book || (this.r.fadeCountsAsFlow && signs.fade)
-    const fadeAlone = this.r.fadeAlone && !inProfit && signs.fade && R <= this.r.fadeAloneR
+    const fadeAlone = (this.r.fadeAlone && !inProfit && signs.fade && R <= this.r.fadeAloneR) || (this.r.fadeAloneProfit && inProfit && signs.fade)
     if (!fadeAlone && (inProfit ? score < this.r.minScore : (score < this.r.minScoreEarly || !orderFlow))) return null
     const lw = this.lastWarn.get(t.sym)
     const mins = (m) => +m.slice(0, 2) * 60 + +m.slice(3, 5)
