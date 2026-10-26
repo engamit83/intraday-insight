@@ -9,7 +9,8 @@
 //  6 market : Nifty moved >= 0.15% against us over the last 5 minutes
 // WARN: once the trade has been >= +1R, 3 signs are enough (protect profit). Before that, early dips are normal: need 4 signs AND real
 // order-flow evidence (flow or book). Never in the first 3 minutes. At most once per trade per 10 minutes.
-export const SMART = { minScore: 3, minScoreEarly: 4, graceMin: 3, flowX: 1.5, bookX: 1.3, niftyPct: 0.15, repeatMin: 10, burstX: 1.5 }
+export const SMART = { minScore: 3, minScoreEarly: 4, graceMin: 3, flowX: 1.5, bookX: 1.3, niftyPct: 0.15, repeatMin: 10, burstX: 1.5,
+  fadeOn: true, fadeX: 0.6, fadeAlone: true, fadeAloneR: 0, fadeCountsAsFlow: false } // VOLUME FADE exit (owner 'do it' 26 Oct 18:48): in loss + volume dried up -> stop 0.3R from price
 
 export class SmartWarn {
   constructor(rules = SMART) { this.r = rules; this.sym = new Map(); this.lastWarn = new Map() }
@@ -116,4 +117,4 @@ export class SmartWarn {
     return { sym: t.sym, dir: t.dir, minute: last.m, price: last.c, R: +R.toFixed(2), best: +best.toFixed(2), mode: inProfit ? 'protect profit' : 'early danger', score, signs: Object.keys(signs).filter((k) => signs[k]) }
   }
 }
-export const SIGN_TXT = { flow: 'aggressive counter-trades', book: 'order book turned against us', volume: 'counter-move on rising volume', vwap: 'back through VWAP', lows: 'structure turning', market: 'Nifty turning against us' }
+export const SIGN_TXT = { flow: 'aggressive counter-trades', book: 'order book turned against us', volume: 'counter-move on rising volume', vwap: 'back through VWAP', lows: 'structure turning', market: 'Nifty turning against us', fade: 'volume dried up, no progress' }
