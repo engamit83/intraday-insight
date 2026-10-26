@@ -51,6 +51,12 @@ export class SmartWarn {
     }
     const n = this.sym.get('NIFTY')
     if (n && n.bars.length >= 6) { const nb = n.bars.slice(-6); const ch = (nb.at(-1).c / nb[0].c - 1) * 100; signs.market = ch * sg <= -this.r.niftyPct }
+    // 7 fade (TEST 26 Oct, owner option 2): volume dried up after entry - last 3 closed minutes average < fadeX x the stock's normal minute
+    // volume today (median since 09:20) AND no progress our way over those 3 minutes. Off unless rules.fadeOn.
+    if (this.r.fadeOn) {
+      const pool = x.bars.filter((b) => b.m >= '09:20').map((b) => b.v).sort((a, b) => a - b), normal = pool.length ? pool[Math.floor(pool.length / 2)] : 0
+      signs.fade = l3.length === 3 && normal > 0 && l3.reduce((a, b) => a + b.v, 0) / 3 < this.r.fadeX * normal && (l3.at(-1).c - l3[0].o) * sg <= 0
+    }
     const score = Object.values(signs).filter(Boolean).length
     const R = (last.c - t.entry) * sg / t.risk
     const best = Math.max(0, ...bars.map((b) => ((sg > 0 ? b.h : b.l) - t.entry) * sg / t.risk))
@@ -100,7 +106,9 @@ export class SmartWarn {
     const x = this.signsFor(t); if (!x) return null
     const { signs, score, R, best, last } = x
     const inProfit = best >= 1
-    if (inProfit ? score < this.r.minScore : (score < this.r.minScoreEarly || !(signs.flow || signs.book))) return null
+    const orderFlow = signs.flow || signs.book || (this.r.fadeCountsAsFlow && signs.fade)
+    const fadeAlone = this.r.fadeAlone && !inProfit && signs.fade && R <= this.r.fadeAloneR
+    if (!fadeAlone && (inProfit ? score < this.r.minScore : (score < this.r.minScoreEarly || !orderFlow))) return null
     const lw = this.lastWarn.get(t.sym)
     const mins = (m) => +m.slice(0, 2) * 60 + +m.slice(3, 5)
     if (lw && mins(minute) - mins(lw) < this.r.repeatMin) return null
