@@ -21,6 +21,8 @@
 
 ---
 
+## 🔒 RULE FREEZE 27 Oct - 31 Oct (owner 27 Oct 17:12): keep ALL current live rules unchanged this week (E1-E6, re-entry v2, X1-X3h incl. fade, fast drop, stall). Change only for a BUG or a rule that is OBVIOUSLY wrong (with proof). All new ideas -> test + Saturday review with numbers.
+
 ## ✅ DAILY + WEEKLY REVIEW CHECKLIST (owner 26 Oct 21:20 - every 15:45 review and every Saturday review MUST do all of this)
 Besides trades / B failures / Stock X / shadows / rule-0 metrics, check the 6 RULE CANDIDATES **separately, every day**, with numbers (tool: tools/backtest/v5/daytype.py,
 breadth_test.py; live day from data\candles-DATE.csv + sip-trades-DATE.csv), and report each one in its own line:
