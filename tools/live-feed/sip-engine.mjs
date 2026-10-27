@@ -31,7 +31,8 @@ import { PreopenShadow } from './preopen-shadow.mjs'
 import { BreadthShadow } from './breadth-shadow.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true, withBreadth: true, breadthBuyMin: 45, breadthSellMax: 55 }
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true, withBreadth: true, breadthBuyMin: 45, breadthSellMax: 55,
+  fastDropR: 0.5, fastSec: 60, stallMin: 10, stallBest: 0.5 } // X3g FAST DROP + X3h STALL (owner 'do it' 27 Oct 16:43)
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -55,6 +56,7 @@ export class SipEngine {
     this.bookNow = new Map()
     this.ckt = new Map() // circuit limits from the feed (25 Oct)
     this.bUp = new Map(); this.bN = 0; this.bCount = 0; this.liqCache = new Map() // live market breadth (rule E6, 27 Oct)
+    this.pendingNotes = []
   }
   static loadBaseline(dataDir) {
     try { return JSON.parse(fs.readFileSync(path.join(dataDir, 'sip-baseline.json'), 'utf8')) } catch { return { first5: {}, turnover: {}, days: [] } }
@@ -102,7 +104,7 @@ export class SipEngine {
     if (this.r.withBreadth && this.bshadow === undefined) { try { this.bshadow = new BreadthShadow({ dataDir: this.dataDir, sw: this.sw, baseline: this.baseline, day: this.day }) } catch { this.bshadow = null } }
     if (this.bshadow) { try { this.bshadow.onTick(sym, tick, ts, istHM(ts), sec >= this.r.squareOff) } catch { this.bshadow = null } }
     if (this.r.smartExit && sec < this.r.squareOff) ev.push(...this.smart(sym, tick, ts, t))
-    if (t && !t.exit) ev.push(...this.manage(t, tick, ts, sec))
+    if (t && !t.exit) { ev.push(...this.manage(t, tick, ts, sec)); while (this.pendingNotes.length) ev.push({ kind: 'note', text: this.pendingNotes.shift() }) }
     else if (this.picks && sec < this.r.lastEntry) {
       const pk = this.picks.find((x) => x.sym === sym)
       if (pk && !t && !pk.breadthSkip) ev.push(...this.tryEntry(pk, tick, ts))
@@ -249,7 +251,7 @@ export class SipEngine {
         const pool = x.bars.filter((b) => b.m >= '09:20' && b.m < last.m).map((b) => b.v).sort((a, b) => a - b), normal = pool.length ? pool[Math.floor(pool.length / 2)] : 0
         if (normal > 0 && last.v >= this.r.absorbX * normal && (last.c - last.o) * sg <= 0 && last.m > inMin) cut = true
       }
-      if (cut) { const ns = +(tick.price - sg * this.r.lossTightR * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { t.stop = ns; t.testCut = true; this.save() } }
+      if (cut) { const ns = +(tick.price - sg * this.r.lossTightR * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { const first = !t.testCut; t.stop = ns; t.testCut = true; this.save(); if (first) ev.push({ kind: 'note', text: `⚠️ STALL: ${t.dir} ${sym} no progress for ${this.r.stallMin} min and in loss - stop moved to ₹${ns} (0.3R from price) - stocks in play (paper)` }) } }
     }
     const w = this.sw.evaluate({ sym, dir: t.dir, entry: t.entry, risk: t.risk, inMin, bookAtEntry: t.bookAtEntry ?? null }, m)
     if (!w) return ev
@@ -289,7 +291,7 @@ export class SipEngine {
     if (this.r.fastDropR) { // tick-level: price fell fastDropR R within fastSec seconds while in loss -> stop 0.3R from price
       (t.win ??= []).push([ts, p]); while (t.win.length && ts - t.win[0][0] > (this.r.fastSec ?? 60) * 1000) t.win.shift()
       const ext = sg > 0 ? Math.max(...t.win.map((x) => x[1])) : Math.min(...t.win.map((x) => x[1]))
-      if (r < 0 && (ext - p) * sg >= this.r.fastDropR * t.risk) { const ns = +(p - sg * this.r.lossTightR * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { t.stop = ns; t.fastCut = true } }
+      if (r < 0 && (ext - p) * sg >= this.r.fastDropR * t.risk) { const ns = +(p - sg * this.r.lossTightR * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { const first = !t.fastCut; t.stop = ns; t.fastCut = true; this.save(); if (first) this.pendingNotes.push(`⚠️ FAST DROP: ${t.dir} ${t.sym} fell ${this.r.fastDropR}R within ${this.r.fastSec ?? 60}s while in loss - stop moved to ₹${ns} (0.3R from price) - stocks in play (paper)`) } }
     }
     if (this.r.beAt && r >= this.r.beAt) { const be = +(t.entry * (1 + sg * (this.r.costPct + 2 * this.r.slipPct) / 100)).toFixed(2); if ((be - t.stop) * sg > 0) t.stop = be }
     if (r > t.best) {
@@ -313,8 +315,8 @@ export class SipEngine {
   logTrade(t) {
     try {
       const f = path.join(this.dataDir, `sip-trades-${this.day}.csv`)
-      const head = fs.existsSync(f) ? '' : 'day,symbol,dir,rvol,gap_with_pct,reentry,signs_at_entry,entry_time,entry,stop0,risk_pct,qty,exit_time,exit,reason,best_R,net_rs,R,tightened,sign3_burst_plus3,breadth_at_entry\n'
-      fs.appendFileSync(f, head + [this.day, t.sym, t.dir, t.rvol, t.gapWith ?? '', t.re ? 'yes' : 'no', (t.signsAtEntry ?? []).join('+'), istClock(t.inTs), t.entry, t.stop0, t.riskPct, t.qty, istClock(t.outTs), t.exit, t.reason, t.best.toFixed(2), t.netRs, t.R, t.tight ? 'yes' : 'no', t.reRuleOk ? 'yes' : 'no', t.breadth ?? ''].join(',') + '\n')
+      const head = fs.existsSync(f) ? '' : 'day,symbol,dir,rvol,gap_with_pct,reentry,signs_at_entry,entry_time,entry,stop0,risk_pct,qty,exit_time,exit,reason,best_R,net_rs,R,tightened,sign3_burst_plus3,breadth_at_entry,early_cut\n'
+      fs.appendFileSync(f, head + [this.day, t.sym, t.dir, t.rvol, t.gapWith ?? '', t.re ? 'yes' : 'no', (t.signsAtEntry ?? []).join('+'), istClock(t.inTs), t.entry, t.stop0, t.riskPct, t.qty, istClock(t.outTs), t.exit, t.reason, t.best.toFixed(2), t.netRs, t.R, t.tight ? 'yes' : 'no', t.reRuleOk ? 'yes' : 'no', t.breadth ?? '', t.fastCut ? 'fast-drop' : t.testCut ? 'stall' : ''].join(',') + '\n')
     } catch {}
   }
   summary() {
