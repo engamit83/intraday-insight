@@ -240,6 +240,17 @@ export class SipEngine {
     }
     const inMin = istHM(t.inTs)
     if (m <= inMin) return ev
+    { // EXIT TESTS 27 Oct (off unless set): stall = no progress after stallMin minutes while in loss; absorb = heavy volume bar with no progress our way
+      const sg = t.dir === 'BUY' ? 1 : -1, x = this.sw.sym.get(sym), last = x?.bars.at(-1), R = (tick.price - t.entry) * sg / t.risk
+      const mins = (h) => +h.slice(0, 2) * 60 + +h.slice(3, 5)
+      let cut = false
+      if (this.r.stallMin && mins(m) - mins(inMin) >= this.r.stallMin && t.best < (this.r.stallBest ?? 0.5) && R < 0) cut = true
+      if (this.r.absorbX && last && R < 0.3) {
+        const pool = x.bars.filter((b) => b.m >= '09:20' && b.m < last.m).map((b) => b.v).sort((a, b) => a - b), normal = pool.length ? pool[Math.floor(pool.length / 2)] : 0
+        if (normal > 0 && last.v >= this.r.absorbX * normal && (last.c - last.o) * sg <= 0 && last.m > inMin) cut = true
+      }
+      if (cut) { const ns = +(tick.price - sg * this.r.lossTightR * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { t.stop = ns; t.testCut = true; this.save() } }
+    }
     const w = this.sw.evaluate({ sym, dir: t.dir, entry: t.entry, risk: t.risk, inMin, bookAtEntry: t.bookAtEntry ?? null }, m)
     if (!w) return ev
     let tightened = false
@@ -274,6 +285,13 @@ export class SipEngine {
       return [this.close(t, q, t.best >= 1 ? 'trail' : 'stop', ts)]
     }
     const r = (p - t.entry) * sg / t.risk
+    // EXIT TESTS 27 Oct (owner: exit closer to 0 loss) - all OFF unless the rule is set
+    if (this.r.fastDropR) { // tick-level: price fell fastDropR R within fastSec seconds while in loss -> stop 0.3R from price
+      (t.win ??= []).push([ts, p]); while (t.win.length && ts - t.win[0][0] > (this.r.fastSec ?? 60) * 1000) t.win.shift()
+      const ext = sg > 0 ? Math.max(...t.win.map((x) => x[1])) : Math.min(...t.win.map((x) => x[1]))
+      if (r < 0 && (ext - p) * sg >= this.r.fastDropR * t.risk) { const ns = +(p - sg * this.r.lossTightR * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { t.stop = ns; t.fastCut = true } }
+    }
+    if (this.r.beAt && r >= this.r.beAt) { const be = +(t.entry * (1 + sg * (this.r.costPct + 2 * this.r.slipPct) / 100)).toFixed(2); if ((be - t.stop) * sg > 0) t.stop = be }
     if (r > t.best) {
       t.best = r
       if (t.best >= 1) {
