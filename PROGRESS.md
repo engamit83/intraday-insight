@@ -23,6 +23,14 @@
 
 ## 🔒 RULE FREEZE 27 Oct - 31 Oct (owner 27 Oct 17:12): keep ALL current live rules unchanged this week (E1-E6, re-entry v2, X1-X3h incl. fade, fast drop, stall). Change only for a BUG or a rule that is OBVIOUSLY wrong (with proof). All new ideas -> test + Saturday review with numbers.
 
+## 💰 PROFIT LEVERS - Saturday 31 Oct test list (owner 27 Oct 17:15: think like an expert who wants more profit, every direction, then advise)
+P1 LET WINNERS RUN: avg winner only ~+0.8R; trail gives back a lot (JSWENERGY best 2.6R -> 1.85R, SWIGGY 26 Oct ran +6% after exit). Test on breadth-aligned / trend days: wider trail (1.5R) or partial hold to 15:15.
+P2 SIZE UP THE BEST: with-breadth + high volume (>=10x) + gap-against setups -> 1.5x-2x; size down weak (rvol < 4x, narrow range). Same risk budget, more on the best.
+P3 CAPTURE MISSED WINNERS: Stock X with breadth + >=10x volume (+2,451 on 27 Oct), against-breadth sells that won (PAYTM +1,372), pre-open strong buy imbalance (+2,065 on 27 Oct) -> find the filter that keeps only the winners.
+P4 MORE TRADES ON GOOD DAYS: top 10 cap; on strong-breadth days allow more picks in the breadth direction.
+P5 CUT LOSERS EARLY (zero-loss): entry filters (narrow opening range, thin stocks, last-ranked weak picks) + the new fast-drop/stall exits.
+P6 COSTS: 0.106% per trade - check brokerage plans/turnover; fewer, bigger, better trades.
+
 ## ✅ DAILY + WEEKLY REVIEW CHECKLIST (owner 26 Oct 21:20 - every 15:45 review and every Saturday review MUST do all of this)
 Besides trades / B failures / Stock X / shadows / rule-0 metrics, check the 6 RULE CANDIDATES **separately, every day**, with numbers (tool: tools/backtest/v5/daytype.py,
 breadth_test.py; live day from data\candles-DATE.csv + sip-trades-DATE.csv), and report each one in its own line:
