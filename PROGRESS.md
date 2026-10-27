@@ -31,6 +31,15 @@ P4 MORE TRADES ON GOOD DAYS: top 10 cap; on strong-breadth days allow more picks
 P5 CUT LOSERS EARLY (zero-loss): entry filters (narrow opening range, thin stocks, last-ranked weak picks) + the new fast-drop/stall exits.
 P6 COSTS: 0.106% per trade - check brokerage plans/turnover; fewer, bigger, better trades.
 
+## 💰 PROFIT SIDE - standing list (owner 27 Oct 17:15: 'think like an expert who wants more profit and more earnings, every direction, then advise')
+Every review: check BOTH sides - fewer/smaller losses AND bigger/more wins. Ideas to test Saturday (profit side):
+P1 let big winners run (winners exit at +0.5..1.9R while stocks run on: SWIGGY +6% after exit 26 Oct, J&KBANK 4.2R 23 Oct) -> wider trail only when breadth strongly with us / day = trend day.
+P2 bigger size on the best setups: gap-against + rvol >= 10x + with breadth (combine quality sizing with breadth).
+P3 Stock X WITH breadth and rvol >= 10x (27 Oct +2,451 at 0.5x) -> take them (half/normal size) instead of skipping.
+P4 more picks on strong-breadth days (top 10 -> 15 when breadth >= 70% at 09:20).
+P5 pre-open strong buyer/seller imbalance (>= 10x) trades at 09:15 (27 Oct +2,065, 26 Oct -9,759 -> needs the gap/breadth filter).
+P6 against-breadth sells that won (PAYTM +1,372) -> find the filter that lets the strong ones back in.
+
 ## ✅ DAILY + WEEKLY REVIEW CHECKLIST (owner 26 Oct 21:20 - every 15:45 review and every Saturday review MUST do all of this)
 Besides trades / B failures / Stock X / shadows / rule-0 metrics, check the 6 RULE CANDIDATES **separately, every day**, with numbers (tool: tools/backtest/v5/daytype.py,
 breadth_test.py; live day from data\candles-DATE.csv + sip-trades-DATE.csv), and report each one in its own line:
