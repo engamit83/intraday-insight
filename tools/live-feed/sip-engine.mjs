@@ -70,6 +70,7 @@ export class SipEngine {
       for (const t of s.trades ?? []) this.trades.set(t.sym, t)
       for (const [k, v] of s.or ?? []) this.or.set(k, v)
       if (this.picks) this.firstTickSec = this.r.orStart
+      this.seedBreadth()
       return true
     } catch { return false }
   }
@@ -149,6 +150,7 @@ export class SipEngine {
     this.bUp.set(sym, up)
   }
   breadth() { return this.bN >= 50 ? +(this.bCount / this.bN * 100).toFixed(1) : null }
+  seedBreadth() { if (this.r.withBreadth) { for (const [sym, o] of this.or) if (o && o.last > 0 && !this.bUp.has(sym)) this.updBreadth(sym, o.last); this.bSeeded = true } }
   // called every second by the feed (and from onTick): selection at 09:20, square-off at 15:15
   onTimer(ts) {
     const ev = [], sec = istSec(ts)
@@ -183,6 +185,7 @@ export class SipEngine {
     cand.sort((a, b) => b.rvol - a.rvol)
     this.gapSkipped = gapSkipped.sort((a, b) => b.rvol - a.rvol)
     this.picks = cand.slice(0, this.r.topK).map((p) => ({ ...p, book0: this.bookNow.get(p.sym) ?? null })); this.status = 'picked'; this.save()
+    this.seedBreadth() // 27 Oct fix: breadth ready at 09:20:00 (RECLTD was entered at 09:20:00 before breadth existed)
     return [{ kind: 'picks', picks: this.picks, ts }]
   }
   tryEntry(pk, tick, ts, confirmed = false) {
@@ -199,6 +202,7 @@ export class SipEngine {
       if (lim > 0 && Math.abs(lim - quote) / quote * 100 < this.r.minCircuitRoomPct) { pk.circuitSkip = true; return [] }
     }
     const br = this.breadth()
+    if (this.r.withBreadth && !this.bSeeded) return [] // 27 Oct fix: breadth not seeded yet -> wait, never enter blind
     const againstBreadth = this.r.withBreadth && br != null && (B ? br < this.r.breadthBuyMin : br > this.r.breadthSellMax)
     const entry = +(quote * (1 + sg * this.r.slipPct / 100)).toFixed(2)
     const opp = B ? pk.low : pk.high
