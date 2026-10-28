@@ -38,6 +38,7 @@ P2 bigger size on the best setups: gap-against + rvol >= 10x + with breadth (com
 P3 Stock X WITH breadth and rvol >= 10x (27 Oct +2,451 at 0.5x) -> take them (half/normal size) instead of skipping.
 P4 more picks on strong-breadth days (top 10 -> 15 when breadth >= 70% at 09:20).
 P5 pre-open strong buyer/seller imbalance (>= 10x) trades at 09:15 (27 Oct +2,065, 26 Oct -9,759 -> needs the gap/breadth filter).
+P7 (28 Oct, owner 'compare picked vs not picked stocks'): same entry+exits on EVERY liquid stock. 5 tick days: our picks WITH breadth 20 tr 55% +0.42R avg (+8.4R) = best per trade; picks AGAINST breadth 27% -2.8R; rvol 2-3 (not picked) WITH breadth 52 tr 48% +0.21R (+10.8R), against -2.3R; rvol 1-2 with +36R / against -19R; rvol<1 -74R; Stock X with breadth ~0 (+0.6R), against -4.6R. 9 history days (1-min): rvol 2-3 WITH breadth 97 tr 58% +0.31R, +30R, positive in BOTH halves (build +11.9, check +18.0); lower rvol bands unstable (build negative). => CANDIDATE: lower the in-play bar from 3x to 2x volume when the trade is WITH breadth (more good trades, ~+10R per 5 days). Against breadth loses in every volume band -> E6 confirmed. Saturday proposal (rule freeze).
 P6 against-breadth sells that won (PAYTM +1,372) -> find the filter that lets the strong ones back in.
 
 ## ✅ DAILY + WEEKLY REVIEW CHECKLIST (owner 26 Oct 21:20 - every 15:45 review and every Saturday review MUST do all of this)
