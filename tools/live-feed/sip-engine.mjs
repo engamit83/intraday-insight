@@ -90,7 +90,7 @@ export class SipEngine {
       if (this.firstTickSec === null) this.firstTickSec = sec
       let o = this.or.get(sym)
       if (!o) { o = { open: p, high: p, low: p, last: p, v0: Number.isFinite(tick.cum) ? tick.cum : null, v1: null }; this.or.set(sym, o) }
-      o.high = Math.max(o.high, p); o.low = Math.min(o.low, p); o.last = p
+      o.high = Math.max(o.high, p); o.low = Math.min(o.low, p); o.last = p; o.ticks = (o.ticks ?? 0) + 1
       if (Number.isFinite(tick.cum)) { if (o.v0 === null) o.v0 = tick.cum; o.v1 = tick.cum }
       if (this.r.smartExit || this.r.entryBase) { this.sw.onTick(sym, istHM(ts), p, tick.cum); if (tick.totBuy > 0 && tick.totSell > 0) { this.bookNow.set(sym, tick.totBuy / tick.totSell); this.sw.st(sym).book = tick.totBuy / tick.totSell } }
       this.preTick(sym, tick, ts, sec, ev)
@@ -180,7 +180,7 @@ export class SipEngine {
       if (rvol < this.r.minRvol) continue
       const dir = o.last > o.open ? 'BUY' : 'SELL', pc = this.baseline.lastClose?.[sym]
       const gapWith = pc > 0 ? +(((o.open / pc - 1) * 100) * (dir === 'BUY' ? 1 : -1)).toFixed(2) : null
-      const c = { sym, dir, rvol: +rvol.toFixed(1), high: o.high, low: o.low, gapWith }
+      const c = { sym, dir, rvol: +rvol.toFixed(1), high: o.high, low: o.low, gapWith, orTicks: o.ticks ?? 0 }
       if (this.r.maxGapWithPct != null && gapWith != null && gapWith > this.r.maxGapWithPct) { gapSkipped.push(c); continue }
       cand.push(c)
     }
@@ -192,7 +192,20 @@ export class SipEngine {
   }
   tryEntry(pk, tick, ts, confirmed = false) {
     const B = pk.dir === 'BUY', sg = B ? 1 : -1, lvl = B ? pk.high : pk.low
-    if (B ? tick.price <= lvl : tick.price >= lvl) return []   // strictly beyond the range
+    if (B ? tick.price <= lvl : tick.price >= lvl) { pk.brokeAt = null; return [] }  // strictly beyond the range
+    // ENTRY TESTS 28 Oct (owner: entry looks weak / false breakouts at 09:20) - all OFF unless set
+    if (!confirmed) {
+      if (this.r.minRvolEntry && pk.rvol < this.r.minRvolEntry) return []
+      if (this.r.minRangePct && (pk.high - pk.low) / pk.low * 100 < this.r.minRangePct) return []
+      if (this.r.minOrTicks && (pk.orTicks ?? 999) < this.r.minOrTicks) return []
+      if (this.r.startAfterSec && istSec(ts) < this.r.startAfterSec) return []
+      if (this.r.confirmSec) { if (!pk.brokeAt) { pk.brokeAt = ts; return [] } if (ts - pk.brokeAt < this.r.confirmSec * 1000) return [] }
+      if (this.r.retestPct) {
+        const band = lvl * this.r.retestPct / 100
+        if (!pk.ranAway) { if ((tick.price - lvl) * sg > band) pk.ranAway = true; return [] }
+        if ((tick.price - lvl) * sg > band) return []   // wait for the pull-back to the level
+      }
+    }
     if (this.r.entryBase && !confirmed) { // BASE RULES (owner 25 Oct): enter only if the favour signs agree; otherwise wait (price must still be beyond the level)
       const f = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0, ts)
       if (!f || f.score < this.r.entryMinSigns || (this.r.entryNeedFlow && !f.signs.flow)) { pk.waited = (pk.waited ?? 0) + 1; return [] }
