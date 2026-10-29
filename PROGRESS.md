@@ -23,6 +23,8 @@
 
 ## 🎯 GOAL (owner 29 Oct 17:31): an app with UNLIMITED profit and ZERO loss - AI mindset, all angles, never divert (CLAUDE.md rule 0b.9). Every review ends with: what moved us closer, what is the next step.
 
+WORKING AGREEMENT (owner 29 Oct 17:36): Claude keeps the goal mindset, keeps finding NEW rules and improving EXISTING ones towards the goal; before doing ANY change Claude explains it simply (what, why, numbers) and asks for 'do it'.
+
 ## 🔒 RULE FREEZE 27 Oct - 31 Oct (owner 27 Oct 17:12): keep ALL current live rules unchanged this week (E1-E6, re-entry v2, X1-X3h incl. fade, fast drop, stall). Change only for a BUG or a rule that is OBVIOUSLY wrong (with proof). All new ideas -> test + Saturday review with numbers.
 
 ## 💰 PROFIT LEVERS - Saturday 31 Oct test list (owner 27 Oct 17:15: think like an expert who wants more profit, every direction, then advise)
