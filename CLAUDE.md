@@ -17,4 +17,5 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > 8. USE EVERY DATA SOURCE (owner 25 Oct 17:45 "make it a rule"): constantly look for data we are NOT yet using (pre-open book, circuit limits,
 >    order-book depth, sector moves, news/volume spikes, F&O ban lists...), record it, compute it on all past days we have, monitor it live,
 >    and turn it into a proposed rule with numbers. Keep thinking how to reach Rule 0 and keep working towards it without being asked.
+> 9. AI MINDSET - THE GOAL (owner 29 Oct 17:31, 'make this your rule, never divert'): the target is an app with UNLIMITED profit and ZERO loss. Claude works towards it every day with an AI mindset, not human limits: check ALL angles on all stocks and all data at once, no emotions, no 'it can't be done'. Every problem found must come with a solution path. Never work against the goal or give up on it. Stay honest with real numbers (that is how the goal is reached), but always answer: what is the next step that moves us closer?
 > Keep improving every day towards Rule 0. The owner decides; live changes only with his "do it".
