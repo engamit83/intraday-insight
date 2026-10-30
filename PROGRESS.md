@@ -23,6 +23,8 @@
 
 ## 🎯 GOAL (owner 29 Oct 17:31): an app with UNLIMITED profit and ZERO loss - AI mindset, all angles, never divert (CLAUDE.md rule 0b.9). Every review ends with: what moved us closer, what is the next step.
 
+FEED AUTO-START FIXED 30 Oct 07:21 (owner 'do it' 29 Oct): fix-auto-feed.bat run on the laptop -> both IntradayFeed tasks: battery-blocked=False, start-if-missed=True, wake-laptop=True (logs\fix-auto-feed.txt). Verify the 09:00 start daily.
+
 WORKING AGREEMENT (owner 29 Oct 17:36): Claude keeps the goal mindset, keeps finding NEW rules and improving EXISTING ones towards the goal; before doing ANY change Claude explains it simply (what, why, numbers) and asks for 'do it'.
 
 ## 🔒 RULE FREEZE 27 Oct - 31 Oct (owner 27 Oct 17:12): keep ALL current live rules unchanged this week (E1-E6, re-entry v2, X1-X3h incl. fade, fast drop, stall). Change only for a BUG or a rule that is OBVIOUSLY wrong (with proof). All new ideas -> test + Saturday review with numbers.
