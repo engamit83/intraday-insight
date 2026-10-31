@@ -47,6 +47,16 @@ P5 pre-open strong buyer/seller imbalance (>= 10x) trades at 09:15 (27 Oct +2,06
 P7 (28 Oct, owner 'compare picked vs not picked stocks'): same entry+exits on EVERY liquid stock. 5 tick days: our picks WITH breadth 20 tr 55% +0.42R avg (+8.4R) = best per trade; picks AGAINST breadth 27% -2.8R; rvol 2-3 (not picked) WITH breadth 52 tr 48% +0.21R (+10.8R), against -2.3R; rvol 1-2 with +36R / against -19R; rvol<1 -74R; Stock X with breadth ~0 (+0.6R), against -4.6R. 9 history days (1-min): rvol 2-3 WITH breadth 97 tr 58% +0.31R, +30R, positive in BOTH halves (build +11.9, check +18.0); lower rvol bands unstable (build negative). => CANDIDATE: lower the in-play bar from 3x to 2x volume when the trade is WITH breadth (more good trades, ~+10R per 5 days). Against breadth loses in every volume band -> E6 confirmed. Saturday proposal (rule freeze).
 P6 against-breadth sells that won (PAYTM +1,372) -> find the filter that lets the strong ones back in.
 
+## 📊 WEEKLY REVIEW Sat 31 Oct (week 26-30 Oct) - tools/backtest/weekly_tests.py on 7 tick days (22,23,26-30) with ALL current live rules
+Live week: 28 trades, 13 won (46%), net -Rs7,538 (rules changed during the week); since 23 Oct -Rs3,570. Losses shrank through the week: 26 Oct losers ~-1.1R, 29-30 Oct -0.4..-0.8R (fast drop / stall / fade work).
+Replay of ALL 7 days with today's rules: +8,719 (week 26-30: -1,820), 30 trades 53% won, avg loss -720, worst -1,641.
+PROPOSALS (owner decides):
+W1 PRE-OPEN CONTRARIAN (strongest): market-wide pre-open buy/sell < 0.8 -> SKIP SELL picks; > 1.25 -> SKIP BUY picks. 7 days +11,272 (+2,553), week -1,820 -> +733, won 60%, worst -1,641 -> -1,089. HALF-size version +9,993 (+1,274). Caveat: only 5 pre-open days and 4 were seller-heavy in a rising week -> Claude recommends HALF size now, SKIP after 2 more weeks if it holds.
+W2 ONE-SIDED DAY: >= 90% of picks one direction -> half size: +746 (29 Oct -1,499 -> -753), no downside seen.
+KEEP: quality sizing (+1,271 vs without), re-entry v2 (removing it +257 only = noise), E6 breadth (week: saved 3,290 on 28 Oct, cost 1,431 on 30 Oct narrow rally), all exits.
+NOT NOW: P7 rvol>=2 with breadth (9 history days +30R but 7 tick days -359 -> watch); Stock X (week -522 at 0.5x; works only with strong breadth - watch); later entries dropped (6 days of losses); v4.2 already off since 25 Oct.
+NEXT: daily 15:45 reviews 2-13 Nov + Saturdays 7 and 14 Nov scheduled; Zerodha history = the way to prove W1/P7/direction rules on years.
+
 ## ✅ DAILY + WEEKLY REVIEW CHECKLIST (owner 26 Oct 21:20 - every 15:45 review and every Saturday review MUST do all of this)
 Besides trades / B failures / Stock X / shadows / rule-0 metrics, check the 6 RULE CANDIDATES **separately, every day**, with numbers (tool: tools/backtest/v5/daytype.py,
 breadth_test.py; live day from data\candles-DATE.csv + sip-trades-DATE.csv), and report each one in its own line:

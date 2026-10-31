@@ -187,6 +187,7 @@ export class SipEngine {
     cand.sort((a, b) => b.rvol - a.rvol)
     this.gapSkipped = gapSkipped.sort((a, b) => b.rvol - a.rvol)
     this.picks = cand.slice(0, this.r.topK).map((p) => ({ ...p, book0: this.bookNow.get(p.sym) ?? null })); this.status = 'picked'; this.save()
+    if (this.r.oneSidedHalf && this.picks.length >= 3) { const nb = this.picks.filter((p) => p.dir === 'BUY').length, share = Math.max(nb, this.picks.length - nb) / this.picks.length; this.oneSided = share >= this.r.oneSidedHalf ? (nb * 2 > this.picks.length ? 'BUY' : 'SELL') : null } // TEST 31 Oct
     this.seedBreadth() // 27 Oct fix: breadth ready at 09:20:00 (RECLTD was entered at 09:20:00 before breadth existed)
     return [{ kind: 'picks', picks: this.picks, ts }]
   }
@@ -226,7 +227,9 @@ export class SipEngine {
     // SIZE BY QUALITY (owner 25 Oct "do it"): 1.5x risk for the strongest setup (gapped AGAINST us, then turned on >= 5x volume),
     // 0.5x for the weakest kept setup (gapped 0-1% our way), 1x otherwise. 9 days: +Rs39,900 vs +Rs31,700, worst day -600 vs -1,200.
     const mult = !this.r.qualitySize || pk.gapWith == null ? 1 : (pk.gapWith < 0 && pk.rvol >= 5 ? 1.5 : (pk.gapWith > 0 ? 0.5 : 1))
-    const riskRs = this.r.riskRs * mult
+    if (this.r.skipDir && pk.dir === this.r.skipDir) return [] // TEST 31 Oct (pre-open contrarian: skip the crowd's side)
+    const mult2 = mult * (this.r.dirHalf === pk.dir ? 0.5 : 1) * (this.oneSided === pk.dir ? 0.5 : 1) // TEST 31 Oct
+    const riskRs = this.r.riskRs * mult2
     const qty = Math.max(1, Math.floor(riskRs / risk))
     // record the 6 favour signs at EVERY entry (owner 25 Oct 16:35: compare the trades that went up with the ones that went down)
     const fs6 = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0, ts)
