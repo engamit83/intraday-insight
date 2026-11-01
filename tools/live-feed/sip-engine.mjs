@@ -85,6 +85,7 @@ export class SipEngine {
     this.makePre()
     const sec = istSec(ts), p = tick.price
     if (!(p > 0)) return ev
+    if (this.r.proveRs != null || this.r.noChase || this.r.breadthRise) { (this.lastPx ??= new Map()).set(sym, p); if (this.bSeeded) { const b = this.breadth(); if (b != null) (this.bHist ??= new Map()).set(istHM(ts), b) } } // TEST 1 Nov (off)
     if (Number.isFinite(tick.cum)) this.cum.set(sym, { cum: tick.cum, price: p })
     if (sec >= this.r.orStart && sec < this.r.orEnd) {
       if (this.firstTickSec === null) this.firstTickSec = sec
@@ -219,6 +220,19 @@ export class SipEngine {
     }
     const br = this.breadth()
     if (this.r.withBreadth && !this.bSeeded) return [] // 27 Oct fix: breadth not seeded yet -> wait, never enter blind
+    // TEST 1 Nov (owner: enter only when the stock AND the market prove it) - all OFF unless set. Not passing = wait (can pass later until lastEntry)
+    if (!confirmed && (this.r.proveRs != null || this.r.noChase || this.r.breadthRise)) {
+      const so = (s, px) => { const o = this.or.get(s); return o && px > 0 ? (px / o.open - 1) * 100 : null }
+      const nif = so('NIFTY', this.lastPx?.get('NIFTY')), st = so(pk.sym, tick.price)
+      if (this.r.proveRs != null && (nif == null || st == null || (st - nif) * sg < this.r.proveRs)) return []
+      if (this.r.noChase && nif != null && nif * sg >= this.r.noChase) return []
+      if (this.r.breadthRise) {
+        const m = istHM(ts), [hh, mm] = m.split(':').map(Number), t5 = hh * 60 + mm - 5, k5 = `${String(Math.floor(t5 / 60)).padStart(2, '0')}:${String(t5 % 60).padStart(2, '0')}`
+        const b5 = this.bHist?.get(k5) ?? 50, ch = br != null && b5 != null ? br - b5 : null
+        if (br == null || ch == null) return []
+        if (B ? !(br >= this.r.breadthRise && ch > 0) : !(br <= 100 - this.r.breadthRise && ch < 0)) return []
+      }
+    }
     const againstBreadth = this.r.withBreadth && br != null && (B ? br < this.r.breadthBuyMin : br > this.r.breadthSellMax)
     const entry = +(quote * (1 + sg * this.r.slipPct / 100)).toFixed(2)
     const opp = B ? pk.low : pk.high

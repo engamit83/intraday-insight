@@ -1419,3 +1419,11 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   3. GitHub Actions tests.yml: all offline tests (back-tester, reversal, paper-trader e2e, history-export, feed: tick exits, offline,
      recorder, e2e, watchdog, tick e2e) run on every push.
   Installed on the laptop 21 Oct 19:56 (verified identical); GitHub tests.yml run: success.
+
+## PROVE-THEN-ENTER TEST (1 Nov, owner "do it" for testing) - NOT live
+- 1-min grid, 1,152 combinations, 13 days (build 13-22 Oct, unseen 23-30): best = strong >=1% vs Nifty + no chase (Nifty <0.3% our way) + breadth >=55% rising (sell <=45% falling):
+  40 trades vs 70, against-at-once 8% vs 17%, net +32,241 vs +26,398, unseen +8,069 vs +5,323. All-day entry, top-20, volume-burst proof, profit lock 0.5R, two-way: worse.
+- TICK REPLAY 22-30 Oct (real exits): REVERSED. Today's rules +8,719 | strong only +9,268 | strong+no chase +7,905 | X2 +7,243 (against-at-once 23% vs 10%).
+  Why: waiting for proof makes us enter AFTER the move (26 Oct CGPOWER/IDFCFIRSTB sells delayed 09:20->09:34 became losers) and it blocked
+  29 Oct's two later winners while the three 09:20 losers still passed. Verdict: NOT proposed for live. 1-min candles overstate delayed entries.
+- Engine test options (OFF): proveRs, noChase, breadthRise. Next: study the 09:20 entries that go against at once on ticks (first 60-120 s).
