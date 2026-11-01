@@ -1435,3 +1435,10 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   and negative for 1-3 min, then won 0.8-3R). Any early cut on our picks would kill these winners. Verdict: no early-exit rule.
 - Real leak found: 5 losers first reached +0.5R..+0.95R and then lost (PATANJALI, BELRISE, GRSE, LGEINDIA, MSUMI = -2.5R).
   Next: tick-test a profit-protect rule between +0.5R and +1R (owner's "100 -> 105 then falls, book profit").
+
+## PROFIT-PROTECT TEST (1 Nov, owner "yes run") - PROPOSED, not live
+- Tick replay 22-30 Oct, real exits. Option protectAt/protectFrac/protectKeepR (OFF). 26 versions.
+- Today +8,719 (week 26-30 -1,820, losing days 5/7, won 53%).
+- Protect at +0.8R, keep half of best (stop = entry + 0.5 x best until +1R, then normal trail): +10,165, week -608, losing days 2/7, won 63%, 23 Oct big winners untouched.
+- Stable 0.75-0.95R (+9,742..+10,426, all beat today). Below 0.7R it HURTS (0.4-0.6R: -1,400..+7,500) - cuts winners that dip before running.
+- Covers GRSE, LGEINDIA, MSUMI; not PATANJALI (0.51R) / BELRISE (0.64R). Small sample (~4-5 trades changed).

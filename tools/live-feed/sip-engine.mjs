@@ -326,6 +326,10 @@ export class SipEngine {
     if (this.r.beAt && r >= this.r.beAt) { const be = +(t.entry * (1 + sg * (this.r.costPct + 2 * this.r.slipPct) / 100)).toFixed(2); if ((be - t.stop) * sg > 0) t.stop = be }
     if (r > t.best) {
       t.best = r
+      if (this.r.protectAt && t.best >= this.r.protectAt && t.best < 1) { // TEST 1 Nov (off): protect profit between +protectAt and +1R
+        const keep = Math.max(this.r.protectKeepR ?? 0, (this.r.protectFrac ?? 0) * t.best)
+        const ns = +(t.entry + sg * keep * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { t.stop = ns; this.dirty = true }
+      }
       if (t.best >= 1) {
         const ns = +(t.entry + sg * (t.best - (t.tight ? this.r.warnTightR : 1)) * t.risk).toFixed(2)
         if ((ns - t.stop) * sg > 0) { t.stop = ns; this.dirty = true }
