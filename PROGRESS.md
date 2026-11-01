@@ -1427,3 +1427,11 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   Why: waiting for proof makes us enter AFTER the move (26 Oct CGPOWER/IDFCFIRSTB sells delayed 09:20->09:34 became losers) and it blocked
   29 Oct's two later winners while the three 09:20 losers still passed. Verdict: NOT proposed for live. 1-min candles overstate delayed entries.
 - Engine test options (OFF): proveRs, noChase, breadthRise. Next: study the 09:20 entries that go against at once on ticks (first 60-120 s).
+
+## EARLY WRONG-ENTRY STUDY (1 Nov, owner "do it") - NOT live
+- Real ticks + book, first 20-180 s after entry, 1,734 breakout trades (7 tick days), 1,976 early-exit rules tested.
+- All stocks: best rule "at 30 s, R <= -0.2 and volume < opening pace -> exit" +19.9R, but it fires on only 1 of our 27 picks (+0.3R).
+- Our picks: winners and losers look the SAME in the first 3 min (MAZDOCK, FSL, COLPAL, J&KBANK, JSWENERGY were back inside the range
+  and negative for 1-3 min, then won 0.8-3R). Any early cut on our picks would kill these winners. Verdict: no early-exit rule.
+- Real leak found: 5 losers first reached +0.5R..+0.95R and then lost (PATANJALI, BELRISE, GRSE, LGEINDIA, MSUMI = -2.5R).
+  Next: tick-test a profit-protect rule between +0.5R and +1R (owner's "100 -> 105 then falls, book profit").
