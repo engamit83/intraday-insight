@@ -1442,3 +1442,8 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - Protect at +0.8R, keep half of best (stop = entry + 0.5 x best until +1R, then normal trail): +10,165, week -608, losing days 2/7, won 63%, 23 Oct big winners untouched.
 - Stable 0.75-0.95R (+9,742..+10,426, all beat today). Below 0.7R it HURTS (0.4-0.6R: -1,400..+7,500) - cuts winners that dip before running.
 - Covers GRSE, LGEINDIA, MSUMI; not PATANJALI (0.51R) / BELRISE (0.64R). Small sample (~4-5 trades changed).
+
+## P8 PROFIT PROTECT - LIVE from Fri 6 Nov (owner "do it" 5 Nov 21:57)
+- protectAt 0.8, protectFrac 0.5: at +0.8R the stop locks half of the best profit (rises with it) until +1R, then the normal trail.
+- Phone note "PROFIT PROTECT" when it first moves a stop. Verified: replay 30 Oct +391 / 27 Oct +292 (= test); with P8 off identical to the laptop 28 Oct engine (-934).
+- FEED 2-5 Nov: NOT recorded. 2 Nov log: NO_VALID_SHAREKHAN_TOKEN 09:00-09:14 (no Sharekhan login that day), then the log stops (laptop off/asleep). 3-5 Nov: no log at all (laptop off).

@@ -32,7 +32,8 @@ import { BreadthShadow } from './breadth-shadow.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
   topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true, withBreadth: true, breadthBuyMin: 45, breadthSellMax: 55,
-  fastDropR: 0.5, fastSec: 60, stallMin: 10, stallBest: 0.5 } // X3g FAST DROP + X3h STALL (owner 'do it' 27 Oct 16:43)
+  fastDropR: 0.5, fastSec: 60, stallMin: 10, stallBest: 0.5, // X3g FAST DROP + X3h STALL (owner 'do it' 27 Oct 16:43)
+  protectAt: 0.8, protectFrac: 0.5 } // P8 PROFIT PROTECT (owner 'do it' 5 Nov 21:57): at +0.8R stop locks half the best profit until +1R. Ticks 22-30 Oct: +10,165 vs +8,719, losing days 2 vs 5
 
 const istSec = (ms) => { const d = new Date(ms + 330 * 60_000); return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds() }
 const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10)
@@ -326,9 +327,9 @@ export class SipEngine {
     if (this.r.beAt && r >= this.r.beAt) { const be = +(t.entry * (1 + sg * (this.r.costPct + 2 * this.r.slipPct) / 100)).toFixed(2); if ((be - t.stop) * sg > 0) t.stop = be }
     if (r > t.best) {
       t.best = r
-      if (this.r.protectAt && t.best >= this.r.protectAt && t.best < 1) { // TEST 1 Nov (off): protect profit between +protectAt and +1R
+      if (this.r.protectAt && t.best >= this.r.protectAt && t.best < 1) { // P8 LIVE 5 Nov: protect profit between +protectAt and +1R
         const keep = Math.max(this.r.protectKeepR ?? 0, (this.r.protectFrac ?? 0) * t.best)
-        const ns = +(t.entry + sg * keep * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { t.stop = ns; this.dirty = true }
+        const ns = +(t.entry + sg * keep * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { const first = !t.protected; t.stop = ns; t.protected = true; this.dirty = true; if (first) this.pendingNotes.push(`🔒 PROFIT PROTECT: ${t.dir} ${t.sym} reached +${this.r.protectAt}R - stop moved to ₹${ns} (keeps half the best profit) - stocks in play (paper)`) }
       }
       if (t.best >= 1) {
         const ns = +(t.entry + sg * (t.best - (t.tight ? this.r.warnTightR : 1)) * t.risk).toFixed(2)
