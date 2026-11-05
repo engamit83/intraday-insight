@@ -190,6 +190,11 @@ export class SipEngine {
     this.gapSkipped = gapSkipped.sort((a, b) => b.rvol - a.rvol)
     this.picks = cand.slice(0, this.r.topK).map((p) => ({ ...p, book0: this.bookNow.get(p.sym) ?? null })); this.status = 'picked'; this.save()
     if (this.r.oneSidedHalf && this.picks.length >= 3) { const nb = this.picks.filter((p) => p.dir === 'BUY').length, share = Math.max(nb, this.picks.length - nb) / this.picks.length; this.oneSided = share >= this.r.oneSidedHalf ? (nb * 2 > this.picks.length ? 'BUY' : 'SELL') : null } // TEST 31 Oct
+    if (this.r.mktDisHalf || this.r.mktDisSkip) { // TEST 5 Nov: market direction of the first 5 minutes (NIFTY if recorded, else average of the liquid stocks)
+      const n = this.or.get('NIFTY'); let mv = n ? n.last / n.open - 1 : null
+      if (mv == null) { let a = 0, k = 0; for (const [sym, o] of this.or) { if (sym.startsWith('NIFTY') || !(median(this.baseline.turnover?.[sym] ?? []) >= this.r.minTurnoverCr)) continue; a += o.last / o.open - 1; k++ } mv = k ? a / k : 0 }
+      this.mktDir = Math.abs(mv) * 100 >= (this.r.mktMinPct ?? 0.05) ? (mv > 0 ? 'BUY' : 'SELL') : null
+    }
     this.seedBreadth() // 27 Oct fix: breadth ready at 09:20:00 (RECLTD was entered at 09:20:00 before breadth existed)
     return [{ kind: 'picks', picks: this.picks, ts }]
   }
@@ -200,6 +205,7 @@ export class SipEngine {
     if (!confirmed) {
       if (this.r.minRvolEntry && pk.rvol < this.r.minRvolEntry) return []
       if (this.r.minRangePct && (pk.high - pk.low) / pk.low * 100 < this.r.minRangePct) return []
+      if (this.r.maxRangePct && (pk.high - pk.low) / pk.low * 100 > this.r.maxRangePct) return [] // TEST 5 Nov (off): skip very wide opening ranges
       if (this.r.minOrTicks && (pk.orTicks ?? 999) < this.r.minOrTicks) return []
       if (this.r.startAfterSec && istSec(ts) < this.r.startAfterSec) return []
       if (this.r.confirmSec) { if (!pk.brokeAt) { pk.brokeAt = ts; return [] } if (ts - pk.brokeAt < this.r.confirmSec * 1000) return [] }
@@ -236,7 +242,7 @@ export class SipEngine {
     }
     const againstBreadth = this.r.withBreadth && br != null && (B ? br < this.r.breadthBuyMin : br > this.r.breadthSellMax)
     const entry = +(quote * (1 + sg * this.r.slipPct / 100)).toFixed(2)
-    const opp = B ? pk.low : pk.high
+    const opp = this.r.stopMid ? (pk.high + pk.low) / 2 : (B ? pk.low : pk.high) // TEST 5 Nov (off): stop at the middle of the opening range
     const riskPct = Math.min(Math.max(Math.abs(entry - opp) / entry * 100, this.r.stopMinPct), this.r.stopMaxPct)
     const risk = entry * riskPct / 100
     // SIZE BY QUALITY (owner 25 Oct "do it"): 1.5x risk for the strongest setup (gapped AGAINST us, then turned on >= 5x volume),
@@ -244,6 +250,8 @@ export class SipEngine {
     const mult = !this.r.qualitySize || pk.gapWith == null ? 1 : (pk.gapWith < 0 && pk.rvol >= 5 ? 1.5 : (pk.gapWith > 0 ? 0.5 : 1))
     if (this.r.skipDir && pk.dir === this.r.skipDir) return [] // TEST 31 Oct (pre-open contrarian: skip the crowd's side)
     const mult2 = mult * (this.r.dirHalf === pk.dir ? 0.5 : 1) * (this.oneSided === pk.dir ? 0.5 : 1) // TEST 31 Oct
+      * (this.r.mktDisHalf && this.mktDir && this.mktDir !== pk.dir ? 0.5 : 1) * (this.r.mktDisSkip && this.mktDir && this.mktDir !== pk.dir ? 0 : 1) // TEST 5 Nov (off)
+    if (mult2 === 0) return []
     const riskRs = this.r.riskRs * mult2
     const qty = Math.max(1, Math.floor(riskRs / risk))
     // record the 6 favour signs at EVERY entry (owner 25 Oct 16:35: compare the trades that went up with the ones that went down)

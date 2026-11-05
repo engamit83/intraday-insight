@@ -1447,3 +1447,16 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - protectAt 0.8, protectFrac 0.5: at +0.8R the stop locks half of the best profit (rises with it) until +1R, then the normal trail.
 - Phone note "PROFIT PROTECT" when it first moves a stop. Verified: replay 30 Oct +391 / 27 Oct +292 (= test); with P8 off identical to the laptop 28 Oct engine (-934).
 - FEED 2-5 Nov: NOT recorded. 2 Nov log: NO_VALID_SHAREKHAN_TOKEN 09:00-09:14 (no Sharekhan login that day), then the log stops (laptop off/asleep). 3-5 Nov: no log at all (laptop off).
+
+## CATCH-UP 2-5 NOV (owner 5 Nov 23:13 "do the things missing ... check all the 3 now")
+- Feed did not run 2-5 Nov (2 Nov: no Sharekhan login; 3-5 Nov: laptop off). Sharekhan 1-min pulled 5 Nov 23:15 (494/494 stocks): 2, 3, 4 Nov. 5 Nov comes with tomorrow's pull (Sharekhan excludes the current day).
+- Missed days replayed through the REAL engine from 1-min candles (tools/backtest/replay/synth.py: candles -> ticks, Nifty proxy = equal-weight top-50, corr 0.88; no order book).
+  Calibration on 7 tick days: same picks/trades ~95%, but candle P&L is PESSIMISTIC (7 days ticks +11,589 vs candles -5,740).
+- 2 Nov (trend up, breadth 70->72%): 4 buys, -2,287 | 3 Nov (mixed, 53->55%): 4 buys, -416 | 4 Nov (strong up +1.45%, 70->88%): 8 buys, -2,844. P8 effect +30.
+  R1 all 16 trades WITH 09:20 breadth (still lost) | R2 10:15 breadth called the close 3/3 | R3 re-entries MUTHOOTFIN +824, HDFCAMC -145 | R4/R5 no data (needs live feed) |
+  R6 2 Nov steady trend, 3 Nov opening dip then flat, 4 Nov trend with midday dip.
+  DIAGNOSIS 4 Nov: market +1.45% but our buys were defensives (NESTLEIND, ITC, DABUR, LUPIN, NEULANDLAB) that FELL - money rotated out of FMCG/pharma. Stops were right (most kept falling).
+- ENTRY TESTS (10 days, then 16 days), all vs today (P8 on): 1a stop mid-range -1,393 | 1b skip range>2% -2,580 (kills 23 Oct winners) | 1c >3% -4,067 |
+  1d stop max 2% -2,205 | 1e stop max 1% -13,576 | 2a market 5-min against half +1,027 (10d) / -38 (16d) | 2b skip: 0.05% -106, 0.1% +1,584, 0.2% +150 (16d) - gain is mostly 29 Oct alone -> NOT robust |
+  3a strong >=1% vs Nifty +560 | 3b 0.5% -717. VERDICT: no entry change proven. Next: SECTOR strength at 09:20 (supabase/functions/_shared/sectors.ts) - the 4 Nov defensives case.
+- Engine test options added (OFF): stopMid, maxRangePct, mktDisHalf/mktDisSkip/mktMinPct. Laptop runs 6cc44a4 (P8 on) - identical live behaviour.
