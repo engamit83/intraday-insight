@@ -205,6 +205,13 @@ export class SipEngine {
     this.gapSkipped = gapSkipped.sort((a, b) => b.rvol - a.rvol)
     this.picks = cand.slice(0, this.r.topK).map((p) => ({ ...p, book0: this.bookNow.get(p.sym) ?? null })); this.status = 'picked'; this.save()
     if (this.r.oneSidedHalf && this.picks.length >= 3) { const nb = this.picks.filter((p) => p.dir === 'BUY').length, share = Math.max(nb, this.picks.length - nb) / this.picks.length; this.oneSided = share >= this.r.oneSidedHalf ? (nb * 2 > this.picks.length ? 'BUY' : 'SELL') : null } // TEST 31 Oct
+    if (this.r.trapPct || this.r.sectorRel) { // TEST 7 Nov: market + sector move over the first 5 minutes
+      const n = this.or.get('NIFTY'); let a = 0, k = 0; const sm = new Map()
+      for (const [sym, o] of this.or) { if (sym.startsWith('NIFTY') || !(median(this.baseline.turnover?.[sym] ?? []) >= this.r.minTurnoverCr) || !(o.open > 0)) continue; const mv = o.last / o.open - 1; a += mv; k++
+        const sec = this.r.sectorMap?.[sym]; if (sec) { const e = sm.get(sec) ?? [0, 0]; e[0] += mv; e[1]++; sm.set(sec, e) } }
+      this.mktAvg = k ? a / k * 100 : null; this.mktMove = n ? (n.last / n.open - 1) * 100 : this.mktAvg
+      this.sectorMove = new Map([...sm].filter(([, e]) => e[1] >= 2).map(([sec, e]) => [sec, e[0] / e[1] * 100]))
+    }
     if (this.r.mktDisHalf || this.r.mktDisSkip) { // TEST 5 Nov: market direction of the first 5 minutes (NIFTY if recorded, else average of the liquid stocks)
       const n = this.or.get('NIFTY'); let mv = n ? n.last / n.open - 1 : null
       if (mv == null) { let a = 0, k = 0; for (const [sym, o] of this.or) { if (sym.startsWith('NIFTY') || !(median(this.baseline.turnover?.[sym] ?? []) >= this.r.minTurnoverCr)) continue; a += o.last / o.open - 1; k++ } mv = k ? a / k : 0 }
@@ -264,7 +271,13 @@ export class SipEngine {
     // 0.5x for the weakest kept setup (gapped 0-1% our way), 1x otherwise. 9 days: +Rs39,900 vs +Rs31,700, worst day -600 vs -1,200.
     const mult = !this.r.qualitySize || pk.gapWith == null ? 1 : (pk.gapWith < 0 && pk.rvol >= 5 ? 1.5 : (pk.gapWith > 0 ? 0.5 : 1))
     if (this.r.skipDir && pk.dir === this.r.skipDir) return [] // TEST 31 Oct (pre-open contrarian: skip the crowd's side)
+    if (this.r.prevMoveMax != null) { const pm = this.baseline.prevMove?.[pk.sym]; if (pm != null && pm * sg >= this.r.prevMoveMax) return [] } // TEST 7 Nov: skip if yesterday already moved >= X% our way
+    if (this.r.buyMinRvol && B && pk.rvol < this.r.buyMinRvol) return [] // TEST 7 Nov: stricter buys
+    const trapHit = this.r.trapPct && this.mktMove != null && Math.abs(this.mktMove) >= this.r.trapPct && this.mktMove * sg > 0 && ((this.r.trapSide ?? 'SELL') === 'BOTH' || (this.r.trapSide ?? 'SELL') === pk.dir) // TEST 7 Nov: market already moved hard our way in the first 5 min
+    if (trapHit && this.r.trapMode === 'skip') return []
+    if (this.r.sectorRel && this.sectorMove) { const sec = this.r.sectorMap?.[pk.sym] ?? this.sectorOf?.(pk.sym); const sm = sec ? this.sectorMove.get(sec) : null; if (sm != null && this.mktAvg != null && (sm - this.mktAvg) * sg < (this.r.sectorRelMin ?? 0)) return [] } // TEST 7 Nov: sector must be stronger (buy) / weaker (sell) than the market
     const mult2 = mult * (this.r.dirHalf === pk.dir ? 0.5 : 1) * (this.oneSided === pk.dir ? 0.5 : 1) // TEST 31 Oct
+      * (trapHit && this.r.trapMode === 'half' ? 0.5 : 1) // TEST 7 Nov
       * (this.r.mktDisHalf && this.mktDir && this.mktDir !== pk.dir ? 0.5 : 1) * (this.r.mktDisSkip && this.mktDir && this.mktDir !== pk.dir ? 0 : 1) // TEST 5 Nov (off)
     if (mult2 === 0) return []
     const riskRs = this.r.riskRs * mult2

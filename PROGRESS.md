@@ -1482,3 +1482,13 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - Baseline refreshed on the laptop: first5 for 2-5 Nov from the Sharekhan pull (5 Nov ~2x normal volume, real), days 26 Oct-6 Nov, lastCloseDay 6 Nov.
 - Data: 5 Nov 1-min pulled (494/494). 6 Nov 13:50-15:30 gap: fill from the next pull (Sharekhan excludes the current day).
 - Laptop battery hit 8% at 19:26 (the cause of the evening disconnects) - owner plugged in.
+
+## SATURDAY TESTS (run 6 Nov night, owner "start doing 2 and 3") - 18 days, CORRECT closes, fixed engine
+- Days: ticks 22,23,26-30 Oct + 6 Nov (8) | candles 13,14,15,16,19,21 Oct + 2,3,4,5 Nov (10). Current rules: +7,768 (ticks +8,408, candles -640), 11/18 losing days, 52% won. Buys -5,238, sells +13,006.
+- WINNER "DON'T CHASE THE MARKET": if Nifty already moved >= X% OUR way in 09:15-09:20, skip that side's 09:20 trades.
+  0.15% +9,093 | 0.2% +9,093 | 0.25% +6,806 | 0.3% +3,962 | 0.4% +1,188 | 0.5% 0. 0.2%: ticks +1,310, candles +7,783, early half +2,774, late half +6,319, losing days 11 -> 7, won 52% -> 59%, days better 6 / worse 1 (26 Oct -707).
+  Same finding as the independent 1 Nov win/loss study (entries after Nifty ran >= 0.3% our way: 17% win). Half size instead of skip: +4,762.
+- Yesterday moved >=5% our way -> skip: +1,941 but 4% mixed, 6%/8% no effect -> fragile, monitor only. Combo with 0.2%: +10,803.
+- Rejected: sector stronger/weaker -6,492 | buys need vol >=5x +580 / >=8x +2,732 but ticks -684 (mixed) | Rule 2 one-sided half -976 (ticks +1,332, candles -2,308) |
+  P8 soft +2,053 but ticks -1,390 -> keep current P8 | no P8 -135.
+- Engine test options (OFF): prevMoveMax, buyMinRvol, trapPct/trapMode/trapSide, sectorRel(+sectorMap).

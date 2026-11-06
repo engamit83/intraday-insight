@@ -4,9 +4,11 @@ const [file, baseFile, day, bookFile, over, eng0] = process.argv.slice(2)
 const { SipEngine, SIP_RULES } = await import(eng0 ?? '/home/claude/intraday-insight/tools/live-feed/sip-engine.mjs')
 const book = new Map(); if (bookFile && fs.existsSync(bookFile)) for (const l of fs.readFileSync(bookFile, 'utf8').split('\n').slice(1)) { const p = l.split(','); if (p[8]) book.set(p[1] + p[0].slice(0, 5), [+p[8], +p[9]]) }
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-'))
-const eng = new SipEngine({ dataDir: dir, baseline: JSON.parse(fs.readFileSync(baseFile, 'utf8')), day, rules: { ...SIP_RULES, lateShadow: false, preopenShadow: false, breadthSkipped: true, ...JSON.parse(over || '{}') } })
+const eng = new SipEngine({ dataDir: dir, baseline: JSON.parse(fs.readFileSync(baseFile, 'utf8')), day, rules: { ...SIP_RULES, lateShadow: false, preopenShadow: false, breadthSkipped: true, ...JSON.parse(over || '{}'), ...(process.env.SECT ? { sectorMap: JSON.parse(fs.readFileSync(process.env.SECT, 'utf8')) } : {}) } })
 if (process.env.SW) eng.sw.r = { ...eng.sw.r, ...JSON.parse(process.env.SW) }
 const base = Date.parse(`${day}T00:00:00+05:30`); let first = true
+if (process.env.PRE && fs.existsSync(process.env.PRE)) { const L = fs.readFileSync(process.env.PRE, 'utf8').split('\n'); const H = L[0].split(','); const iS = H.indexOf('symbol'), iP = H.indexOf('prev_close'), iT = H.indexOf('time')
+  for (const l of L.slice(1)) { const p = l.split(','); if (!p[iS] || !(+p[iP] > 0)) continue; const [hh, mm, ss] = p[iT].split(':'); eng.onPreOpen(p[iS], { prevClose: +p[iP] }, base + ((+hh) * 3600 + (+mm) * 60 + (+ss)) * 1000) } }
 for await (const line of readline.createInterface({ input: fs.createReadStream(file) })) {
   if (first) { first = false; continue }
   const [t, sym, price, cum, bid, , ask] = line.split(','); const [hh, mm, ss] = t.split(':'); const ts = base + ((+hh) * 3600 + (+mm) * 60 + (+ss)) * 1000
