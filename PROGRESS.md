@@ -1460,3 +1460,16 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   1d stop max 2% -2,205 | 1e stop max 1% -13,576 | 2a market 5-min against half +1,027 (10d) / -38 (16d) | 2b skip: 0.05% -106, 0.1% +1,584, 0.2% +150 (16d) - gain is mostly 29 Oct alone -> NOT robust |
   3a strong >=1% vs Nifty +560 | 3b 0.5% -717. VERDICT: no entry change proven. Next: SECTOR strength at 09:20 (supabase/functions/_shared/sectors.ts) - the 4 Nov defensives case.
 - Engine test options added (OFF): stopMid, maxRangePct, mktDisHalf/mktDisSkip/mktMinPct. Laptop runs 6cc44a4 (P8 on) - identical live behaviour.
+
+## DAILY REVIEW Fri 6 Nov (live, P8 on) - NET +910 (6 trades, 3 won; avg loss -654, worst -1,145; not a losing day)
+- Day type: NARROW / DIVERGENCE - Nifty +1.25% but breadth 31-45% all day (index heavyweights up, most stocks down). 9 of 10 picks SELL.
+- Trades: ASTRAL S +1,901 (trail 2.06R) | MPHASIS S +595 (P8) | BRITANNIA S +377 (P8) | HINDALCO S -684 (fast-drop cut) | CPPLUS S -1,145 (10:00 entry, stopped in 2 min) | LICI S -134 (stall, square-off).
+- Replay of today's ticks = live exactly (+910). Without P8 +157 (P8 +753: MPHASIS -48 -> +595, BRITANNIA 267 -> 377). Soft P8 (keep +0.1R) +199.
+- R1 breadth: all sells at 31-49%; PIIND buy skipped at 39% -> virtual -1,471 (rule saved 1,471). R2: 10:15 breadth 45% (weak) - right for most stocks, wrong for Nifty.
+  R3 no re-entries. R4 late shadow 127 virtual -36,096 (rule_ok 30: -17,296) - still failing. R5 pre-open shadow 10 virtual, 2 won, -5,559; pre-open market buy/sell 0.57 (sellers heavy, as every day).
+  R6 no opening reversal; trend in index, weakness in stocks.
+- BUG (real): baseline lastClose stuck at 30 Oct (feed missed 2-5 Nov) -> gaps wrong -> 29 stocks wrongly gap-skipped (HDFCBANK "gap 10%", GLENMARK 41x, TITAN, M&M) and every trade 1.5x size.
+  Replay with correct closes (Sharekhan pre-open prev_close, first5 to 4 Nov): different picks, -2,558. Live was lucky today; the fix is still required (rules must run on correct data).
+  FIX PLAN (needs owner do it): when the baseline's last day is not the previous trading day, use Sharekhan's pre-open prev_close as lastClose; refresh baseline from the Sharekhan pull after missed days.
+- SYSTEM: feed lost 13:50-15:30 - cloud gateway answered Unauthorized/timeouts (its token lookup in the database failed; the morning token worked) -> no ticks/candles after 13:50 for all stocks; LICI square-off used last price.
+  Friday history pull failed 401 (same cause). Disconnects 10:54, 13:06 recovered in 3 s. Rerun pull-1min.bat when the cloud answers -> fill 13:50-15:30 gap.
