@@ -1473,3 +1473,12 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   FIX PLAN (needs owner do it): when the baseline's last day is not the previous trading day, use Sharekhan's pre-open prev_close as lastClose; refresh baseline from the Sharekhan pull after missed days.
 - SYSTEM: feed lost 13:50-15:30 - cloud gateway answered Unauthorized/timeouts (its token lookup in the database failed; the morning token worked) -> no ticks/candles after 13:50 for all stocks; LICI square-off used last price.
   Friday history pull failed 401 (same cause). Disconnects 10:54, 13:06 recovered in 3 s. Rerun pull-1min.bat when the cloud answers -> fill 13:50-15:30 gap.
+
+## CLOSING-PRICE FIX - LIVE from Mon 9 Nov (owner "do it" 6 Nov 20:35)
+- Previous close = Sharekhan's own 'close' (pre-open 09:00-09:15; any tick as backup - verified: during market 'close' = yesterday, ltp-close = rsChange).
+  Else our saved close ONLY if saved on the previous trading day (baseline.lastCloseDay). Else NONE -> gap check off for that stock (no skip, no gap sizing) + phone note.
+- Check: Sharekhan pre-open prev_close vs real 5 Nov close = exact for 494/494 stocks.
+- Replay 26-30 Oct (ticks, pre-open closes): laptop engine -2,770 vs fixed -2,002 (official close changes 1 pick/day). 6 Nov: as live +910 (stale 30 Oct close, luck) vs fixed -1,537.
+- Baseline refreshed on the laptop: first5 for 2-5 Nov from the Sharekhan pull (5 Nov ~2x normal volume, real), days 26 Oct-6 Nov, lastCloseDay 6 Nov.
+- Data: 5 Nov 1-min pulled (494/494). 6 Nov 13:50-15:30 gap: fill from the next pull (Sharekhan excludes the current day).
+- Laptop battery hit 8% at 19:26 (the cause of the evening disconnects) - owner plugged in.

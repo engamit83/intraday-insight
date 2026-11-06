@@ -228,7 +228,7 @@ async function onSipEvent(ev) {
 }
 function sipTick(symbol, t, now) {
   if (!sip) return
-  try { for (const ev of sip.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask, cum: t.cumulativeVolume, totBuy: t.totBuy, totSell: t.totSell }, now)) onSipEvent(ev) }
+  try { for (const ev of sip.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask, cum: t.cumulativeVolume, totBuy: t.totBuy, totSell: t.totSell, prevClose: t.prevClose }, now)) onSipEvent(ev) }
   catch (e) { say(`! stocks-in-play error (feed continues): ${e.message}`); sip = null }
 }
 function sipTimer() {

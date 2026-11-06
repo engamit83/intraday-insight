@@ -64,7 +64,7 @@ export class SipEngine {
   }
   stateFile() { return path.join(this.dataDir, `sip-state-${this.day}.json`) }
   save() {
-    try { fs.writeFileSync(this.stateFile(), JSON.stringify({ picks: this.picks, gapSkipped: this.gapSkipped ?? [], trades: [...this.trades.values()], closed: this.closed, status: this.status, or: [...this.or] })) } catch {}
+    try { fs.writeFileSync(this.stateFile(), JSON.stringify({ picks: this.picks, gapSkipped: this.gapSkipped ?? [], prevCloseSource: this.pcSrc ?? null, trades: [...this.trades.values()], closed: this.closed, status: this.status, or: [...this.or] })) } catch {}
   }
   restore() { // after a restart in the middle of the day: keep the picks and open trades
     try {
@@ -81,6 +81,7 @@ export class SipEngine {
   // tick: { price, bid, ask, cum } ; returns events [{kind:'picks'|'entry'|'exit'|'note', ...}]
   onTick(sym, tick, ts) {
     const ev = []
+    if (tick.prevClose > 0 && !this.pc?.has(sym)) (this.pc ??= new Map()).set(sym, tick.prevClose) // 6 Nov fix: backup if the pre-open was missed
     if (!this.day) { this.day = istDay(ts); this.restore() }
     if (this.r.lateShadow && this.shadow === undefined) { try { this.shadow = new LateShadow({ dataDir: this.dataDir, sw: this.sw, baseline: this.baseline, day: this.day }) } catch { this.shadow = null } }
     this.makePre()
@@ -130,10 +131,20 @@ export class SipEngine {
     if (this.shadow && sec >= this.r.lastEntry) { try { this.shadow.onTick(sym, tick, ts, istHM(ts), sec >= this.r.squareOff) } catch (e) { this.shadow = null; ev.push({ kind: 'note', text: `late-entry shadow monitor stopped (live trading unaffected): ${e.message}` }) } }
     return ev
   }
+  // 6 Nov fix: previous close = Sharekhan's (pre-open / tick 'close') -> else our saved close ONLY if saved on the previous trading day -> else none (gap check off for that stock)
+  prevTradingDay(day) { const d = new Date(day + 'T12:00:00Z'); do { d.setUTCDate(d.getUTCDate() - 1) } while ([0, 6].includes(d.getUTCDay())); return d.toISOString().slice(0, 10) }
+  prevCloseFor(sym) {
+    const sk = this.pc?.get(sym); this.pcSrc ??= { sharekhan: 0, saved: 0, none: 0 }
+    if (sk > 0) { this.pcSrc.sharekhan++; return sk }
+    const savedDay = this.baseline.lastCloseDay ?? this.baseline.days?.at(-1), saved = this.baseline.lastClose?.[sym]
+    if (saved > 0 && savedDay && savedDay === this.prevTradingDay(this.day)) { this.pcSrc.saved++; return saved }
+    this.pcSrc.none++; return null
+  }
   // PRE-OPEN virtual trades (owner 25 Oct 17:57) - monitoring only, can never affect live trades
   makePre() { if (this.r.preopenShadow && this.pre === undefined && this.day) { try { this.pre = new PreopenShadow({ dataDir: this.dataDir, sw: this.sw, baseline: this.baseline, day: this.day }) } catch { this.pre = null } } }
   onPreOpen(sym, tick, ts) { // 09:00-09:15 ticks from the feed
     if (!this.day) { this.day = istDay(ts); this.restore() }
+    if (tick.prevClose > 0) (this.pc ??= new Map()).set(sym, tick.prevClose) // 6 Nov fix: Sharekhan's previous close, fresh every morning
     this.makePre()
     if (this.pre) { try { this.pre.onPre(sym, tick) } catch { this.pre = null } }
   }
@@ -159,7 +170,11 @@ export class SipEngine {
   onTimer(ts) {
     const ev = [], sec = istSec(ts)
     if (!this.day) { this.day = istDay(ts); this.restore() }
-    if (this.picks === null && sec >= this.r.orEnd && sec < this.r.squareOff) ev.push(...this.select(ts))
+    if (this.picks === null && sec >= this.r.orEnd && sec < this.r.squareOff) {
+      ev.push(...this.select(ts))
+      const c = this.pcSrc ?? {} // 6 Nov fix: say where the previous close came from; warn if some stocks had no correct close
+      if (c.none) ev.push({ kind: 'note', text: `⚠️ PREVIOUS CLOSE: ${c.none} stocks had no correct previous-day close (Sharekhan ${c.sharekhan ?? 0}, saved ${c.saved ?? 0}) - gap check OFF for them today - stocks in play (paper)` })
+    }
     if (sec >= this.r.squareOff) for (const t of this.trades.values()) if (!t.exit) ev.push(this.close(t, t.lastPrice ?? t.entry, 'squareoff', ts))
     if (sec >= this.r.squareOff && this.shadow) { try { this.shadow.closeAll(ts) } catch {} }
     if (sec >= this.r.squareOff && this.pre) { try { this.pre.closeAll(ts) } catch {} }
@@ -180,7 +195,7 @@ export class SipEngine {
       if (!(avg > 0) || turn < this.r.minTurnoverCr || o.v0 === null || o.v1 === null || o.last === o.open) continue
       const rvol = (o.v1 - o.v0) / avg
       if (rvol < this.r.minRvol) continue
-      const dir = o.last > o.open ? 'BUY' : 'SELL', pc = this.baseline.lastClose?.[sym]
+      const dir = o.last > o.open ? 'BUY' : 'SELL', pc = this.prevCloseFor(sym) // 6 Nov fix (owner do it): only a CORRECT previous-day close, else no gap check
       const gapWith = pc > 0 ? +(((o.open / pc - 1) * 100) * (dir === 'BUY' ? 1 : -1)).toFixed(2) : null
       const c = { sym, dir, rvol: +rvol.toFixed(1), high: o.high, low: o.low, gapWith, orTicks: o.ticks ?? 0 }
       if (this.r.maxGapWithPct != null && gapWith != null && gapWith > this.r.maxGapWithPct) { gapSkipped.push(c); continue }
@@ -380,6 +395,7 @@ export class SipEngine {
     for (const [sym, c] of this.cum) { (b.turnover[sym] ??= []).push(+(c.cum * c.price / 1e7).toFixed(2)); b.turnover[sym] = b.turnover[sym].slice(-this.r.baselineDays) }
     b.lastClose ??= {}
     for (const [sym, c] of this.cum) b.lastClose[sym] = c.price // yesterday's close for tomorrow's gap check (Proposal B)
+    b.lastCloseDay = this.day // 6 Nov fix: so a stale close is never used as 'yesterday'
     b.days.push(this.day); b.days = b.days.slice(-this.r.baselineDays); b.updated = new Date().toISOString()
     try { fs.writeFileSync(path.join(this.dataDir, 'sip-baseline.json'), JSON.stringify(b)); return true } catch { return false }
   }
