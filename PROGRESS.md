@@ -1499,3 +1499,10 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - PROPOSED (needs do it): "don't chase the market" 0.2% (+9,093 on 18 days, every split positive, losing days 11 -> 7).
 - Profit side: P1 exit leak confirmed (winners keep 40-70% of best R) -> next test: wider trail only on trend/breadth-strong days. P2/P4 not tested this week. P7 rvol 2-3 with breadth: watch.
 - Open: Fri 13:50-15:30 data gap (needs laptop + Sharekhan login for the pull). Laptop not linked this morning.
+
+## MISSED-DAY REPLAY QUALITY (7 Nov night, owner "do it")
+- Calibration on 7 tick days (live +11,543): old candle replay -6,040 (picks 91% same, but entries land on the minute's extreme).
+- Random high/low order (60 paths): worse (-12,724) -> order is not the main error.
+- SMOOTH path (6 small steps per leg, entries/stops at the level): +6,602 (candle-colour order) / median +3,116 over 30 random orders. Still below live (~700-1,200/day), but far closer.
+- 2-5 Nov estimate: old replay -897 -> smooth paths median +1,986 (range +66..+3,457); live would likely have been a small profit. Tools: tools/backtest/replay/synth_mc2.py, mc2.py.
+- Next: use the smooth replay for all candle-day tests (fairer to tight exits like P8).
