@@ -1492,3 +1492,10 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - Rejected: sector stronger/weaker -6,492 | buys need vol >=5x +580 / >=8x +2,732 but ticks -684 (mixed) | Rule 2 one-sided half -976 (ticks +1,332, candles -2,308) |
   P8 soft +2,053 but ticks -1,390 -> keep current P8 | no P8 -135.
 - Engine test options (OFF): prevMoveMax, buyMinRvol, trapPct/trapMode/trapSide, sectorRel(+sectorMap).
+
+## WEEKLY REVIEW Sat 7 Nov (scheduled 10:00; full numbers were run on 6 Nov night - see SATURDAY TESTS + review 2-6 Nov above)
+- Week 2-6 Nov (correct closes): -4,032, 27 trades 12 won, buys -5,547 / sells +1,515, losing days 4/5 (prev week 2/5). Live: only Fri ran (+910, stale-close luck).
+- W1 pre-open contrarian: withdrawn (regime bias). W2 one-sided half size (= Rule 2): 18 days -976 -> REJECTED.
+- PROPOSED (needs do it): "don't chase the market" 0.2% (+9,093 on 18 days, every split positive, losing days 11 -> 7).
+- Profit side: P1 exit leak confirmed (winners keep 40-70% of best R) -> next test: wider trail only on trend/breadth-strong days. P2/P4 not tested this week. P7 rvol 2-3 with breadth: watch.
+- Open: Fri 13:50-15:30 data gap (needs laptop + Sharekhan login for the pull). Laptop not linked this morning.
