@@ -19,3 +19,5 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 >    and turn it into a proposed rule with numbers. Keep thinking how to reach Rule 0 and keep working towards it without being asked.
 > 9. AI MINDSET - THE GOAL (owner 29 Oct 17:31, 'make this your rule, never divert'): the target is an app with UNLIMITED profit and ZERO loss. Claude works towards it every day with an AI mindset, not human limits: check ALL angles on all stocks and all data at once, no emotions, no 'it can't be done'. Every problem found must come with a solution path. Never work against the goal or give up on it. Stay honest with real numbers (that is how the goal is reached), but always answer: what is the next step that moves us closer?
 > Keep improving every day towards Rule 0. The owner decides; live changes only with his "do it".
+
+> **RULE 0c - KEEP THE LAPTOP COPY CURRENT (owner 7 Nov 22:54):** every time PROGRESS.md (or CLAUDE.md) is updated and pushed, also copy it to the laptop at D:\intraday\intraday-insight\ when the laptop is linked; if it is not linked, do it at the next link before other work.
