@@ -1578,3 +1578,13 @@ Other candidates tested (24 variants on 2026, 9 on 2025): 10x+breadth 55/45 +14,
 - BUY breadth 70: 3-year total +10,178 / 70 losing days vs V9 +1,718 / 90, but 2026 net -793 below V9 -> not installed (fails own bar).
 - Exit tests on V9, 3 years: breakeven at 0.5R/0.7R, protect at 0.5R, stall 5 min -> none better on all years. Exits stay.
 - Next: breadth sell 35, rvol 12/15/8, gap limit 0.5 on all 3 years.
+
+## 9 Nov 04:10 IST - 4th year (2023, never used) check
+| | 2026 | 2025 | 2024 | 2023 (unseen) | 4-yr total | losing days |
+|---|---|---|---|---|---|---|
+| Old rules 8 Nov | -41,566 | -24,230 | -59,027 | -84,996 | -209,819 | 457 |
+| V9 (live) | +11,315 | +850 | -10,447 | -7,200 | -5,482 | 107 |
+| Breadth 70/35 (on V9) | +4,170 | +3,530 | +5,109 | -4,612 | +8,197 | 48 |
+- Breadth 70/35 beat V9 on the unseen 2023 (net, losing days 6 vs 17, worst -1,245 vs -1,552) but trades very rarely (7 days in 2023) and is clearly WORSE than V9 in the most recent year 2026 (-7,145).
+- Decision (rule 0e bar not met on 2026 net): NOT installed. V9 stays. Breadth 70/35 runs as a SHADOW: each daily review replays the day's real ticks with both rules; switch only if it keeps winning on live days.
+- Big picture: the opening-range breakout only makes money when volume is extreme AND the whole market agrees; most days it should not trade. To reach V1 (profit every day) a SECOND method is needed for normal days (research next: mean-reversion / VWAP / sector-leader setups on the 4 years).
