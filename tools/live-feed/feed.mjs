@@ -19,6 +19,7 @@ import { TickExitEngine, TICK_RULES } from './tick-exits.mjs'
 import { SipEngine } from './sip-engine.mjs'
 import { dailyReport } from './daily-report.mjs'
 import { DayRecorder } from './recorder.mjs'
+import { spawn } from 'node:child_process'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
@@ -402,6 +403,9 @@ async function main() {
   console.log('\n=== intraday-insight live feed ===')
   if (TEST_IGNORE_MARKET_HOURS) console.log('!!! TEST MODE: market-hours filter is OFF. Never use this on a real day. !!!')
   say('Starting. Press Ctrl+C to stop.')
+  // 8 Nov (owner 'i want all of them'): fetch NSE's free end-of-day data for the previous trading day in the background
+  // (delivery %, ban list, circuit bands, bulk/block deals, results calendar, FII/DII). Separate process - cannot affect the feed.
+  try { const p = spawn(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), 'eod-nse.mjs')], { detached: true, stdio: 'ignore', windowsHide: true }); p.on('error', () => {}); p.unref(); say('Fetching NSE end-of-day data for the previous trading day in the background (data\\nse).') } catch {}
   // 23 Oct: start the smart exit warning (alert only, smart-watch.mjs) in its own window every market day, so it runs without a click.
   // Its own window title (INTRADAY-SMARTWARN) - the 15:40 stop task closes only the feed window; smart-watch stops itself at 15:31.
   try {

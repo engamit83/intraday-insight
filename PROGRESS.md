@@ -1506,3 +1506,12 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - SMOOTH path (6 small steps per leg, entries/stops at the level): +6,602 (candle-colour order) / median +3,116 over 30 random orders. Still below live (~700-1,200/day), but far closer.
 - 2-5 Nov estimate: old replay -897 -> smooth paths median +1,986 (range +66..+3,457); live would likely have been a small profit. Tools: tools/backtest/replay/synth_mc2.py, mc2.py.
 - Next: use the smooth replay for all candle-day tests (fairer to tight exits like P8).
+
+## NEW DATA RECORDING (owner 8 Nov "i want all of them") - record only, no rule change
+- Already recorded live since 16 Oct (record-extra.csv): 23 NSE indices incl. Nifty Bank/IT/FMCG/Pharma/Metal/Auto/Energy/PSU bank... (I wrongly listed sector indices as missing).
+- NEW tools/live-feed/eod-nse.mjs (+ pull-nse.bat): NSE free files per day -> data\nse\DATE\: bhavdata (delivery %), F&O ban list, price bands (circuits),
+  bulk/block deals, results calendar + board meetings (next 30 days), FII/DII. Tested on the laptop for 6 Nov: 7/8 ok (ban list path fixed after a 404).
+  feed.mjs now starts it in the background every morning at 09:00 for the previous trading day (separate process, cannot affect the feed).
+- Example: HINDALCO results on 6 Nov = our -684 sell that day. Next: test "skip results-day stocks" once we have history (pull past calendar from 12 Oct).
+- STILL TO DO: India VIX (Sharekhan code unknown - needs a master-list lookup via the cloud gateway = 1 Lovable credit, ask first); 5-level order-book depth
+  (test Sharekhan's depth feed during market hours); daily backup of data\ (owner to choose OneDrive/USB).
