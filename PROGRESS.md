@@ -1571,3 +1571,10 @@ futures OI, FII/DII, delivery %, results-day skip) -> 6 universe (liquid non-Nif
 Other candidates tested (24 variants on 2026, 9 on 2025): 10x+breadth 55/45 +14,371/23 (2026) and +1,894/47 (2025); single changes M1/M2/B55/B60/RV5/RV7/K5/S20 all better than P but still losing; rejected: 1% stop (-74,405), stop after 1-2 losers, proveRs, entries until 09:45.
 **Weak spot:** V9 trades only on ~22% of days (37/209, 54/247) - still far from V1 (profit EVERY day). Next: find safe trades for the quiet days.
 **Undo:** in sip-engine.mjs set minRvol: 3, breadthBuyMin: 45, breadthSellMax: 55.
+
+## 9 Nov 01:55-03:15 IST - loop after V9 (all replay, nothing else changed live)
+- V9 checked on a 3rd year, 2024 (246 days): old rules -59,027/133 losing days, V9 -10,447/40 -> V9 better on all 3 years, but still losing in 2024 (Jul-Sep).
+- Sell-only (2026 +12,075/11, 2025 +8,052/19) FAILS on 2024 (-12,520) - sells lost in 2024 -> rejected (year-specific).
+- BUY breadth 70: 3-year total +10,178 / 70 losing days vs V9 +1,718 / 90, but 2026 net -793 below V9 -> not installed (fails own bar).
+- Exit tests on V9, 3 years: breakeven at 0.5R/0.7R, protect at 0.5R, stall 5 min -> none better on all years. Exits stay.
+- Next: breadth sell 35, rvol 12/15/8, gap limit 0.5 on all 3 years.
