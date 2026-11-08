@@ -26,3 +26,4 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > in every market situation, and ends EVERY day in profit (small profit is fine). Version 2 (after that) = grow the profit. Never tell the owner it cannot
 > be done - keep working towards it. EVERY loss (trade or day) must be checked: find the mistake, refine the rules, test on all days, propose with numbers.
 > Daily report must show the streak: "X days in a row without a losing day" and the losing days so far.
+> **V1 READY SIGNAL (owner 8 Nov 17:29):** when paper trading has a full month with every day in profit across all market situations (up/down/flat/narrow/wild days), Claude tells the owner "Version 1 is ready - we can consider live trading", with the full month's numbers. Real-money orders stay the owner's own action (Claude never places real trades or moves money).

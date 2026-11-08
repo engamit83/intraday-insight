@@ -222,6 +222,12 @@ export class SipEngine {
   }
   tryEntry(pk, tick, ts, confirmed = false) {
     const B = pk.dir === 'BUY', sg = B ? 1 : -1, lvl = B ? pk.high : pk.low
+    // TEST 8 Nov (Version 1 goal: no losing day) - day-level safety, all OFF unless set. dayNet = closed trades today (Rs)
+    const dayNet = this.closed.reduce((a, t) => a + (t.netRs ?? 0), 0)
+    if (this.r.dayLossStop && dayNet <= -this.r.dayLossStop) return []
+    if (this.r.dayProfitStop && dayNet >= this.r.dayProfitStop) return []
+    if (this.r.maxDayTrades && this.closed.length + this.trades.size >= this.r.maxDayTrades) return []
+    if (this.r.maxDayLosers && this.closed.filter((t) => t.netRs < 0).length >= this.r.maxDayLosers) return []
     if (B ? tick.price <= lvl : tick.price >= lvl) { pk.brokeAt = null; return [] }  // strictly beyond the range
     // ENTRY TESTS 28 Oct (owner: entry looks weak / false breakouts at 09:20) - all OFF unless set
     if (!confirmed) {
@@ -281,7 +287,7 @@ export class SipEngine {
       * (this.r.mktDisHalf && this.mktDir && this.mktDir !== pk.dir ? 0.5 : 1) * (this.r.mktDisSkip && this.mktDir && this.mktDir !== pk.dir ? 0 : 1) // TEST 5 Nov (off)
     if (mult2 === 0) return []
     const riskRs = this.r.riskRs * mult2
-    const qty = Math.max(1, Math.floor(riskRs / risk))
+    const qty = Math.max(1, Math.floor(riskRs * (this.r.untilProfitMult && this.closed.reduce((a, t) => a + (t.netRs ?? 0), 0) <= 0 ? this.r.untilProfitMult : 1) / risk)) // TEST 8 Nov: smaller size until the day is in profit
     // record the 6 favour signs at EVERY entry (owner 25 Oct 16:35: compare the trades that went up with the ones that went down)
     const fs6 = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0, ts)
     const signsAtEntry = fs6 ? Object.keys(fs6.signs).filter((k) => fs6.signs[k]) : []
