@@ -1515,3 +1515,6 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - Example: HINDALCO results on 6 Nov = our -684 sell that day. Next: test "skip results-day stocks" once we have history (pull past calendar from 12 Oct).
 - STILL TO DO: India VIX (Sharekhan code unknown - needs a master-list lookup via the cloud gateway = 1 Lovable credit, ask first); 5-level order-book depth
   (test Sharekhan's depth feed during market hours); daily backup of data\ (owner to choose OneDrive/USB).
+- 8 Nov 15:39: feed-gateway deployed via Lovable (1 credit, owner YES) with read-only master_search. Lovable then started "fixing preview build errors" on its own -> STOPPED by Claude (no code changed).
+  Lovable shows "Build unsuccessful / preview out of date" for every GitHub push since 6 Nov (website preview only; feed + gateway unaffected) - investigate for free, no credits.
+  VIX lookup: run master-search.bat Monday after the Sharekhan login.
