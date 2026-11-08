@@ -32,3 +32,6 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > Claude's own bar before installing a rule: (1) better on losing days AND net over all 2026 days, (2) better in BOTH halves of 2026, (3) still better on 2025 (unseen data),
 > (4) installed only outside market hours (not 09:00-15:30 IST), engine checked on the laptop, (5) the owner is told the same day exactly what changed, the numbers, and how to undo it.
 > Real-money trading stays the owner's own decision and action.
+> **RULE 0f - TELL THE OWNER EVERY CHANGE (owner 9 Nov 00:19, "make it ur rule, I shd know all things"):** every change Claude makes - live rule, engine/code,
+> laptop files, scheduled tasks, data, test findings that matter - is reported to the owner right away in a short message (what, why, numbers, how to undo),
+> and logged in PROGRESS.md. Nothing is changed silently.
