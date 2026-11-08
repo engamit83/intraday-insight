@@ -70,12 +70,12 @@ for i,dd in enumerate(days):
     if i<2 or not(D0<=day<=D1): continue
     of=f'days/{day}-{TAG}.json'
     if os.path.exists(of): continue
-    b=baseline(i); liq=sorted(liquid(b)&set(S)); bf=f'tmp/b-{day}.json'; json.dump(b,open(bf,'w'))
+    b=baseline(i); liq=sorted(liquid(b)&set(S)); bf=f'tmp/b-{day}-{TAG}.json'; json.dump(b,open(bf,'w'))
     syms=liq+(['NIFTY'] if 'NIFTY' in S else [])
-    write_ticks(f'tmp/p1-{day}.csv',dd,syms,set(),561,False)
-    r1=run(f'tmp/p1-{day}.csv',bf,day,OVER); picks=[p['sym'] for p in r1.get('picks') or []]
-    write_ticks(f'tmp/p2-{day}.csv',dd,syms,set(picks),615,False)
-    r2=run(f'tmp/p2-{day}.csv',bf,day,OVER)
+    write_ticks(f'tmp/p1-{day}-{TAG}.csv',dd,syms,set(),561,False)
+    r1=run(f'tmp/p1-{day}-{TAG}.csv',bf,day,OVER); picks=[p['sym'] for p in r1.get('picks') or []]
+    write_ticks(f'tmp/p2-{day}-{TAG}.csv',dd,syms,set(picks),615,False)
+    r2=run(f'tmp/p2-{day}-{TAG}.csv',bf,day,OVER)
     json.dump({'day':day,'liquid':len(liq),'picks':r2.get('picks'),'sum':r2.get('sum'),'trades':r2.get('trades'),'error':r2.get('error')},open(of,'w'))
-    for f in (f'tmp/p1-{day}.csv',f'tmp/p2-{day}.csv'): os.remove(f)
+    for f in (f'tmp/p1-{day}-{TAG}.csv',f'tmp/p2-{day}-{TAG}.csv'): os.remove(f)
     print(day,'liquid',len(liq),'net',(r2.get('sum') or {}).get('net'),'trades',len(r2.get('trades') or []),flush=True)
