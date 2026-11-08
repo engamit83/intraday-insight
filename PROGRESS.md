@@ -1518,3 +1518,4 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - 8 Nov 15:39: feed-gateway deployed via Lovable (1 credit, owner YES) with read-only master_search. Lovable then started "fixing preview build errors" on its own -> STOPPED by Claude (no code changed).
   Lovable shows "Build unsuccessful / preview out of date" for every GitHub push since 6 Nov (website preview only; feed + gateway unaffected) - investigate for free, no credits.
   VIX lookup: run master-search.bat Monday after the Sharekhan login.
+- 8 Nov 17:14: Lovable build fix PAUSED (out of credits; upgrade popup closed, nothing bought). Owner: resume later when credits are available (click Resume on the 4:37 PM task). Website preview only - trading unaffected.
