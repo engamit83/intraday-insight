@@ -1523,3 +1523,9 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 ## VERSION 1 GOAL (owner 8 Nov): every day in profit for a month (small is fine), then Version 2 = bigger profit
 - Score for every test from now: 1) losing days, 2) worst day, 3) net profit. 18-day baseline: 11/18 losing days (current), 7/18 with don't-chase 0.2%.
 - Next: day-level safety tests (daily loss limit, lock the day's profit, smaller size until the day is in profit) + don't-chase, on all 18 days.
+- 8 Nov evening V1 tests (18 days, candle days now on the SMOOTH replay): current rules 8/18 losing days, worst -3,135, +19,369.
+  Don't chase 0.2%: 6/18, +22,977. Day-level safety (loss limit 500/1000, stop at +1000/+2000, stop after 1st/2nd loser, max 5 trades): NO change in losing days
+  (losses come from trades entered together at 09:20). Half size until the day is in profit: same 6/18, worst -2,321 but profit halves.
+  MISTAKE FOUND: most big losers were 1.5x "gap-against" trades (JSWINFRA, BANDHANBNK, INDHOTEL, KEC...). 1.5x only when volume >= 10x: 5/18 losing days,
+  worst day -2,274, +22,390 (best balance). All 1x: 5/18, -2,080, +19,920.
+  PROPOSAL (needs do it): don't chase 0.2% + 1.5x only if volume >= 10x. Remaining losing days to diagnose: 26 Oct (-226), 28 Oct, 29 Oct, 6 Nov, 14 Oct.

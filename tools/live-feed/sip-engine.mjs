@@ -275,7 +275,7 @@ export class SipEngine {
     const risk = entry * riskPct / 100
     // SIZE BY QUALITY (owner 25 Oct "do it"): 1.5x risk for the strongest setup (gapped AGAINST us, then turned on >= 5x volume),
     // 0.5x for the weakest kept setup (gapped 0-1% our way), 1x otherwise. 9 days: +Rs39,900 vs +Rs31,700, worst day -600 vs -1,200.
-    const mult = !this.r.qualitySize || pk.gapWith == null ? 1 : (pk.gapWith < 0 && pk.rvol >= 5 ? 1.5 : (pk.gapWith > 0 ? 0.5 : 1))
+    const mult = !this.r.qualitySize || pk.gapWith == null ? 1 : (pk.gapWith < 0 && pk.rvol >= (this.r.qsBigRvol ?? 5) && pk.gapWith >= -(this.r.qsBigMaxGap ?? 99) ? (this.r.qsBig ?? 1.5) : (pk.gapWith > 0 ? (this.r.qsSmall ?? 0.5) : 1)) // TEST 8 Nov: qsBig/qsSmall/qsBigRvol/qsBigMaxGap (defaults = live)
     if (this.r.skipDir && pk.dir === this.r.skipDir) return [] // TEST 31 Oct (pre-open contrarian: skip the crowd's side)
     if (this.r.prevMoveMax != null) { const pm = this.baseline.prevMove?.[pk.sym]; if (pm != null && pm * sg >= this.r.prevMoveMax) return [] } // TEST 7 Nov: skip if yesterday already moved >= X% our way
     if (this.r.buyMinRvol && B && pk.rvol < this.r.buyMinRvol) return [] // TEST 7 Nov: stricter buys
