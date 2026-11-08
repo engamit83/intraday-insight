@@ -1519,3 +1519,7 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   Lovable shows "Build unsuccessful / preview out of date" for every GitHub push since 6 Nov (website preview only; feed + gateway unaffected) - investigate for free, no credits.
   VIX lookup: run master-search.bat Monday after the Sharekhan login.
 - 8 Nov 17:14: Lovable build fix PAUSED (out of credits; upgrade popup closed, nothing bought). Owner: resume later when credits are available (click Resume on the 4:37 PM task). Website preview only - trading unaffected.
+
+## VERSION 1 GOAL (owner 8 Nov): every day in profit for a month (small is fine), then Version 2 = bigger profit
+- Score for every test from now: 1) losing days, 2) worst day, 3) net profit. 18-day baseline: 11/18 losing days (current), 7/18 with don't-chase 0.2%.
+- Next: day-level safety tests (daily loss limit, lock the day's profit, smaller size until the day is in profit) + don't-chase, on all 18 days.

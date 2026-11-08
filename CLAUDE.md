@@ -21,3 +21,8 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > Keep improving every day towards Rule 0. The owner decides; live changes only with his "do it".
 
 > **RULE 0c - KEEP THE LAPTOP COPY CURRENT (owner 7 Nov 22:54):** every time PROGRESS.md (or CLAUDE.md) is updated and pushed, also copy it to the laptop at D:\intraday\intraday-insight\ when the laptop is linked; if it is not linked, do it at the next link before other work.
+
+> **RULE 0d - VERSION 1 GOAL: PROFIT EVERY DAY, NO LOSING DAY (owner 8 Nov 17:25/17:27):** Version 1 = the app trades EVERY market day for a full month,
+> in every market situation, and ends EVERY day in profit (small profit is fine). Version 2 (after that) = grow the profit. Never tell the owner it cannot
+> be done - keep working towards it. EVERY loss (trade or day) must be checked: find the mistake, refine the rules, test on all days, propose with numbers.
+> Daily report must show the streak: "X days in a row without a losing day" and the losing days so far.
