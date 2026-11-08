@@ -5,7 +5,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data', 'kite')
-const years = process.argv[2] ? [process.argv[2]] : fs.readdirSync(path.join(root, 'minute')).filter((y) => !fs.existsSync(path.join(root, `bundle-${y}-2.bin`)))
+// only years the downloader has marked finished (progress.log 'YEAR x finished'), so a half-downloaded year is never bundled
+const finished = new Set([...(fs.existsSync(path.join(root, 'progress.log')) ? fs.readFileSync(path.join(root, 'progress.log'), 'utf8') : '').matchAll(/YEAR (\d{4}) finished/g)].map((m) => m[1]))
+const years = process.argv[2] ? [process.argv[2]] : [...finished].filter((y) => !fs.existsSync(path.join(root, `bundle-${y}-2.bin`)))
 for (const y of years) {
   const dir = path.join(root, 'minute', y); if (!fs.existsSync(dir)) continue
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.csv.gz')).sort()
