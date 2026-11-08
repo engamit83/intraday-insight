@@ -1529,3 +1529,10 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
   MISTAKE FOUND: most big losers were 1.5x "gap-against" trades (JSWINFRA, BANDHANBNK, INDHOTEL, KEC...). 1.5x only when volume >= 10x: 5/18 losing days,
   worst day -2,274, +22,390 (best balance). All 1x: 5/18, -2,080, +19,920.
   PROPOSAL (needs do it): don't chase 0.2% + 1.5x only if volume >= 10x. Remaining losing days to diagnose: 26 Oct (-226), 28 Oct, 29 Oct, 6 Nov, 14 Oct.
+
+## ZERODHA HISTORY DOWNLOAD (owner 8 Nov: Kite Connect app "trading", ₹500 Connect plan; login done 21:59 by owner)
+- tools/live-feed/kite-login.mjs (+.bat): owner logs in himself; token only on laptop (data\kite-token.json, valid till ~6 AM). kite-history.mjs (+.bat): 1-min candles,
+  newest year first 2026 -> 2015, data\kite\minute\YEAR\SYMBOL.csv.gz, resumable, 0.4 s between requests. Started 22:00.
+- 510 instruments = 492 of our stocks (HFCL, ICICIPRULI not on Zerodha) + 18 indices incl. NIFTY, sector indices and INDIA VIX (VIX solved this way).
+- Check 2026 files: NIFTY/INDIAVIX/ADANIENT 1 Jan - 6 Nov, ~78,800 rows each, prices match our feed. ~0.9 MB per stock-year -> ~5-6 GB total, ~40 min per year -> ~8 h.
+- If the token expires (~6 AM) before the end: owner re-runs kite-login.bat, then kite-history.bat continues where it stopped. After all years: stop the ₹500 plan.
