@@ -1560,3 +1560,14 @@ futures OI, FII/DII, delivery %, results-day skip) -> 6 universe (liquid non-Nif
   (Jan-May -35,143 -> -33,415; Jun-Nov -26,563 -> -8,151). Confirms the 18-day result on 209 days.
 - Honest: even allowing for the replay's pessimism, the rules are far from V1 (no losing day). Next: rule search on these 209 days (+2025 etc. as they arrive),
   score = losing days first; first targets = UP days (TREND UP 88% losing days) and NORMAL days.
+
+## 9 Nov 01:55 IST - V9 made live by Claude (rule 0e, paper only)
+**Change:** minRvol 3 -> 10 (only stocks at 10x normal opening volume) + breadth 45/55 -> 60/40 (buy only if >=60% of stocks are up, sell only if <=40%).
+**Why (smooth replay, Zerodha 1-min data):**
+| | Rules of 8 Nov (P) | V9 |
+|---|---|---|
+| 2026, 209 days | -41,566, 90 losing days, worst -4,600 | **+11,315, 16 losing days, worst -1,800** (both halves positive) |
+| 2025, 247 days, never used to choose | -24,230, 111 losing days, worst -5,911 | **+850, 34 losing days**, worst -3,088 |
+Other candidates tested (24 variants on 2026, 9 on 2025): 10x+breadth 55/45 +14,371/23 (2026) and +1,894/47 (2025); single changes M1/M2/B55/B60/RV5/RV7/K5/S20 all better than P but still losing; rejected: 1% stop (-74,405), stop after 1-2 losers, proveRs, entries until 09:45.
+**Weak spot:** V9 trades only on ~22% of days (37/209, 54/247) - still far from V1 (profit EVERY day). Next: find safe trades for the quiet days.
+**Undo:** in sip-engine.mjs set minRvol: 3, breadthBuyMin: 45, breadthSellMax: 55.
