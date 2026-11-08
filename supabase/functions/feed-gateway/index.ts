@@ -185,6 +185,22 @@ Deno.serve(async (req) => {
   }
 
   // ---- weekly history pull by the laptop (owner 21 Oct): Sharekhan's past 1/5-minute candles, 10 stocks per call ----
+  // 8 Nov (owner YES): look up scrip codes in Sharekhan's master list (to find the right India VIX code). Read-only, returns at most 50 matches.
+  if (body.action === 'master_search') {
+    const q = String(body.query ?? '').toUpperCase().trim()
+    const exchange = ['NC', 'BC', 'NF', 'RN', 'MX'].includes(String(body.exchange)) ? String(body.exchange) : 'NC'
+    if (q.length < 2 || q.length > 30) return json({ error: 'query must be 2-30 characters' }, 400)
+    const apiKey = Deno.env.get('SHAREKHAN_API_KEY')
+    if (!apiKey) return json({ error: 'SHAREKHAN_API_KEY is not configured' }, 500)
+    const token = await loadStoredSharekhanToken(supabase)
+    if (!token) return json({ error: 'NO_VALID_SHAREKHAN_TOKEN' }, 409)
+    const r = await fetch(`https://api.sharekhan.com/skapi/services/master/${exchange}`, { headers: { 'api-key': apiKey, 'access-token': token.accessToken } })
+    if (!r.ok) return json({ error: `master list HTTP ${r.status}` }, 502)
+    const list = ((await r.json()).data ?? []) as Record<string, unknown>[]
+    const hits = list.filter((x) => Object.values(x).some((v) => typeof v === 'string' && v.toUpperCase().includes(q))).slice(0, 50)
+    return json({ exchange, total: list.length, matches: hits })
+  }
+
   if (body.action === 'history') {
     // 26 Oct (owner 'do it'): also longer intervals - Sharekhan keeps intraday ~7 days but daily candles since listing
     const interval = ['1minute', '3minute', '5minute', '15minute', '30minute', '60minute', 'daily'].includes(body.interval) ? body.interval : '5minute'
