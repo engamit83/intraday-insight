@@ -1550,3 +1550,13 @@ STEPS: 1 data foundation (finish download, NSE 60-day + results history, per-day
 -> 4 walk-forward rule search, thousands of variants, score = losing days first, then worst day, then profit -> 5 test each new data signal (VIX size,
 futures OI, FII/DII, delivery %, results-day skip) -> 6 universe (liquid non-Nifty-500, liquidity 10/25/50/100 cr) -> 7 confirm on tick days -> owner
 "do it" -> live paper month (V1 proof) -> V1 ready signal.
+
+## 2026 FULL-YEAR REPLAY (8 Nov night, Zerodha 1-min, 209 days, real engine, smooth replay - pessimistic ~700-1,200/day vs live)
+- Day types 2026 (NIFTY+VIX+breadth): NORMAL DOWN 50, NORMAL UP 45, FLAT 42, WILD 35, TREND UP 17, TREND DOWN 11, NARROW 9.
+- CURRENT RULES: -61,706, losing days 125/209, worst -6,117. Buys 423 trades 41% won -37,449; sells 627, 42% won -24,257.
+  By type (losing/total, net): TREND UP 15/17 -17,077 (worst type) | NORMAL UP 30/45 -34,620 | NORMAL DOWN 32/50 -24,097 | FLAT 25/42 -7,834 |
+  WILD 16/35 +16,571 | TREND DOWN 3/11 +2,791 | NARROW 4/9 +2,560.
+- PROPOSED (don't chase 0.2% + 1.5x only at >=10x volume): -41,566 (+20,140), losing days 90/209 (-35), worst -4,600; better in BOTH halves
+  (Jan-May -35,143 -> -33,415; Jun-Nov -26,563 -> -8,151). Confirms the 18-day result on 209 days.
+- Honest: even allowing for the replay's pessimism, the rules are far from V1 (no losing day). Next: rule search on these 209 days (+2025 etc. as they arrive),
+  score = losing days first; first targets = UP days (TREND UP 88% losing days) and NORMAL days.
