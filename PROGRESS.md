@@ -1536,3 +1536,17 @@ on + Claude app open; if ntfy.sh access is asked each time, ask the owner to all
 - 510 instruments = 492 of our stocks (HFCL, ICICIPRULI not on Zerodha) + 18 indices incl. NIFTY, sector indices and INDIA VIX (VIX solved this way).
 - Check 2026 files: NIFTY/INDIAVIX/ADANIENT 1 Jan - 6 Nov, ~78,800 rows each, prices match our feed. ~0.9 MB per stock-year -> ~5-6 GB total, ~40 min per year -> ~8 h.
 - If the token expires (~6 AM) before the end: owner re-runs kite-login.bat, then kite-history.bat continues where it stopped. After all years: stop the ₹500 plan.
+
+## MASTER DATA PLAN (owner 8 Nov 22:15 "make plan with all the data") - towards V1 (no losing day for a month)
+DATA WE WILL HAVE: (a) own live recordings - ticks, bid/ask, buyer/seller totals, pre-open (exact, few days, grows daily);
+(b) Zerodha 1-min 2015-2026, 492 stocks + 18 indices incl. INDIA VIX (~2,700 days); (c) NSE daily files - delivery %, circuit bands, bulk/block deals,
+results calendar, FII/DII, ban list (from 6 Nov; backfill to 2022 where NSE archives allow).
+NOT YET USED FROM ZERODHA (Kite docs checked 8 Nov): 1) live 'full' mode = 5-level depth WITH order counts + exchange timestamps, 3,000 instruments x 3
+connections - backup feed + depth recorder; 2) futures OPEN INTEREST (oi=1 on historical candles; continuous=1 gives day candles of expired futures) ->
+long build-up / short covering per stock = what big players do; 3) Nifty/BankNifty futures premium (basis) = sentiment; 4) option OI by strike -> put-call
+ratio (current contracts only); 5) instruments master: F&O stock list, lot sizes; quote API: circuit limits. CHECK: are Kite candles split/bonus adjusted?
+STEPS: 1 data foundation (finish download, NSE 60-day + results history, per-day liquidity without look-ahead, corporate actions) ->
+2 fast smooth-replay of the real engine on all days, calibrated on our tick days -> 3 day-type map of every day (trend/flat/narrow/wild via VIX, gap, breadth)
+-> 4 walk-forward rule search, thousands of variants, score = losing days first, then worst day, then profit -> 5 test each new data signal (VIX size,
+futures OI, FII/DII, delivery %, results-day skip) -> 6 universe (liquid non-Nifty-500, liquidity 10/25/50/100 cr) -> 7 confirm on tick days -> owner
+"do it" -> live paper month (V1 proof) -> V1 ready signal.
