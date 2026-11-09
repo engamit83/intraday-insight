@@ -1660,3 +1660,6 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - Old tick-replay baselines (work/base*.json) had FUTURE turnover (look-ahead) -> old tick-day results (e.g. V9 +4,004) inflated; do not use them.
 - Clean calibration needs live days after the 9 Nov fix: from 9 Nov on, compare replay (live 1-min candles + official close) with live picks/trades every day.
 - Overnight: BASE and V9 on 2022-2026 with replay v2 (tags BASE/V9 in z/mdays2).
+- 10 Nov 01:05 replay v2 fixes: NSE PREV_CLOSE of the replay day used as yesterday's close (covers the 8 Nov Sunday Muhurat session + corporate actions); weekend sessions excluded from the baseline (like live).
+- CLEAN CHECK 9 Nov (first live day after the close fix), using live 1-min candles + clean baseline: V9 rules -> live, tick replay, minute replay all = HONASA S 56.6 + FINCABLES S 40.2, 0 trades (EXACT). BASE rules -> same 6 trades tick vs minute (entries within seconds, same exit reasons); net tick -1,299 vs minute -1,008 (diff Rs 291, minute fills slightly kinder) + 1 extra minute pick (COHANCE, tie at 3.6x for 10th place, +342).
+- Running: BASE + V9 on 2022-2026 with replay v2 (z/mdays2, tags BASE/V9). Next: stricter exit fills, re-check on 10 Nov live day, then step 1.
