@@ -1645,3 +1645,9 @@ BASE (new definition) = stocks in play (top 10 by unusual volume, low bar 3x) + 
 6. Final exam once on 2017-2021 (locked, never used before), then 2 weeks live without trading -> owner decides.
 V9 keeps running live (paper) until the owner says otherwise. Step 1 of the old plan (C-* piece test) stopped 10 Nov 00:10 (needs the fixed replay).
 Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = different picks (liquidity list, last-minute price used as close) + tick baselines may contain future turnover (23 Oct list has later days) - to verify.
+
+## 10 Nov 00:50 IST - LIVE CHANGE (owner "remove v9 that 2 filters I want trade all days for paper trade as of now", 00:40): BASE RULES LIVE (paper)
+- sip-engine.mjs defaults: minRvol 10 -> 3 (stocks in play low bar), breadthBuyMin/SellMax 60/40 -> 0/100 (breadth still recorded, never blocks). All other BASE rules unchanged.
+- Installed on the laptop 00:50 (outside market hours), verified byte-equal to repo commit 30b44ba; smoke test on 2 tick days ran clean (V9 override reproduces old numbers exactly).
+- Undo (back to V9): minRvol 10, breadthBuyMin 60, breadthSellMax 40.
+- Owner: posted/live paper rules will keep changing as BASE rules get refined (each change logged here + told to owner).
