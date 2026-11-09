@@ -1633,3 +1633,15 @@ Test rule: every change must win as full trades after costs on 2022-24 AND 2025-
 Parallel track (owner): make the minute-candle replay match tick replay closely (calibrate on the tick days: compare per-trade entry/exit/net, fix the price-path model until the gap is small).
 Tracks A/B merged into this plan (A = per-day-type rules, back after step 6). Checkpoints: direction 55% -> 60% -> no losing year -> a month with no losing day ("Version 1 is ready").
 Lesson 9 Nov: V10 candidate (stall 15 + Nifty gap 0.25 filter) beat V9 on 5 years of candles but LOST on tick days (-577 vs +4,004: 23 Oct, Nifty gap +0.25 blocked 3 winning sells) -> not live. Direction check: V9 trades right by 15:15 only 42%; 80% of losers were truly wrong direction.
+
+## THE PLAN v2 (owner 10 Nov 00:13-00:22) - REPLACES "THE PLAN" above. Base-first; filters only after the base is refined.
+Owner: "I dnt want v9 just test our base rules n try refining it n then u can try applying those filters" + "all direction entry exit smart exit n so on all rules refined by testing ... and after refinement how those rules work together - this testing also for all data, also add news and external info also as base rule that decides direction n entry n exit".
+BASE (new definition) = stocks in play (top 10 by unusual volume, low bar 3x) + direction + entry + stop + smart exit + fast-drop + stall + profit protect + trail + square-off + size + re-entry + NEWS (NSE announcements/results/board/bulk-block/ban/delivery) + EXTERNAL (US/Asia/Europe, crude, gold, USD/INR, US yields, VIX) as inputs to direction, entry and exit.
+1. Fix the replay so it matches live (clean no-look-ahead baseline from NSE official close/turnover; then in-minute price path). Pass mark: same picks/trades on every tick day, daily net within ~Rs 200. Live feed = truth (check tick-day baselines for future data).
+2. BASE edge check, all years: profit per trade before/after costs, per year, which part loses.
+3. Refine each BASE rule one at a time (direction -> entry -> stop -> exits -> size/re-entry), news + external tested inside each. Idea + pass mark written first; build 2022-24, check 2025-26; tick days = replay check, not proof (too few trades).
+4. Combined test: all refined rules together on ALL data (does each still help with the others on?).
+5. Add filters one by one on the refined BASE (volume level, breadth, gap, ...), keep only what helps.
+6. Final exam once on 2017-2021 (locked, never used before), then 2 weeks live without trading -> owner decides.
+V9 keeps running live (paper) until the owner says otherwise. Step 1 of the old plan (C-* piece test) stopped 10 Nov 00:10 (needs the fixed replay).
+Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = different picks (liquidity list, last-minute price used as close) + tick baselines may contain future turnover (23 Oct list has later days) - to verify.
