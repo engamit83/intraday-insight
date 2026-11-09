@@ -1588,3 +1588,8 @@ Other candidates tested (24 variants on 2026, 9 on 2025): 10x+breadth 55/45 +14,
 - Breadth 70/35 beat V9 on the unseen 2023 (net, losing days 6 vs 17, worst -1,245 vs -1,552) but trades very rarely (7 days in 2023) and is clearly WORSE than V9 in the most recent year 2026 (-7,145).
 - Decision (rule 0e bar not met on 2026 net): NOT installed. V9 stays. Breadth 70/35 runs as a SHADOW: each daily review replays the day's real ticks with both rules; switch only if it keeps winning on live days.
 - Big picture: the opening-range breakout only makes money when volume is extreme AND the whole market agrees; most days it should not trade. To reach V1 (profit every day) a SECOND method is needed for normal days (research next: mean-reversion / VWAP / sector-leader setups on the 4 years).
+
+## TWO SEPARATE RESEARCH TRACKS (owner 9 Nov 12:06-12:08, "remember this A and B")
+- **Track A - scenario rules:** V9 stays LOCKED as base; extra rules on top, separately per 09:20 day type (gap/drive/breadth/VIX/expiry/NR7/news/global cues). Result names A-...
+- **Track B - improve V9 itself:** make V9 alone no-loss (no losing year -> no losing day) and more profitable: analyse V9's own losing trades/days on all years, test fixes to its own rules -> candidate "V10". Result names B-...
+- Kept separate: own names, own result files, own section in the nightly summary. Nothing goes live from either track (rule 0g); owner decides at night (~21:00, about 1 hour), he has ideas to add.
