@@ -38,3 +38,5 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > **RULE 0g - PROPOSE ONLY, OWNER DECIDES AT NIGHT (owner 9 Nov 12:04, replaces 0e):** "suggest all rules, dnt make those rules live". Claude keeps working
 > on the intent all day (tests, analysis, smart decisions), but makes NO live rule change. Every night Claude sends ONE short summary of all findings and
 > proposed rules with numbers; the owner works with Claude about 1 hour at night and decides. Live rules change only with the owner's "do it".
+> **RULE 0h - TWO TRACKS, NEVER MIXED (owner 9 Nov 12:06-12:08, "remember this A and B"):** Track A = per-scenario rules on top of the locked V9 base;
+> Track B = improving V9 itself (no loss first, then more profit) -> candidate V10. Separate names (A-/B-), files and summary sections. Results every night.

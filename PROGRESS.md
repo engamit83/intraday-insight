@@ -1593,3 +1593,8 @@ Other candidates tested (24 variants on 2026, 9 on 2025): 10x+breadth 55/45 +14,
 - **Track A - scenario rules:** V9 stays LOCKED as base; extra rules on top, separately per 09:20 day type (gap/drive/breadth/VIX/expiry/NR7/news/global cues). Result names A-...
 - **Track B - improve V9 itself:** make V9 alone no-loss (no losing year -> no losing day) and more profitable: analyse V9's own losing trades/days on all years, test fixes to its own rules -> candidate "V10". Result names B-...
 - Kept separate: own names, own result files, own section in the nightly summary. Nothing goes live from either track (rule 0g); owner decides at night (~21:00, about 1 hour), he has ideas to add.
+
+## 9 Nov 12:08 IST - TWO SEPARATE RESEARCH TRACKS (owner: "remember this A and B", results every night)
+- **Track A - scenario rules:** V9 stays LOCKED as base; extra rules on top, separately per 09:20 day type (gap/drive/breadth/VIX/expiry/NR7/inside/news/global cues). Files tagged A-..., own section in the nightly summary.
+- **Track B - improve V9 itself:** make V9 alone loss-free (no losing year -> no losing day), then more profitable; analyse V9's own losing trades/days on all years, test fixes to its own rules -> candidate "V10". Files tagged B-..., own section in the nightly summary.
+- Never mixed. Nothing goes live from either (rule 0g); owner decides at night (~1 hr) and has ideas to add.
