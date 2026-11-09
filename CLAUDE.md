@@ -28,10 +28,13 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > Daily report must show the streak: "X days in a row without a losing day" and the losing days so far.
 > **V1 READY SIGNAL (owner 8 Nov 17:29):** when paper trading has a full month with every day in profit across all market situations (up/down/flat/narrow/wild days), Claude tells the owner "Version 1 is ready - we can consider live trading", with the full month's numbers. Real-money orders stay the owner's own action (Claude never places real trades or moves money).
 
-> **RULE 0e - CLAUDE MAY MAKE RULES LIVE (owner 9 Nov 00:11, PAPER TRADING ONLY):** "u are market expert u decide ... make the rules and make it live if u are confident".
+> **RULE 0e - (REPLACED by 0g on 9 Nov 12:04)** CLAUDE MAY MAKE RULES LIVE (owner 9 Nov 00:11, PAPER TRADING ONLY): "u are market expert u decide ... make the rules and make it live if u are confident".
 > Claude's own bar before installing a rule: (1) better on losing days AND net over all 2026 days, (2) better in BOTH halves of 2026, (3) still better on 2025 (unseen data),
 > (4) installed only outside market hours (not 09:00-15:30 IST), engine checked on the laptop, (5) the owner is told the same day exactly what changed, the numbers, and how to undo it.
 > Real-money trading stays the owner's own decision and action.
 > **RULE 0f - TELL THE OWNER EVERY CHANGE (owner 9 Nov 00:19, "make it ur rule, I shd know all things"):** every change Claude makes - live rule, engine/code,
 > laptop files, scheduled tasks, data, test findings that matter - is reported to the owner right away in a short message (what, why, numbers, how to undo),
 > and logged in PROGRESS.md. Nothing is changed silently.
+> **RULE 0g - PROPOSE ONLY, OWNER DECIDES AT NIGHT (owner 9 Nov 12:04, replaces 0e):** "suggest all rules, dnt make those rules live". Claude keeps working
+> on the intent all day (tests, analysis, smart decisions), but makes NO live rule change. Every night Claude sends ONE short summary of all findings and
+> proposed rules with numbers; the owner works with Claude about 1 hour at night and decides. Live rules change only with the owner's "do it".
