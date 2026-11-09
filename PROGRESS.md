@@ -1619,3 +1619,17 @@ Track B (improve V9 -> V10), totals 2022-26:
 | B-R15GA (rvol 15 + gap filter) | 1,960 | -1,088 | -3,077 | 3,477 | 5,100 | +6,372 | 49 | -2,052 |
 - B-ST15GA is the only one better than V9 in ALL 5 years -> proposed V10 candidate (owner decides). Undo: stallMin 10 / stallBest back, gapAgainstMax off.
 - Rejected: confirm 30/60s, retest 0.1/0.2%, stop max 0.8%, fast drop 0.3R, no quality size, 4 signs (no effect), rvol 12.
+
+## THE PLAN (owner 9 Nov 23:47-23:52: "do it stepwise and whatever can be done parallel do it that way, I want all tests on real tick days, also ... improving replays so that it becomes close to ticks")
+Names (owner 9 Nov 23:40): **SIP** = the strategy (stocks in play). **BASE rules** = direction (first 5-min candle), breakout entry, range stop, smart exit, fast-drop, stall, profit protect P8, trail, square-off 15:15, re-entry, quality size. **V9** = BASE rules + 2 filters (volume 10x, breadth 60/40) = live (paper) since 9 Nov.
+Goal: V1 = profit every day for a month. Direction call must go from ~53% right to 60%+, no losing year.
+Steps, in order (parallel where possible); V9 stays live unchanged; nothing live without owner's "do it":
+1. Measure each BASE rule + the 2 filters (RAW + each piece, V9 - each piece), 5 years - RUNNING since 9 Nov 23:20 (menuC.json, tags C-*).
+2. Collect factors: global markets (DONE 9 Nov 23:45, 18 series since 2015), NSE news history 2022+ (running on laptop), Kite bundle 2017-2025 (running on laptop).
+3. Direction study: which factors predict buy/sell (stock, market, news, global).
+4. Combine into a better direction rule: build 2022-24, check 2025-26 + ALL real tick days.
+5. Better entry: real vs fake breakout.  6. Refine exits on the new entries.  7. Shadow 2 weeks next to V9 -> owner decides.
+Test rule: every change must win as full trades after costs on 2022-24 AND 2025-26 AND on all real tick days (22,23,26-30 Oct, 6 Nov, 9 Nov, and every new day).
+Parallel track (owner): make the minute-candle replay match tick replay closely (calibrate on the tick days: compare per-trade entry/exit/net, fix the price-path model until the gap is small).
+Tracks A/B merged into this plan (A = per-day-type rules, back after step 6). Checkpoints: direction 55% -> 60% -> no losing year -> a month with no losing day ("Version 1 is ready").
+Lesson 9 Nov: V10 candidate (stall 15 + Nifty gap 0.25 filter) beat V9 on 5 years of candles but LOST on tick days (-577 vs +4,004: 23 Oct, Nifty gap +0.25 blocked 3 winning sells) -> not live. Direction check: V9 trades right by 15:15 only 42%; 80% of losers were truly wrong direction.
