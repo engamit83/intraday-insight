@@ -1652,3 +1652,11 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - Undo (back to V9): minRvol 10, breadthBuyMin 60, breadthSellMax 40.
 - Owner: posted/live paper rules will keep changing as BASE rules get refined (each change logged here + told to owner).
 - Owner 10 Nov 00:44: live paper must show BOTH every day - (a) BASE (live, all trades) and (b) V9 (trades V9 would have taken: rvol >= 10 + breadth BUY >= 60 / SELL <= 40, confirmed by a V9 tick replay of the day). Daily reviews 10-13 Nov updated to report both side by side with running totals and losing days.
+
+## 10 Nov 01:00 - REPLAY FIX, step 0 (in progress)
+- Replay v2 (z/zmulti2.py): official NSE close + turnover (bhav, 1,254 days 2022-2026, packed on the laptop by bhav-compact.bat) replace last-minute price / minute turnover; no look-ahead (previous 10 days only).
+- Pick match vs what live actually picked (7 live days 23 Oct-6 Nov, minRvol 3 as live then): 45/68 = 66%.
+- Mismatches are mostly OLD LIVE BUGS, not the replay: live had no gap rule on 23 Oct (CYIENT +5% gap picked), used stale/missing closes before the 9 Nov close fix (GROWW -4% gap sell picked on 6 Nov; GLENMARK/TITAN/UNITDSPR wrongly gap-skipped). Rest: direction flips on tiny 5-min moves (SAGILITY, ALKEM, APLAPOLLO, ADANIPORTS) - to check open-price definition (first tick vs official open).
+- Old tick-replay baselines (work/base*.json) had FUTURE turnover (look-ahead) -> old tick-day results (e.g. V9 +4,004) inflated; do not use them.
+- Clean calibration needs live days after the 9 Nov fix: from 9 Nov on, compare replay (live 1-min candles + official close) with live picks/trades every day.
+- Overnight: BASE and V9 on 2022-2026 with replay v2 (tags BASE/V9 in z/mdays2).
