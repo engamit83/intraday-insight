@@ -282,6 +282,7 @@ export class SipEngine {
     if (this.r.buyMinRvol && B && pk.rvol < this.r.buyMinRvol) return [] // TEST 7 Nov: stricter buys
     const trapHit = this.r.trapPct && this.mktMove != null && Math.abs(this.mktMove) >= this.r.trapPct && this.mktMove * sg > 0 && ((this.r.trapSide ?? 'SELL') === 'BOTH' || (this.r.trapSide ?? 'SELL') === pk.dir) // TEST 7 Nov: market already moved hard our way in the first 5 min
     if (trapHit && this.r.trapMode === 'skip') return []
+    if (this.r.gapAgainstMax != null) { const n = this.or.get('NIFTY'), npc = this.prevCloseFor('NIFTY'); if (n?.open > 0 && npc > 0 && (n.open / npc - 1) * 100 * sg <= -this.r.gapAgainstMax) return [] } // TEST 9 Nov (track B, OFF): skip trades against a Nifty gap of >= X%
     if (this.r.sectorRel && this.sectorMove) { const sec = this.r.sectorMap?.[pk.sym] ?? this.sectorOf?.(pk.sym); const sm = sec ? this.sectorMove.get(sec) : null; if (sm != null && this.mktAvg != null && (sm - this.mktAvg) * sg < (this.r.sectorRelMin ?? 0)) return [] } // TEST 7 Nov: sector must be stronger (buy) / weaker (sell) than the market
     const mult2 = mult * (this.r.dirHalf === pk.dir ? 0.5 : 1) * (this.oneSided === pk.dir ? 0.5 : 1) // TEST 31 Oct
       * (trapHit && this.r.trapMode === 'half' ? 0.5 : 1) // TEST 7 Nov
