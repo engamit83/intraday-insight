@@ -1651,3 +1651,4 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - Installed on the laptop 00:50 (outside market hours), verified byte-equal to repo commit 30b44ba; smoke test on 2 tick days ran clean (V9 override reproduces old numbers exactly).
 - Undo (back to V9): minRvol 10, breadthBuyMin 60, breadthSellMax 40.
 - Owner: posted/live paper rules will keep changing as BASE rules get refined (each change logged here + told to owner).
+- Owner 10 Nov 00:44: live paper must show BOTH every day - (a) BASE (live, all trades) and (b) V9 (trades V9 would have taken: rvol >= 10 + breadth BUY >= 60 / SELL <= 40, confirmed by a V9 tick replay of the day). Daily reviews 10-13 Nov updated to report both side by side with running totals and losing days.
