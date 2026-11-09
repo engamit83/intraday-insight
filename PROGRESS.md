@@ -1663,3 +1663,15 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - 10 Nov 01:05 replay v2 fixes: NSE PREV_CLOSE of the replay day used as yesterday's close (covers the 8 Nov Sunday Muhurat session + corporate actions); weekend sessions excluded from the baseline (like live).
 - CLEAN CHECK 9 Nov (first live day after the close fix), using live 1-min candles + clean baseline: V9 rules -> live, tick replay, minute replay all = HONASA S 56.6 + FINCABLES S 40.2, 0 trades (EXACT). BASE rules -> same 6 trades tick vs minute (entries within seconds, same exit reasons); net tick -1,299 vs minute -1,008 (diff Rs 291, minute fills slightly kinder) + 1 extra minute pick (COHANCE, tie at 3.6x for 10th place, +342).
 - Running: BASE + V9 on 2022-2026 with replay v2 (z/mdays2, tags BASE/V9). Next: stricter exit fills, re-check on 10 Nov live day, then step 1.
+
+## 10 Nov 01:40 - FIRST RESULT ON ALL YEARS WITH REPLAY v2 (= step 1 "BASE edge check", first answer)
+| Year | BASE trades | BASE net | BASE before costs | V9 trades | V9 net | V9 before costs |
+|---|---|---|---|---|---|---|
+| 2022 | 1,110 | -55,592 | +53,366 (+48/trade) | 24 | +1,982 | +4,983 (+208/trade) |
+| 2023 | 1,415 | -118,578 | +23,403 (+17/trade) | 28 | -9,970 | -6,063 |
+| 2024 | 1,574 | -73,554 | +79,276 (+50/trade) | 78 | -4,009 | +6,587 (+84/trade) |
+| 2025 | 1,397 | -70,658 | +68,115 (+49/trade) | 73 | +8,997 | +18,053 (+247/trade) |
+| 2026 | 1,139 | -51,176 | +52,705 (+46/trade) | 52 | +8,965 | +14,865 (+286/trade) |
+- BASE: win rate 41-42% every year, ~60% losing days, worst day about -5,000 to -6,800. It HAS a small edge before costs in all 5 years (+17 to +50 per trade), but costs + slippage are ~Rs 100 per trade (about 0.15% of a Rs 1 lakh position) and wipe it out.
+- V9's 2 filters raise the edge per trade to +84..+286 (4 of 5 years) by trading ~20x less.
+- Diagnosis: the core problem is edge per trade vs cost per trade. To win: bigger winners per trade (exits/targets), fewer and better trades (selection/direction), or lower cost per trade. Replay note: minute fills ~Rs 291/day kinder than ticks on 9 Nov, so true results are slightly worse.
