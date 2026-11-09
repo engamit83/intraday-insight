@@ -1598,3 +1598,24 @@ Other candidates tested (24 variants on 2026, 9 on 2025): 10x+breadth 55/45 +14,
 - **Track A - scenario rules:** V9 stays LOCKED as base; extra rules on top, separately per 09:20 day type (gap/drive/breadth/VIX/expiry/NR7/inside/news/global cues). Files tagged A-..., own section in the nightly summary.
 - **Track B - improve V9 itself:** make V9 alone loss-free (no losing year -> no losing day), then more profitable; analyse V9's own losing trades/days on all years, test fixes to its own rules -> candidate "V10". Files tagged B-..., own section in the nightly summary.
 - Never mixed. Nothing goes live from either (rule 0g); owner decides at night (~1 hr) and has ideas to add.
+
+## DAILY REVIEW Mon 9 Nov (V9 live day 1, paper) - 0 trades, NET 0, not a losing day
+- Market: FLAT OPEN / drive down, breadth ~28% at 09:20, Nifty -0.12% on the day. Feed ran 09:00-15:35, 494 stocks, closes 4/4 Sharekhan; normal end (silence after close, disconnect 15:35).
+- Picks: HONASA SELL <473 (rvol 56.5) never broke (low 475). FINCABLES SELL <1266.5 (rvol 40.2) broke 09:21 but don't-chase skip (Nifty -0.65% from open by 09:20) -> fell to ~1,250 = missed winner. GLAND, ASTERDM gap-skipped.
+- Shadows: late entries 165 virtual net -17,669 (confirms: no late entries). Pre-open 10 virtual +276. Breadth-skipped 0.
+- Diagnosis: one missed winner from don't-chase on a strong down-drive day - noise for now (don't-chase was kept because it helps on all years); watch "drive-down + SELL pick" in Track A.
+- STREAK (V1 goal): 2 market days in a row without a losing day (6 Nov +910, 9 Nov 0). Losing days so far (live SIP): 26, 28, 29, 30 Oct.
+
+## 9 Nov - TRACK A / TRACK B RESULTS (replay, Zerodha 1-min, 2022-2026, 1,190 days) - PROPOSALS ONLY, nothing changed live
+Track A (21 variants on top of locked V9, chosen per 09:20 scenario):
+- Honest rolling test (choose with earlier years only, apply to next year) 2024-26: scenario rules +8,646 / 77 losing days vs V9 +1,718 / 90; but 2026 worse (+7,433 vs +11,315). Best variant per scenario changes year to year -> NOT ready; needs 2017-21 data + live scenario detector in shadow. Files: work z/scenA.py, comboA.py, trackA-results.txt.
+Track B (improve V9 -> V10), totals 2022-26:
+| Rules | 2022 | 2023 | 2024 | 2025 | 2026 | total | losing days | worst day |
+|---|---|---|---|---|---|---|---|---|
+| V9 | 1,476 | -7,955 | -10,447 | 850 | 11,315 | -4,761 | 116 | -4,479 |
+| B-ST15GA (stall 15 min/0.3R + skip vs Nifty gap >=0.25%) | 2,324 | -2,555 | -4,997 | 2,758 | 11,402 | +8,932 | 83 | -4,479 |
+| B-V10RE0 (+ no re-entry) | 2,533 | -2,331 | -1,383 | 1,566 | 10,285 | +10,670 | 84 | -3,088 |
+| B-V10DL2 (+ stop after 2 losers) | 2,324 | -2,555 | -2,699 | 3,361 | 8,925 | +9,356 | 84 | -2,763 |
+| B-R15GA (rvol 15 + gap filter) | 1,960 | -1,088 | -3,077 | 3,477 | 5,100 | +6,372 | 49 | -2,052 |
+- B-ST15GA is the only one better than V9 in ALL 5 years -> proposed V10 candidate (owner decides). Undo: stallMin 10 / stallBest back, gapAgainstMax off.
+- Rejected: confirm 30/60s, retest 0.1/0.2%, stop max 0.8%, fast drop 0.3R, no quality size, 4 signs (no effect), rvol 12.
