@@ -40,3 +40,10 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > proposed rules with numbers; the owner works with Claude about 1 hour at night and decides. Live rules change only with the owner's "do it".
 > **RULE 0h - TWO TRACKS, NEVER MIXED (owner 9 Nov 12:06-12:08, "remember this A and B"):** Track A = per-scenario rules on top of the locked V9 base;
 > Track B = improving V9 itself (no loss first, then more profit) -> candidate V10. Separate names (A-/B-), files and summary sections. Results every night.
+
+> **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
+> (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
+> ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
+> The link itself is made by the Claude desktop app: it reconnects automatically while the app is open and the laptop is on and online, so the owner keeps
+> the app open (ideally starting at Windows sign-in) and the laptop awake during market days. On trading days also check the feed (logs\feed-DAY.log fresh,
+> logs\watchdog-DAY.txt) right after the link check.
