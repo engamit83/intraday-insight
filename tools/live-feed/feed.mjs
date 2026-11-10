@@ -403,6 +403,19 @@ async function main() {
   console.log('\n=== intraday-insight live feed ===')
   if (TEST_IGNORE_MARKET_HOURS) console.log('!!! TEST MODE: market-hours filter is OFF. Never use this on a real day. !!!')
   say('Starting. Press Ctrl+C to stop.')
+  // 10 Nov (owner: 'shd the feed start on holidays' -> no): NSE trading holidays - the feed stops at once on a holiday or weekend,
+  // so nothing is traded and the baseline is NOT updated with a non-trading day. List checked against NSE 2026 + our 2026 minute data.
+  // Also reads data\\nse-holidays.json (["YYYY-MM-DD", ...]) if present - add future years there.
+  {
+    const NSE_HOLIDAYS = new Set(['2026-01-15', '2026-01-26', '2026-03-03', '2026-03-26', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-28',
+      '2026-06-26', '2026-09-14', '2026-10-02', '2026-10-20', '2026-11-10', '2026-11-24', '2026-12-25'])
+    try { for (const d of JSON.parse(fs.readFileSync(path.join(here, 'data', 'nse-holidays.json'), 'utf8'))) NSE_HOLIDAYS.add(d) } catch {}
+    const nowIst = new Date(Date.now() + 330 * 60_000), today = nowIst.toISOString().slice(0, 10), wd = nowIst.getUTCDay()
+    if (!TEST_IGNORE_MARKET_HOURS && (NSE_HOLIDAYS.has(today) || wd === 0 || wd === 6)) {
+      say(`Market holiday / weekend today (${today}) - NSE is closed. Nothing to do; the feed stops now and starts again on the next trading day.`)
+      return
+    }
+  }
   // 8 Nov (owner 'i want all of them'): fetch NSE's free end-of-day data for the previous trading day in the background
   // (delivery %, ban list, circuit bands, bulk/block deals, results calendar, FII/DII). Separate process - cannot affect the feed.
   try { const p = spawn(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), 'eod-nse.mjs')], { detached: true, stdio: 'ignore', windowsHide: true }); p.on('error', () => {}); p.unref(); say('Fetching NSE end-of-day data for the previous trading day in the background (data\\nse).') } catch {}
