@@ -9,7 +9,7 @@ if errorlevel 1 (
   timeout /t 10 >nul
   exit /b
 )
-tasklist /V /FI "IMAGENAME eq cmd.exe" | find /I "INTRADAY-FEED" >nul
+powershell -NoProfile -Command "if(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -like '*feed.mjs*' }){exit 0}else{exit 1}"
 if not errorlevel 1 (
   echo Feed is already running - nothing to do.
   timeout /t 10 >nul
@@ -19,11 +19,16 @@ title INTRADAY-FEED
 :run
 echo [%date% %time%] Starting feed...
 node feed.mjs
+if %errorlevel%==3 goto holiday
 call :inhours
 if errorlevel 1 goto done
 echo Feed stopped during market hours - restarting in 30 seconds...
 timeout /t 30 /nobreak >nul
 goto run
+:holiday
+echo Market holiday today - feed not needed.
+timeout /t 10 >nul
+exit /b
 :done
 echo Market closed - feed finished for today.
 timeout /t 10 >nul

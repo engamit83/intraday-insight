@@ -413,7 +413,7 @@ async function main() {
     const nowIst = new Date(Date.now() + 330 * 60_000), today = nowIst.toISOString().slice(0, 10), wd = nowIst.getUTCDay()
     if (!TEST_IGNORE_MARKET_HOURS && (NSE_HOLIDAYS.has(today) || wd === 0 || wd === 6)) {
       say(`Market holiday / weekend today (${today}) - NSE is closed. Nothing to do; the feed stops now and starts again on the next trading day.`)
-      return
+      process.exit(3) // exit code 3 = holiday: auto-feed.bat and the watchdog do NOT restart
     }
   }
   // 8 Nov (owner 'i want all of them'): fetch NSE's free end-of-day data for the previous trading day in the background
