@@ -1796,3 +1796,9 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - Stopped the old-data exit replay run. Exit refinement now runs on the 9 tick days only:
   - [TICK] stall 15/20/30 min: all worse than 10 min (net +6,103 / +5,304 / +4,872 vs +6,897; losing days 4/5/6 vs 4) -> keep stall 10.
   - P8 / fast-drop / tighten variants running.
+- [TICK] Exit refinement results, 9 tick days (BASE now: +6,897, 4 losing days, worst -2,355):
+  - P8 keep 25% of best (protectFrac 0.25): +9,270, 4 losing days, worst -2,355 -> BEST. The gain comes from 2 days (23 Oct, 27 Oct).
+  - P8 keep 35%: +8,827, 4. P8 start at 0.9R: +7,629, 4.
+  - Fast-drop 0.7R / 1.0R: +5,080 / +4,926, 6 losing days -> keep 0.5R.
+  - Stop tighten to 0.5R: +7,562, 5 losing days, worst -3,005 -> keep 0.3R.
+  - PROPOSAL (not installed): P8 protectFrac 0.5 -> 0.25. Sample is small (50 trades); re-check daily as tick days grow; owner decides.
