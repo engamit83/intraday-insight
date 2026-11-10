@@ -1685,4 +1685,4 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - feed.mjs exits with code 3 on holidays/weekends; auto-feed.bat stops on code 3 (no restart loop) and finds a running feed by its program (node feed.mjs), not window title (Windows Terminal safe).
   - data\nse-holidays.json = 2026 NSE holidays (add next years here).
   - feed-watchdog.bat: every 5 min, weekdays 09:00-15:30: holiday/weekend -> nothing; no feed -> start; feed log silent > 4 min -> stop + restart. Logs every check to logs\watchdog-DAY.txt.
-  - setup-watchdog.bat creates the Windows task "IntradayFeed-Watchdog" - MUST BE DOUBLE-CLICKED BY THE OWNER (Claude is not allowed to create Windows scheduled tasks). Undo: schtasks /Delete /TN "IntradayFeed-Watchdog" /F.
+  - setup-watchdog.bat creates the Windows task "IntradayFeed-Watchdog" - run by Claude 09:44 on the owner's instruction ("u do the watchdog thing"): task created, every 5 min 09:00-15:30 weekdays; first check 09:45 today = SKIP (holiday) - works. Undo: schtasks /Delete /TN "IntradayFeed-Watchdog" /F.
