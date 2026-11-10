@@ -14,7 +14,7 @@ for (const kind of ['announcements', 'board', 'results', 'actions', 'bulk', 'blo
     const arr = Array.isArray(j) ? j : (j.data ?? j.rows ?? [])
     for (const o of arr) {
       if (!keysSeen[kind]) keysSeen[kind] = Object.keys(o).slice(0, 25)
-      const sym = pick(o, ['symbol', 'sm_symbol', 'BD_SYMBOL', 'bdSymbol'])
+      const sym = pick(o, ['symbol', 'bm_symbol', 'sm_symbol', 'BD_SYMBOL', 'bdSymbol'])
       const dt = String(pick(o, ['an_dt', 'sort_date', 'bm_date', 'exDate', 'ex_dt', 'filingDate', 'broadcastDate', 'BD_DT_DATE', 'date', 're_broadcastDt', 'creation_Date']))
       const txt = pick(o, ['desc', 'subject', 'bm_purpose', 'purpose', 'attchmntText', 'sm_name', 'BD_BUY_SELL', 'buySell', 'relatingTo'])
       const extra = kind === 'bulk' || kind === 'block' ? ' ' + clean(pick(o, ['BD_CLIENT_NAME', 'clientName'])) + ' qty ' + clean(pick(o, ['BD_QTY_TRD', 'qty'])) + ' @ ' + clean(pick(o, ['BD_TP_WATP', 'watp'])) : ''
