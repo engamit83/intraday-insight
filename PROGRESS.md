@@ -1719,3 +1719,17 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - ESCAPE RULE triggered -> step 2 = direction + selection (one level up), not more piece tuning.
 - Bug note: z/step1.py (a quick direction check, not reported) subtracted 5:30 from IST-minute npz times; fixed in z/dir2.py. No other script affected (checked).
 - Scripts: z/score1.py -> z/step1-score.json; z/dir2.py.
+
+## 10 Nov 14:00 - STEP 2 FIRST RESULT: direction (z/s2data.py -> s2rows.json 9,648 picks; z/s2an.py, s2rules.py, s2stop.py) - nothing changed live
+- Pass mark, written first: right >=55% AND after-cost average >+0.05% in BOTH 2022-24 and 2025-26, n>=100.
+- Stocks in play drift DOWN from 09:20 to 15:14: 44% up, -0.15% on average in both periods. Nifty drift over the same window is 0.00% (labels920 after_move) -> the effect is stock-specific.
+- Single factors with a stable sign (rank correlation): prev1 -0.06/-0.06, ret5 -0.08/-0.06, pos20, gap, ret20, prevrng (all mean-reversion). Global and news factors: weak (|r| <0.04).
+- GBM model (build 2022-24): +0.13% after cost only at high confidence; walk-forward 2024 negative -> REJECTED (simple beats complex).
+- R3 = SELL a pick at 09:20 if its 5-day rise is >=7.6%, hold to 15:14, Rs 1 lakh per trade:
+  - right 59%/60%, after cost +0.29%/+0.37% (n 1,056/660) -> PASSES.
+  - Per year: +87k, -2k, +225k, +106k, +136k.
+  - Thresholds 3.5/5/10 are all positive.
+  - With a 3% stop: all 5 years positive (+36k, +8k, +106k, +40k, +131k); worst day -13k vs -24k.
+  - Losing days 39-50%.
+- Mirror (BUY if 5-day fall >=7.6%): +0.28%/+0.17% after cost, but only 50% right -> candidate only.
+- Ideas tried today: 8 (7 rules + 1 model). Pending: tick days, full engine run, 2017-21 final exam.
