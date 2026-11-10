@@ -1675,3 +1675,9 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - BASE: win rate 41-42% every year, ~60% losing days, worst day about -5,000 to -6,800. It HAS a small edge before costs in all 5 years (+17 to +50 per trade), but costs + slippage are ~Rs 100 per trade (about 0.15% of a Rs 1 lakh position) and wipe it out.
 - V9's 2 filters raise the edge per trade to +84..+286 (4 of 5 years) by trading ~20x less.
 - Diagnosis: the core problem is edge per trade vs cost per trade. To win: bigger winners per trade (exits/targets), fewer and better trades (selection/direction), or lower cost per trade. Replay note: minute fills ~Rs 291/day kinder than ticks on 9 Nov, so true results are slightly worse.
+
+## 10 Nov 09:40 - HOLIDAY (Diwali Balipratipada) + feed holiday check
+- 10 Nov is an NSE holiday. Feed had no Sharekhan login at 09:00 (owner connected ~09:12), Claude started it 09:12 (owner "can u start it"), then stopped it 09:30 (owner "u can close the feed") so the baseline is not updated with a non-trading day.
+- NEW (owner "shd the feed start on holidays" -> no): feed.mjs stops at once on NSE holidays and weekends (2026 list, checked against NSE + our 2026 minute data; future years via data\nse-holidays.json). Installed on the laptop 09:40 (repo commit after 'feed: stop at once on NSE holidays'). Undo: remove the holiday block after 'Starting.' in feed.mjs.
+- Downloads started 09:16 (owner "start all things needed"): NSE official files 2017-2021 (590 days saved; files before ~mid-2019 do not exist under this NSE address - older years need the old bhavcopy format), news re-run (fill 34 missing announcement weeks, bulk/block deals in weekly pieces).
+- Next holiday: Tue 24 Nov.
