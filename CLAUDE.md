@@ -54,6 +54,13 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > owner told the same day (what, numbers, undo) and logged (rule 0f). Real money: never - owner only.
 > NIGHTLY SCORECARD (fixed, in PROGRESS.md): per year net before/after costs, losing days, worst day, direction accuracy, trades; replay-vs-live gap; plan step.
 
+> **RULE 0k - WHAT OLD DATA MAY DECIDE (owner 10 Nov 15:48-15:50: "exit rules shd never be removed, it just have to be refined" / "only few decisions depending on the past data unless replay same as live feed tick ... I can't rely on it"):**
+> 1. Exit rules are NEVER removed, only refined (parameters), and only on REAL TICK DAYS (live recorded ticks). Old minute data may suggest, never decide.
+> 2. Entry timing, stops, smart exits, re-entry, order-flow rules: decided only on tick days.
+> 3. Old Zerodha minute data may be used ONLY where the replay was proven equal to ticks (stock selection 95%, direction at 09:20), and even then only to choose WHAT to put in shadow;
+>    a live rule change needs the shadow to prove itself on live tick days first.
+> 4. Every proposal states its evidence type: [TICK] or [OLD DATA - hint only].
+
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.

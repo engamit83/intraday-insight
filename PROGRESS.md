@@ -1789,3 +1789,10 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 ## 10 Nov 15:46 - DAILY REVIEW: NSE HOLIDAY (no trading, no trades)
 - Watchdog: 70 checks 09:45-15:30, all SKIP (holiday detected), 0 restarts -> working as designed. Laptop link OK.
 - Streak and running totals unchanged. BASE vs V9 vs R3 side by side starts tomorrow, 11 Nov (the first real test of the auto-start).
+
+## 10 Nov 15:55 - OWNER CORRECTION -> RULE 0k in CLAUDE.md
+- My 14:53 suggestion to "remove" exit rules (based on old data) was wrong. Exits are only REFINED, and only on real tick days.
+- Old data = hints for selection/direction only. Every proposal is now tagged [TICK] or [OLD DATA - hint only].
+- Stopped the old-data exit replay run. Exit refinement now runs on the 9 tick days only:
+  - [TICK] stall 15/20/30 min: all worse than 10 min (net +6,103 / +5,304 / +4,872 vs +6,897; losing days 4/5/6 vs 4) -> keep stall 10.
+  - P8 / fast-drop / tighten variants running.
