@@ -53,8 +53,8 @@ const kinds = [
   ['board', 30, (a, b) => `${N}/corporate-board-meetings?index=equities&from_date=${dmy(a)}&to_date=${dmy(b)}`],
   ['results', 30, (a, b) => `${N}/corporates-financial-results?index=equities&period=Quarterly&from_date=${dmy(a)}&to_date=${dmy(b)}`],
   ['actions', 30, (a, b) => `${N}/corporates-corporateActions?index=equities&from_date=${dmy(a)}&to_date=${dmy(b)}`],
-  ['bulk', 30, (a, b) => `${N}/historical/bulk-deals?from=${dmy(a)}&to=${dmy(b)}`],
-  ['block', 30, (a, b) => `${N}/historical/block-deals?from=${dmy(a)}&to=${dmy(b)}`],
+  ['bulk', 7, (a, b) => `${N}/historical/bulk-deals?from=${dmy(a)}&to=${dmy(b)}`],
+  ['block', 7, (a, b) => `${N}/historical/block-deals?from=${dmy(a)}&to=${dmy(b)}`],
 ]
 log(`NSE news history ${from} .. ${to} - start`)
 for (const [kind, step, url] of kinds) {
@@ -62,7 +62,7 @@ for (const [kind, step, url] of kinds) {
   for (const [a, b] of chunks(step)) {
     const f = path.join(dir, `${a}_${b}.json`); if (fs.existsSync(f) && b < to) { skip++; continue }
     try { fs.writeFileSync(f, await api(url(a, b))); ok++ } catch (e) { bad++; log(`${kind} ${a}..${b} FAILED: ${e.message}`) }
-    await sleep(700)
+    await sleep(kind === 'bulk' || kind === 'block' ? 2000 : 700)
   }
   log(`${kind}: ${ok} saved, ${skip} already there, ${bad} failed`)
 }
