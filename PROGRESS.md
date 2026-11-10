@@ -1704,3 +1704,18 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - 10 Nov 10:50 STEP 2 INPUTS READY (built while step 1 runs): z/fac/global.json (1,254 days: previous completed session % change of SP500, NASDAQ, DOW, US VIX, NIKKEI, HANGSENG, KOSPI, SHANGHAI, TAIWAN, FTSE, DAX, WTI, BRENT, GOLD, USDINR, DOLLAR INDEX, US10Y) and z/fac/news.json (561,973 stock-days: results meeting/filed, filings before 09:15 with type order/deal/rating/resign/fundraise/buyback/dividend/meet/press, corporate action, F&O ban). Built by tools/backtest/replay/factors.py, no look-ahead (filings after 09:15 count for the next trading day). News packed on the laptop by news-compact.bat: announcements 782,928, board 86,860, results 43,295, actions 11,657, ban 3,970. Bulk/block deals: NSE refused (HTTP 503) - missing.
 - 10 Nov 10:50 LAPTOP COPY BUG found + fixed: sending a file to the laptop twice from the same staged name re-sent the FIRST version (bhav-compact.mjs, news-compact.mjs, PROGRESS.md, CLAUDE.md were stale on the laptop). Rule from now: stage every copy under a unique name and verify it on the laptop afterwards. PROGRESS.md + CLAUDE.md re-sent and verified equal.
 - 10 Nov 11:00 STEP 1 crashed twice (memory): replay v2 loaded all 7 years of official data and kept corrected prices in double precision. Fixed: load only the run's year + stocks, keep float32 (peak 1.8 GB -> 1.06 GB). Restarted 10:58 with runyears.sh (auto-retry up to 4x per year, resumable). 2022 results from before stay valid.
+
+## 10 Nov 12:55 - STEP 1 RESULTS (replay v2, 23 variants; 2023-26 complete, 2022 78 days, rest running) - nothing changed live
+- BASE: about Rs 44 per trade before costs vs about Rs 100 costs -> loses about Rs 130k per period after costs; about 60% of days lose.
+- Piece value, Rs after costs, 2022-24 / 2025-26 (added to RAW | removed from BASE):
+  - TRAP +51k/+49k | -35k/-70k -> KEEP.
+  - QS +42k/+76k | -15k/-56k -> KEEP.
+  - GAP +34k/+17k | +8k/+12k -> unclear.
+  - RE +18k/+9k | +11k/+14k -> remove candidate.
+  - FAST -16k/-8k | +4k/+2k; STALL -7k/-35k | +19k/+22k; P8 +1k/-34k | +15k/+44k -> remove candidates (exit rules: tick-day confirmation required).
+  - CONF and CIRC: no effect in the replay (minute bars carry no flow or circuit data) -> judge on tick days only.
+- Filters: RAW+VOL10 -56k/-4k (386 trades a year); RAW+BR -65k/-13k; V9 -14k/+17k (Rs 249 per trade before costs, the only one above costs).
+- ROOT CAUSE: the first-5-min candle direction is right 49% (09:20->15:14 hold, 9,130 picks, 2022-26). Following the gap: 44-46%. Fading the gap: 54-56%, about 0 after costs.
+  - ESCAPE RULE triggered -> step 2 = direction + selection (one level up), not more piece tuning.
+- Bug note: z/step1.py (a quick direction check, not reported) subtracted 5:30 from IST-minute npz times; fixed in z/dir2.py. No other script affected (checked).
+- Scripts: z/score1.py -> z/step1-score.json; z/dir2.py.
