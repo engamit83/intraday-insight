@@ -1695,3 +1695,9 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - PROPOSAL (engine option officialOpen, OFF, needs owner 'do it'): live uses the official open (last pre-open price) as the open - then live = history for direction/gap/picks. Undo: officialOpen false.
 - 10 Nov 10:30 LIVE (owner 10:22 "go to basics and decide, dont wait for me"): officialOpen ON in the live engine - the open = last pre-open price = NSE official open (same as history). Laptop engine verified = repo. Undo: officialOpen false.
 - 10 Nov 10:30 STEP 1 STARTED: 23 variants (RAW, BASE, V9; RAW + each piece; BASE - each piece; RAW + volume 10x; RAW + breadth) on 2022-2026, replay v2 (official open/close/turnover, corporate-action fix). Results in z/mdays2 tags S-*.
+- 10 Nov 10:35 STEP 0 CLOSED (escape rule: further path tuning on 9 days = noise-level gains):
+  - High/low order inside a minute: current guess (red candle -> high first) right 88.9% on 513,636 real stock-minutes (better than nearest-extreme 84.1%) - kept.
+  - Tick vs minute net gap by exit rule (9 tick days, BASE): all rules -902/day; no fast-drop -899; no stall -776; no profit-protect -750; no smart exits at all -439. So about half the gap comes from the tick-speed exit rules, the rest from entry/trail timing; the minute replay is PESSIMISTIC (conservative) by ~Rs 450-900/day.
+  - Decision: replay is reliable for stock selection, direction and entry tests (picks 95%, trades 91% same). Every EXIT-rule change must also be confirmed on the real tick days (and each new live day). Replay vs live checked daily.
+  - Corporate-action fix size by year (stock-days rescaled): 2023 28,035 / 2024 25,427 / 2025 18,433 - older years were heavily distorted before.
+- Step 1 crashed at the first try (memory, a parallel test); restarted 10:36 alone.
