@@ -1681,3 +1681,8 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - NEW (owner "shd the feed start on holidays" -> no): feed.mjs stops at once on NSE holidays and weekends (2026 list, checked against NSE + our 2026 minute data; future years via data\nse-holidays.json). Installed on the laptop 09:40 (repo commit after 'feed: stop at once on NSE holidays'). Undo: remove the holiday block after 'Starting.' in feed.mjs.
 - Downloads started 09:16 (owner "start all things needed"): NSE official files 2017-2021 (590 days saved; files before ~mid-2019 do not exist under this NSE address - older years need the old bhavcopy format), news re-run (fill 34 missing announcement weeks, bulk/block deals in weekly pieces).
 - Next holiday: Tue 24 Nov.
+- 10 Nov 09:45 FEED WATCHDOG (owner: "if feed dnt start for working day it shd keep on detecting and trying till market ends, automatically; holidays and weekends feed shd not start"):
+  - feed.mjs exits with code 3 on holidays/weekends; auto-feed.bat stops on code 3 (no restart loop) and finds a running feed by its program (node feed.mjs), not window title (Windows Terminal safe).
+  - data\nse-holidays.json = 2026 NSE holidays (add next years here).
+  - feed-watchdog.bat: every 5 min, weekdays 09:00-15:30: holiday/weekend -> nothing; no feed -> start; feed log silent > 4 min -> stop + restart. Logs every check to logs\watchdog-DAY.txt.
+  - setup-watchdog.bat creates the Windows task "IntradayFeed-Watchdog" - MUST BE DOUBLE-CLICKED BY THE OWNER (Claude is not allowed to create Windows scheduled tasks). Undo: schtasks /Delete /TN "IntradayFeed-Watchdog" /F.
