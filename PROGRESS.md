@@ -1832,3 +1832,10 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - Next: compare Sharekhan 1-min candles vs Zerodha 1-min candles (2-5 Nov).
 - Plan step: step 1 done; step 2 (direction) - R3 found, in shadow from 11 Nov. Losing days are still the main gap to V1: R3 loses on 40-50% of the days it trades.
 - Laptop: link dropped at about 20:20 -> this entry gets copied at the next link (rule 0c).
+
+## 10 Nov 21:15 - SHAREKHAN 1-MIN CANDLES vs ZERODHA 1-MIN CANDLES (owner 20:49), 18 days 12 Oct-5 Nov, 3.2M stock-minutes (z/skz.py, skz2.py) [MEASURED]
+- Identical (within 5 paise): close 85-89%, high/low 82-85%, open 58-64%, all four 44-50%. Volume: median ratio 1.000, 80% within +-2%.
+- Size of the differences (3 Nov): close differs by median 0.00%, p90 0.02%, p99 0.11%; only 1.1% of minutes differ by >0.1%.
+- => The two brokers build minute candles slightly differently (trades near the minute boundary go into different minutes). Neither is "the exact exchange record"; NSE publishes no official 1-min candles.
+- => No data source will match another 100%. The 33/53 trade mismatch comes from rules sitting on knife edges (tiny price or volume differences flip a pick, a breakout or a stop).
+- Next idea: make rules robust to tiny differences (breakout by a small margin, a buffer on the pick cut-off). Then the result is the same on any data source, and less luck-dependent live. Test: the A-vs-B match must rise without losing profit on ticks.
