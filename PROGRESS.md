@@ -1757,3 +1757,17 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - Worst day -9.4k vs -13k for R3; about half the trades for the same profit.
   - Losing days 44-51% (still the open problem).
 - Candidate only (shadow R3 logs rng5-relevant data: entry at 09:20 with the 5-min range known). Ideas tried today: 8 + 23 factor splits.
+
+## 10 Nov 16:10 - STEP 1 COMPLETE (all 1,184 days x 23 variants) - verdicts unchanged
+- Net after costs, 22-24 / 25-26:
+  - RAW -245k / -169k.
+  - BASE -191k / -129k.
+  - V9 -8k / +17k.
+  - RAW+VOL10 -41k / -4k.
+  - RAW+BR -49k / -13k.
+- Piece values (added to RAW | removed from BASE):
+  - TRAP +24k/+49k | -21k/-70k KEEP.
+  - QS +73k/+76k | -38k/-56k KEEP.
+  - GAP +37k/+17k | +3k/+12k.
+  - RE +6k/+9k | +6k/+13k.
+  - FAST -17k/-8k | +9k/+2k; STALL -12k/-35k | +29k/+22k; P8 +4k/-34k | +8k/+44k -> exit removals need tick-day confirmation.
