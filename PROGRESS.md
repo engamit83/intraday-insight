@@ -1771,3 +1771,17 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - GAP +37k/+17k | +3k/+12k.
   - RE +6k/+9k | +6k/+13k.
   - FAST -17k/-8k | +9k/+2k; STALL -12k/-35k | +29k/+22k; P8 +4k/-34k | +8k/+44k -> exit removals need tick-day confirmation.
+
+## 10 Nov 15:20 - COMBINED TEST (entry + exits together), z/comb.json, all 1,184 days; also 9 tick days
+- Replay, after costs, 22-24 / 25-26:
+  - BASE -191k / -129k.
+  - BASE-RE -185k / -115k.
+  - C-ALL4 (no re-entry, fast, stall, P8) -149k / -42k.
+  - C-KEEPFAST -163k / -56k.
+  - C-ALL4+minRvol10 -26k / +35k (Rs 199 per trade before costs; 2026 +42k).
+- 9 REAL TICK DAYS:
+  - BASE +6,897, 4 losing days.
+  - C-ALL4 +5,112, 6 losing days.
+  - C-KEEPFAST +7,251, 6 losing days.
+  - -> Ticks do NOT confirm the exit removal (more losing days). Exits stay. Only 45 trades: inconclusive; recheck as tick days grow.
+- Owner told: old Zerodha minute data is reliable for selection and direction (picks 95%, trades 91%), not for exit rules (replay understates fast exits by Rs 450-900 per day).
