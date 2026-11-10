@@ -1785,3 +1785,7 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - C-KEEPFAST +7,251, 6 losing days.
   - -> Ticks do NOT confirm the exit removal (more losing days). Exits stay. Only 45 trades: inconclusive; recheck as tick days grow.
 - Owner told: old Zerodha minute data is reliable for selection and direction (picks 95%, trades 91%), not for exit rules (replay understates fast exits by Rs 450-900 per day).
+
+## 10 Nov 15:46 - DAILY REVIEW: NSE HOLIDAY (no trading, no trades)
+- Watchdog: 70 checks 09:45-15:30, all SKIP (holiday detected), 0 restarts -> working as designed. Laptop link OK.
+- Streak and running totals unchanged. BASE vs V9 vs R3 side by side starts tomorrow, 11 Nov (the first real test of the auto-start).
