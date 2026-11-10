@@ -1813,3 +1813,22 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
 - Cause 2: live day_volume includes pre-open volume (A/B 1.04-1.05); subtracting the 09:15:00 tick volume gives 0.95-0.98.
 - Proposed fix: record a Zerodha Kite websocket feed next to Sharekhan (recording only), then re-run the gate on Kite days. Asked the owner (token / morning login).
 - Scripts: tools/backtest/replay/mcbuild.py, mccmp.py.
+
+## NIGHTLY SCORECARD 10 Nov 2026 (rule 0j) - replay v2 = [OLD DATA - hint only] except where marked [TICK]
+Rs after costs (before costs in brackets); losing days / market days; worst day; win % per trade.
+| Year | BASE (live paper since 10 Nov) | V9 (BASE + 2 filters) | R3 shadow (sell 5d rise >=7.6%, 3% stop, Rs 1 lakh) | R3b (R3 + 5-min range >=2.84%) |
+|---|---|---|---|---|
+| 2022 | -14k (+97k), 132/245, worst -3,776, 1,155 tr, 43% | +5k (+8k), 12/245, -2,405, 28 tr | +36k (+59k), 29/76*, -9,823, 155 tr | +9k (+18k), 23/76*, -6,292, 65 tr |
+| 2023 | -109k (+28k), 152/243, -4,963, 1,432 tr, 41% | -8k (-5k), 19/243, -2,178, 28 tr | +8k (+70k), 108/243, -10,886, 425 tr | +50k (+78k), 71/243, -6,292, 195 tr |
+| 2024 | -68k (+82k), 142/243, -6,827, 1,604 tr, 43% | -4k (+7k), 36/243, -4,479, 88 tr | +106k (+175k), 95/230, -12,678, 476 tr | +137k (+176k), 72/230, -9,438, 269 tr |
+| 2025 | -84k (+55k), 143/246, -5,561, 1,429 tr, 40% | +7k (+17k), 32/246, -3,088, 77 tr | +40k (+90k), 74/245, -14,579, 341 tr | +43k (+68k), 49/245, -9,874, 171 tr |
+| 2026 | -44k (+59k), 115/207, -4,882, 1,138 tr, 42% | +9k (+15k), 17/207, -2,150, 53 tr | +131k (+177k), 65/207, -10,942, 319 tr | +109k (+136k), 48/207, -9,438, 187 tr |
+*R3 2022 covers only 76 days (the dataset was built before 2022 finished) -> rebuild pending.
+- Direction accuracy (09:20->15:14 hold): BASE first-5-min candle 49%. R3 without stop 59-60%; with the 3% stop the win rate is 49-57% (the stop cuts some later winners).
+- [TICK] 9 tick days, BASE: +6,897, 4 losing days; P8 keep 10%: +9,582 (proposal, owner decides).
+- Replay-vs-live:
+  - picks 95%, trades 91%; replay pessimistic Rs 450-900 per day.
+  - Minute-close gate (live ticks cut to minute ends vs Zerodha candles, 8 days): trades 33/53 -> NOT equal; only about 90% of minute-end prices identical.
+  - Next: compare Sharekhan 1-min candles vs Zerodha 1-min candles (2-5 Nov).
+- Plan step: step 1 done; step 2 (direction) - R3 found, in shadow from 11 Nov. Losing days are still the main gap to V1: R3 loses on 40-50% of the days it trades.
+- Laptop: link dropped at about 20:20 -> this entry gets copied at the next link (rule 0c).
