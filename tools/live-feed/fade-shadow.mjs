@@ -5,6 +5,7 @@
 //       3% above entry. Rs 1 lakh per trade, costs 0.10628% + 0.02% slippage per side (same as the engine).
 // Research (2022-26 replay, 1 lakh/trade, hold to 15:14, no stop): build 2022-24 right 59%, +0.29%/trade after costs (n 1,056);
 //       check 2025-26 right 60%, +0.37% (n 660). With the 3% stop all 5 years positive.
+// Each trade also logs rng5 (first-5-min range %) and r3b = rng5 >= 2.84 (candidate R3b, 10 Nov 15:35).
 // Daily returns: own file data\fade-dret.json (seeded from NSE official close/prev_close; updated after each close). Replay passes
 //       baseline.fadeDret instead. Files: data\fade-shadow-DATE.csv + fade-shadow-state-DATE.json (restarts).
 import fs from 'node:fs'
@@ -31,7 +32,7 @@ export class FadeShadow {
       const r5 = this.ret5(p.sym)
       if (r5 == null || r5 < this.r.ret5Min || !(p.price > 0)) continue
       const entry = +(p.price * (1 - this.r.slipPct / 100)).toFixed(2), qty = Math.floor(this.r.notional / entry)
-      this.trades.set(p.sym, { sym: p.sym, dir: 'SELL', rvol: p.rvol, ret5: +r5.toFixed(2), entry, qty, stop: +(entry * (1 + this.r.stopPct / 100)).toFixed(2), inTs: ts })
+      this.trades.set(p.sym, { sym: p.sym, dir: 'SELL', rvol: p.rvol, ret5: +r5.toFixed(2), rng5: p.rng5 ?? null, r3b: (p.rng5 ?? 0) >= 2.84, entry, qty, stop: +(entry * (1 + this.r.stopPct / 100)).toFixed(2), inTs: ts })
     }
     this.save()
   }
@@ -46,8 +47,8 @@ export class FadeShadow {
     Object.assign(t, { exit, reason, outTs: ts, net }); this.save()
     if (this.replay) return
     try {
-      const f = this.file('fade-shadow') + '.csv', head = fs.existsSync(f) ? '' : 'day,symbol,dir,ret5_pct,rvol,entry_time,entry,exit_time,exit,reason,qty,net_rs\n'
-      fs.appendFileSync(f, head + [this.day, t.sym, t.dir, t.ret5, t.rvol, istClock(t.inTs), t.entry, istClock(ts), exit, reason, t.qty, net].join(',') + '\n')
+      const f = this.file('fade-shadow') + '.csv', head = fs.existsSync(f) ? '' : 'day,symbol,dir,ret5_pct,rng5_pct,r3b,rvol,entry_time,entry,exit_time,exit,reason,qty,net_rs\n'
+      fs.appendFileSync(f, head + [this.day, t.sym, t.dir, t.ret5, t.rng5, t.r3b ? 1 : 0, t.rvol, istClock(t.inTs), t.entry, istClock(ts), exit, reason, t.qty, net].join(',') + '\n')
     } catch {}
   }
   // squareoff fallback (e.g. no tick after 15:14 for that stock)
