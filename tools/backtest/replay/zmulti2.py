@@ -82,6 +82,16 @@ def baseline(i):
     if days[i] in BHAV:
         for s_,(cl_,tv_,pc_) in BHAV[days[i]].items():
             if s_ in S and pc_>0: b['lastClose'][s_]=pc_
+    fr={}  # SHADOW R3: last 5 daily returns from NSE official close/prev_close (minute closes if no NSE file)
+    for s in S:
+        r=[]
+        for k,x in enumerate(prev[-5:]):
+            if x in BHAV and s in BHAV[x] and BHAV[x][s][2]>0: r.append(BHAV[x][s][0]/BHAV[x][s][2]-1)
+            else:
+                j=days.index(x)
+                if j>0 and s in stats[x] and s in stats.get(days[j-1],{}) and stats[days[j-1]][s][1]>0: r.append(stats[x][s][1]/stats[days[j-1]][s][1]-1)
+        if len(r)==5: fr[s]=[round(v,5) for v in r]
+    b['fadeDret']={'ret':fr}
     return b
 def liquid(b): return {s for s,v in b['turnover'].items() if np.median(v)>=25}
 def write_ticks(path,dd,syms,smooth,until,nifty_proxy):

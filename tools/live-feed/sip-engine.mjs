@@ -27,11 +27,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { SmartWarn } from './smart-warn.mjs'
 import { LateShadow } from './late-shadow.mjs'
+import { FadeShadow } from './fade-shadow.mjs'
 import { PreopenShadow } from './preopen-shadow.mjs'
 import { BreadthShadow } from './breadth-shadow.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, preopenShadow: true, withBreadth: true, breadthBuyMin: 0, breadthSellMax: 100,
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, fadeShadow: true, preopenShadow: true, withBreadth: true, breadthBuyMin: 0, breadthSellMax: 100,
   fastDropR: 0.5, fastSec: 60, stallMin: 10, stallBest: 0.5, // X3g FAST DROP + X3h STALL (owner 'do it' 27 Oct 16:43)
   protectAt: 0.8, protectFrac: 0.5, // P8 PROFIT PROTECT (owner 'do it' 5 Nov 21:57)
   trapPct: 0.2, trapMode: 'skip', trapSide: 'BOTH', qsBigRvol: 10, officialOpen: true } // BASE RULES LIVE (owner 10 Nov 00:40 'remove v9 that 2 filters I want trade all days for paper trade'): V9's 2 filters removed - minRvol 10->3 (stocks in play low bar), breadth 60/40 -> 0/100 (breadth still recorded, never blocks). Undo = V9: minRvol 10, breadthBuyMin 60, breadthSellMax 40 // V9 (Claude, rule 0e, 9 Nov 01:55 IST): minRvol 3->10 + breadth 45/55->60/40. Replay 2026 (209d): -41,566/90 losing days -> +11,315/16; 2025 unseen (247d): -24,230/111 -> +850/34. Undo: minRvol 3, breadthBuyMin 45, breadthSellMax 55 // DON'T CHASE + 1.5x ONLY AT >=10x VOLUME (owner 'Do it' 8 Nov 23:45): 2026 replay 209 days -61,706 -> -41,566, losing days 125 -> 90 // P8 PROFIT PROTECT (owner 'do it' 5 Nov 21:57): at +0.8R stop locks half the best profit until +1R. Ticks 22-30 Oct: +10,165 vs +8,719, losing days 2 vs 5
@@ -86,6 +87,7 @@ export class SipEngine {
     if (!this.day) { this.day = istDay(ts); this.restore() }
     if (this.r.lateShadow && this.shadow === undefined) { try { this.shadow = new LateShadow({ dataDir: this.dataDir, sw: this.sw, baseline: this.baseline, day: this.day }) } catch { this.shadow = null } }
     this.makePre()
+    if (this.r.fadeShadow && this.fade === undefined) { try { this.fade = new FadeShadow({ dataDir: this.dataDir, day: this.day, baseline: this.baseline }) } catch { this.fade = null } } // SHADOW R3 (10 Nov, step 2): virtual trades only
     const sec = istSec(ts), p = tick.price
     if (!(p > 0)) return ev
     if (this.r.proveRs != null || this.r.noChase || this.r.breadthRise) { (this.lastPx ??= new Map()).set(sym, p); if (this.bSeeded) { const b = this.breadth(); if (b != null) (this.bHist ??= new Map()).set(istHM(ts), b) } } // TEST 1 Nov (off)
@@ -102,6 +104,7 @@ export class SipEngine {
       return ev
     }
     ev.push(...this.onTimer(ts))
+    if (this.fade) { try { this.fade.onTick(sym, p, ts, sec) } catch { this.fade = null } }
     const t = this.trades.get(sym)
     if (tick.totBuy > 0 && tick.totSell > 0) this.bookNow.set(sym, tick.totBuy / tick.totSell)
     if (tick.upCkt > 0 || tick.loCkt > 0) this.ckt.set(sym, { up: tick.upCkt, lo: tick.loCkt })
@@ -206,6 +209,7 @@ export class SipEngine {
     cand.sort((a, b) => b.rvol - a.rvol)
     this.gapSkipped = gapSkipped.sort((a, b) => b.rvol - a.rvol)
     this.picks = cand.slice(0, this.r.topK).map((p) => ({ ...p, book0: this.bookNow.get(p.sym) ?? null })); this.status = 'picked'; this.save()
+    if (this.fade) { try { this.fade.onPicks([...cand, ...gapSkipped].sort((a, b) => b.rvol - a.rvol).slice(0, this.r.topK).map((c) => ({ sym: c.sym, rvol: c.rvol, price: this.or.get(c.sym)?.last })), ts) } catch { this.fade = null } } // SHADOW R3: same picks as replay S-RAW (before the gap filter)
     if (this.r.oneSidedHalf && this.picks.length >= 3) { const nb = this.picks.filter((p) => p.dir === 'BUY').length, share = Math.max(nb, this.picks.length - nb) / this.picks.length; this.oneSided = share >= this.r.oneSidedHalf ? (nb * 2 > this.picks.length ? 'BUY' : 'SELL') : null } // TEST 31 Oct
     if (this.r.trapPct || this.r.sectorRel) { // TEST 7 Nov: market + sector move over the first 5 minutes
       const n = this.or.get('NIFTY'); let a = 0, k = 0; const sm = new Map()
@@ -404,10 +408,12 @@ export class SipEngine {
     let late = null, pre = null; try { late = this.shadow ? this.shadow.summary() : null } catch {}
     try { pre = this.pre ? this.pre.summary() : null } catch {}
     let bsk = null; try { bsk = this.bshadow ? this.bshadow.summary() : null } catch {}
-    return { n, net, wins: w, picks: this.picks?.length ?? 0, status: this.status, late, pre, breadthSkipped: bsk }
+    let fade = null; try { fade = this.fade ? this.fade.summary() : null } catch {}
+    return { n, net, wins: w, picks: this.picks?.length ?? 0, status: this.status, late, pre, breadthSkipped: bsk, fade }
   }
   // after the close: add today's opening-range volume and turnover to the baseline (keeps the last 10 days)
   updateBaseline() {
+    try { if (this.fade) { this.fade.closeAll((s) => this.cum.get(s)?.price, Date.now()); this.fade.endDay(this.cum) } } catch {} // SHADOW R3 daily returns
     if (!this.or.size || this.baseline.days?.includes(this.day)) return false
     const b = this.baseline; b.first5 ??= {}; b.turnover ??= {}; b.days ??= []
     for (const [sym, o] of this.or) {

@@ -1733,3 +1733,16 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - Losing days 39-50%.
 - Mirror (BUY if 5-day fall >=7.6%): +0.28%/+0.17% after cost, but only 50% right -> candidate only.
 - Ideas tried today: 8 (7 rules + 1 model). Pending: tick days, full engine run, 2017-21 final exam.
+
+## 10 Nov 15:15 - INSTALLED ON LAPTOP: SHADOW TRACK R3 (logging only; the BASE paper trades are unchanged) - owner told the same day (rule 0f)
+- New file tools/live-feed/fade-shadow.mjs. Engine hooks in sip-engine.mjs (option fadeShadow: true).
+- What it does: at 09:20 it takes the top-10 stocks in play (before the gap filter = replay S-RAW picks). If a stock's 5-day rise is >=7.6% -> VIRTUAL SELL at that price; exit at 15:14 or at a 3% stop; Rs 1 lakh per trade, same costs as the engine.
+- Writes data\fade-shadow-DATE.csv; the day summary has a 'fade' entry.
+- Daily returns live in data\fade-dret.json: seeded from NSE bhav close/prev_close 26 Oct-9 Nov; updated after each close.
+- Checks done:
+  - Replay of 5 days with the new engine: BASE and RAW trades identical to before.
+  - Fade trades match the analysis 12/12 stocks.
+  - Live-path smoke test on the real 9 Nov ticks works (that day R3 = 2 stops, -6,345).
+  - Laptop files verified byte-equal; laptop engine equalled repo HEAD before the change.
+- Replay: z/zmulti2.py baseline now carries fadeDret (last 5 NSE daily returns).
+- Undo: set fadeShadow: false in sip-engine.mjs, or copy D:\intraday\live-feed\sip-engine-before-fade.mjs over sip-engine.mjs.
