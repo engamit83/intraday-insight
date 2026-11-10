@@ -58,6 +58,7 @@ NOT NOW: P7 rvol>=2 with breadth (9 history days +30R but 7 tick days -359 -> wa
 NEXT: daily 15:45 reviews 2-13 Nov + Saturdays 7 and 14 Nov scheduled; Zerodha history = the way to prove W1/P7/direction rules on years.
 
 ## ✅ DAILY + WEEKLY REVIEW CHECKLIST (owner 26 Oct 21:20 - every 15:45 review and every Saturday review MUST do all of this)
+**FROM 11 NOV: report THREE tracks side by side every day - BASE (live paper), V9 (would-have), and SHADOW R3 (data\fade-shadow-DATE.csv / day summary 'fade': SELL at 09:20 the picks whose 5-day rise is >=7.6%, exit 15:14 or 3% stop, Rs 1 lakh each). Day + running totals + losing days for each. Check data\fade-dret.json lastDay = today after the close.**
 Besides trades / B failures / Stock X / shadows / rule-0 metrics, check the 6 RULE CANDIDATES **separately, every day**, with numbers (tool: tools/backtest/v5/daytype.py,
 breadth_test.py; live day from data\candles-DATE.csv + sip-trades-DATE.csv), and report each one in its own line:
 - R1 BREADTH 09:20: breadth % up at 09:20; each trade with/against it; result of with vs against; what 0.5x size against breadth would have changed (Rs).
