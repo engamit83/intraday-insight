@@ -1802,3 +1802,5 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - Fast-drop 0.7R / 1.0R: +5,080 / +4,926, 6 losing days -> keep 0.5R.
   - Stop tighten to 0.5R: +7,562, 5 losing days, worst -3,005 -> keep 0.3R.
   - PROPOSAL (not installed): P8 protectFrac 0.5 -> 0.25. Sample is small (50 trades); re-check daily as tick days grow; owner decides.
+- [TICK] Owner proposal 16:16, P8 keep 10-15%: 10% +9,582; 15% +9,193; 20% +9,294; 25% +9,270; 35% +8,827; 50% (now) +6,897. Losing days 4 and worst -2,355 for all.
+  - 10-25% are equal within noise (they differ only on 30 Oct). Clear gain vs 50%: about +2,300 to +2,700 on 9 days.
