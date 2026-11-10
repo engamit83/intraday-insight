@@ -11,9 +11,13 @@ os.makedirs('days',exist_ok=True); os.makedirs('mdays2',exist_ok=True); os.maked
 IST=0  # Kite times are already IST (naive)
 BHAV={}; BOHL={}
 import csv
+_SYMS={os.path.basename(x)[:-4] for x in glob.glob(NPZ+'/*.npz')}
+_Y=''.join(ch for ch in os.path.basename(NPZ.rstrip('/')) if ch.isdigit())[:4] or '2026'
+_D0=f'{int(_Y)-1}-11-01'; _D1=f'{int(_Y)+1}-01-31'   # only this year (+2 months before for the baseline)
 with open('/mnt/user-data/uploads/live-feed/data/history-news/bhav-compact.csv') as fh:
     r=csv.reader(fh); next(r)
     for row in r:
+        if row[1] not in _SYMS or not (_D0<=row[0]<=_D1): continue
         try:
             d_,sym,cl,pc,tv,dp,op,hi,lo,la=row
             dd_=(dt.date.fromisoformat(d_)-dt.date(1970,1,1)).days
@@ -35,7 +39,7 @@ def unadjust(sym,t,o,h,l,c,v):
         if abs(f-1)>0.002:
             o[m]*=f; h[m]*=f; l[m]*=f; c[m]*=f; ADJ['fixed']+=1
             if abs(f-1)>0.05: v[m]/=f            # split/bonus: volume adjusted too
-    return o,h,l,c,v
+    return [x.astype('float32') for x in (o,h,l,c,v)]
 def load():
     S={}
     for f in sorted(glob.glob(NPZ+'/*.npz')):
