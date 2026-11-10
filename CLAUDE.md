@@ -35,11 +35,24 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > **RULE 0f - TELL THE OWNER EVERY CHANGE (owner 9 Nov 00:19, "make it ur rule, I shd know all things"):** every change Claude makes - live rule, engine/code,
 > laptop files, scheduled tasks, data, test findings that matter - is reported to the owner right away in a short message (what, why, numbers, how to undo),
 > and logged in PROGRESS.md. Nothing is changed silently.
-> **RULE 0g - PROPOSE ONLY, OWNER DECIDES AT NIGHT (owner 9 Nov 12:04, replaces 0e):** "suggest all rules, dnt make those rules live". Claude keeps working
+> **RULE 0g - (REPLACED by 0j on 10 Nov 10:27)** PROPOSE ONLY, OWNER DECIDES AT NIGHT (owner 9 Nov 12:04, replaces 0e): "suggest all rules, dnt make those rules live". Claude keeps working
 > on the intent all day (tests, analysis, smart decisions), but makes NO live rule change. Every night Claude sends ONE short summary of all findings and
 > proposed rules with numbers; the owner works with Claude about 1 hour at night and decides. Live rules change only with the owner's "do it".
-> **RULE 0h - TWO TRACKS, NEVER MIXED (owner 9 Nov 12:06-12:08, "remember this A and B"):** Track A = per-scenario rules on top of the locked V9 base;
+> **RULE 0h - (MERGED into THE PLAN v2 on 10 Nov)** TWO TRACKS, NEVER MIXED (owner 9 Nov 12:06-12:08, "remember this A and B"):** Track A = per-scenario rules on top of the locked V9 base;
 > Track B = improving V9 itself (no loss first, then more profit) -> candidate V10. Separate names (A-/B-), files and summary sections. Results every night.
+
+> **RULE 0j - AUTO MODE + SELF-CHECKING LOOP (owner 10 Nov 10:27: "create a loop to achieve it ... not such a loop that even if it doesn't achieve it u remain in loop ... think where u are wrong, are ur basics correct ... like v9 and v10 where ur direction was wrong but u kept improving ... work on auto mode where u dnt need me"):**
+> BASICS OF EVERY TEST: (1) measure correctly first (replay = live; check daily); (2) write the idea + pass mark BEFORE testing; (3) judge AFTER costs;
+> (4) out-of-sample: build 2022-24, check 2025-26 + all real tick days + live paper; 2017-21 locked = final exam, used once; (5) enough trades (~100+);
+> (6) steady every year > one big total, simple > complex; (7) count ideas tried - more tries = stricter bar (luck).
+> THE LOOP, each round: GOAL (which scorecard number moves) -> BASICS CHECK (replay still = live? does the part being improved have any edge at all?)
+> -> DIAGNOSIS (why losers lose, from data) -> TEST (by the basics) -> DECIDE (keep/reject, log both) ->
+> ESCAPE RULE: 3 failed rounds in a row, or gains smaller than noise -> STOP tuning, go one level up and question the assumption itself
+> (direction signal, stock selection, strategy idea). Never keep polishing a weak base.
+> AUTO MODE: Claude runs this loop alone all day (tests, fixes, data, replay) without asking. Live PAPER rule changes: Claude decides, only when a change
+> passes all four checks (2022-24, 2025-26, tick days, live paper where available) + an independent re-check, installed outside market hours,
+> owner told the same day (what, numbers, undo) and logged (rule 0f). Real money: never - owner only.
+> NIGHTLY SCORECARD (fixed, in PROGRESS.md): per year net before/after costs, losing days, worst day, direction accuracy, trades; replay-vs-live gap; plan step.
 
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
