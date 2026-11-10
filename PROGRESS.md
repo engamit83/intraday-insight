@@ -1804,3 +1804,12 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - PROPOSAL (not installed): P8 protectFrac 0.5 -> 0.25. Sample is small (50 trades); re-check daily as tick days grow; owner decides.
 - [TICK] Owner proposal 16:16, P8 keep 10-15%: 10% +9,582; 15% +9,193; 20% +9,294; 25% +9,270; 35% +8,827; 50% (now) +6,897. Losing days 4 and worst -2,355 for all.
   - 10-25% are equal within noise (they differ only on 30 Oct). Clear gain vs 50%: about +2,300 to +2,700 on 9 days.
+
+## 10 Nov 17:55 - MAKE OLD DATA = LIVE: the minute-close proof test (owner 17:01-17:34) [TICK]
+- Idea: if every decision happens at minute ends, old data and live see the same inputs. Proof gate: the same engine on (A) live ticks cut to minute ends vs (B) Zerodha candles must give the same trades; only then run 5 years.
+- Result on 8 tick days (9 Nov excluded: its candles were built from our own ticks):
+  - Picks same 54/72; trades same 33/53; A +12,130 vs B +2,271 -> NOT EQUAL, gate closed.
+- Cause 1: only 86-93% of minute-end prices are identical. The Sharekhan feed samples trades with a delay; Zerodha records every trade.
+- Cause 2: live day_volume includes pre-open volume (A/B 1.04-1.05); subtracting the 09:15:00 tick volume gives 0.95-0.98.
+- Proposed fix: record a Zerodha Kite websocket feed next to Sharekhan (recording only), then re-run the gate on Kite days. Asked the owner (token / morning login).
+- Scripts: tools/backtest/replay/mcbuild.py, mccmp.py.
