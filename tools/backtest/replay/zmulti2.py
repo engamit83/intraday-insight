@@ -9,13 +9,42 @@ D0=sys.argv[4] if len(sys.argv)>4 else '0000'; D1=sys.argv[5] if len(sys.argv)>5
 ENG='/home/claude/intraday-insight/tools/live-feed/sip-engine.mjs'; RP='/home/claude/work/rp.mjs'
 os.makedirs('days',exist_ok=True); os.makedirs('mdays2',exist_ok=True); os.makedirs('tmp',exist_ok=True)
 IST=0  # Kite times are already IST (naive)
+BHAV={}; BOHL={}
+import csv
+with open('/mnt/user-data/uploads/live-feed/data/history-news/bhav-compact.csv') as fh:
+    r=csv.reader(fh); next(r)
+    for row in r:
+        try:
+            d_,sym,cl,pc,tv,dp,op,hi,lo,la=row
+            dd_=(dt.date.fromisoformat(d_)-dt.date(1970,1,1)).days
+            BHAV.setdefault(dd_,{})[sym]=(float(cl),float(tv),float(pc)); BOHL[(dd_,sym)]=(float(hi),float(lo))
+        except ValueError: pass
+print('bhav days',len(BHAV),file=sys.stderr)
+ADJ={'days':0,'fixed':0}
+def unadjust(sym,t,o,h,l,c,v):
+    # 10 Nov: Zerodha minute history is back-adjusted for corporate actions; scale each day to NSE's official high/low = real traded prices
+    d=t//1440; o,h,l,c,v=[x.astype('float64').copy() for x in (o,h,l,c,v)]
+    for dd in np.unique(d):
+        k=BOHL.get((int(dd),sym))
+        if not k: continue
+        m=d==dd; mh=h[m].max(); ml=l[m].min()
+        if mh<=0 or ml<=0: continue
+        f1,f2=k[0]/mh,k[1]/ml; ADJ['days']+=1
+        if abs(f1-f2)>0.004: continue           # high/low disagree (partial data) - leave as is
+        f=(f1+f2)/2
+        if abs(f-1)>0.002:
+            o[m]*=f; h[m]*=f; l[m]*=f; c[m]*=f; ADJ['fixed']+=1
+            if abs(f-1)>0.05: v[m]/=f            # split/bonus: volume adjusted too
+    return o,h,l,c,v
 def load():
     S={}
     for f in sorted(glob.glob(NPZ+'/*.npz')):
         z=np.load(f); t=z['t']+IST   # IST minutes
-        S[os.path.basename(f)[:-4]]=(t,z['o'],z['h'],z['l'],z['c'],z['v'])
+        sym=os.path.basename(f)[:-4]; o,h,l,c,v=unadjust(sym,t,z['o'],z['h'],z['l'],z['c'],z['v'])
+        S[sym]=(t,o,h,l,c,v)
     return S
 S=load()
+print('unadjust: checked %d stock-days, fixed %d'%(ADJ['days'],ADJ['fixed']),file=sys.stderr)
 # per stock per day: first-5 volume, close, traded value (Rs cr)
 day_of=lambda t:(t//1440)
 stats={}; alldays=set()
@@ -28,14 +57,6 @@ for s,(t,o,h,l,c,v) in S.items():
         tv=float((c[m]*v[m]).sum()/1e7)
         stats.setdefault(int(dd),{})[s]=(float(f5),float(cl),tv); alldays.add(int(dd))
 
-BHAV={}
-import csv
-with open('/mnt/user-data/uploads/live-feed/data/history-news/bhav-compact.csv') as fh:
-    r=csv.reader(fh); next(r)
-    for d_,sym,cl,pc,tv,dp in r:
-        try: BHAV.setdefault((dt.date.fromisoformat(d_)-dt.date(1970,1,1)).days,{})[sym]=(float(cl),float(tv),float(pc))
-        except ValueError: pass
-print('bhav days',len(BHAV),file=sys.stderr)
 days=sorted(d for d in alldays if (d+3)%7<5)  # Mon-Fri only (1970-01-01 was a Thursday)
 # use OFFICIAL close + turnover where NSE file exists (same inputs as live)
 for dd in days:

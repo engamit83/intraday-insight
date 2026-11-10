@@ -1686,3 +1686,10 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - data\nse-holidays.json = 2026 NSE holidays (add next years here).
   - feed-watchdog.bat: every 5 min, weekdays 09:00-15:30: holiday/weekend -> nothing; no feed -> start; feed log silent > 4 min -> stop + restart. Logs every check to logs\watchdog-DAY.txt.
   - setup-watchdog.bat creates the Windows task "IntradayFeed-Watchdog" - run by Claude 09:44 on the owner's instruction ("u do the watchdog thing"): task created, every 5 min 09:00-15:30 weekdays; first check 09:45 today = SKIP (holiday) - works. Undo: schtasks /Delete /TN "IntradayFeed-Watchdog" /F.
+
+## 10 Nov 10:40 - REPLAY FIX (step 0) - status
+- Official files repacked with open/high/low (bhav-compact.csv, 2019-08..2026-11; earlier years need the old NSE bhavcopy format).
+- Minute history was back-adjusted for corporate actions (INFY ~2.5% until early Nov): replay v2 now scales each stock-day to NSE's official high/low (2026: 5,939 of 103,214 stock-days corrected).
+- MAIN CAUSE of pick mismatch found: live takes the OPEN from its first trade tick (~09:15:02), history has only NSE's OFFICIAL open (pre-open auction). They differ > 0.2% on over half the stocks (CHOLAFIN 23 Oct: 1480 live vs 1500 official). Live's last pre-open price (09:09) = official open for 99% of stocks (9 Nov).
+- With the official open on the tick side, 9 tick days: picks match 78/82 (95%, was 79%), trades 41/45 (91%). Remaining gap = how trades play out inside a minute: minute replay ~Rs 900/day more pessimistic than ticks on these 9 days (mostly trail/stop timing, e.g. J&KBANK 23 Oct, FSL 30 Oct). Selection is now reliable; exit-rule tests must be confirmed on tick days.
+- PROPOSAL (engine option officialOpen, OFF, needs owner 'do it'): live uses the official open (last pre-open price) as the open - then live = history for direction/gap/picks. Undo: officialOpen false.

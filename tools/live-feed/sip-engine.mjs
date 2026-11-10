@@ -90,10 +90,11 @@ export class SipEngine {
     if (!(p > 0)) return ev
     if (this.r.proveRs != null || this.r.noChase || this.r.breadthRise) { (this.lastPx ??= new Map()).set(sym, p); if (this.bSeeded) { const b = this.breadth(); if (b != null) (this.bHist ??= new Map()).set(istHM(ts), b) } } // TEST 1 Nov (off)
     if (Number.isFinite(tick.cum)) this.cum.set(sym, { cum: tick.cum, price: p })
+    if (this.r.officialOpen && sec >= 9 * 3600 + 8 * 60 && sec < this.r.orStart) (this.preOpenPx ??= new Map()).set(sym, p) // PROPOSAL 10 Nov (OFF until owner 'do it'): last pre-open price = NSE official open (99% equal, 9 Nov)
     if (sec >= this.r.orStart && sec < this.r.orEnd) {
       if (this.firstTickSec === null) this.firstTickSec = sec
       let o = this.or.get(sym)
-      if (!o) { o = { open: p, high: p, low: p, last: p, v0: Number.isFinite(tick.cum) ? tick.cum : null, v1: null }; this.or.set(sym, o) }
+      if (!o) { const op = this.r.officialOpen ? (this.preOpenPx?.get(sym) ?? p) : p; o = { open: op, high: Math.max(op, p), low: Math.min(op, p), last: p, v0: Number.isFinite(tick.cum) ? tick.cum : null, v1: null }; this.or.set(sym, o) }
       o.high = Math.max(o.high, p); o.low = Math.min(o.low, p); o.last = p; o.ticks = (o.ticks ?? 0) + 1
       if (Number.isFinite(tick.cum)) { if (o.v0 === null) o.v0 = tick.cum; o.v1 = tick.cum }
       if (this.r.smartExit || this.r.entryBase) { this.sw.onTick(sym, istHM(ts), p, tick.cum); if (tick.totBuy > 0 && tick.totSell > 0) { this.bookNow.set(sym, tick.totBuy / tick.totSell); this.sw.st(sym).book = tick.totBuy / tick.totSell } }
