@@ -1747,3 +1747,13 @@ Replay gap found 10 Nov: tick +4,004 vs minute +712 on 8 tick days; cause = diff
   - Laptop files verified byte-equal; laptop engine equalled repo HEAD before the change.
 - Replay: z/zmulti2.py baseline now carries fadeDret (last 5 NSE daily returns).
 - Undo: set fadeShadow: false in sip-engine.mjs, or copy D:\intraday\live-feed\sip-engine-before-fade.mjs over sip-engine.mjs.
+
+## 10 Nov 15:35 - STEP 2 cont.: what separates R3 winners (R3 subset, split at the 2022-24 median; 23 factors tried -> strict bar)
+- Only 2 factors are stable in both periods: rng5 (first-5-min range) and vixchg.
+- rng5 >= 2.84%: build +0.60% vs -0.01% below; check +0.52% vs +0.18% below. A wide opening range = exhaustion.
+- R3b = R3 + rng5 >= 2.84%, 3% stop:
+  - per year +9k, +50k, +137k, +43k, +109k (all positive).
+  - 22-24 +195k (n 529); 25-26 +152k (n 358).
+  - Worst day -9.4k vs -13k for R3; about half the trades for the same profit.
+  - Losing days 44-51% (still the open problem).
+- Candidate only (shadow R3 logs rng5-relevant data: entry at 09:20 with the 5-min range known). Ideas tried today: 8 + 23 factor splits.
