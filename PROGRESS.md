@@ -2004,3 +2004,19 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - Weak on unseen years and found among 8,632 tries -> CANDIDATE ONLY, not a rule.
 - All other top rules fail on 2025-26.
 - Both sides: the "clean 2% without going against" entry does not exist in these overheated/oversold stocks with minute factors; the reversal is real but needs room.
+
+## 12 Nov 00:15 - SCENARIO S1 (reversal at the day's extreme) - owner 11 Nov 23:31: "make it a rule for both sides, check on live; one entry scenario, not the only entry"
+- RULE S1 (fixed, not tuned):
+  - Stock: 09:20 pick with a 5-day move >=7.6% (up -> SELL, down -> BUY).
+  - Entry: first 1-min bar close 09:20-10:25 where the day's high (sell) / low (buy) was made within the last 30 min and price is >=0.3% off it.
+  - Stop: 0.1% beyond that extreme. Exit: stop or 15:14. Rs 1 lakh per trade.
+- [OLD DATA - hint only] z/s1.py, after costs:
+  - SELL: 2022-24 1,054 trades +0.23%/trade (+243k); 2025-26 660 trades +0.24% (+156k); all 5 years positive (+55k, +9k, +178k, +47k, +109k). Win 39-42%.
+  - BUY: 2022-24 251 trades +0.38% (+94k); 2025-26 263 trades -0.01% (-3k); 2022 and 2026 slightly negative.
+  - BOTH: all 5 years positive (+54k, +19k, +263k, +63k, +90k).
+  - Weak points: wins only ~40% of trades (big winners, small losers); 54-58% of its trade-days lose; worst day -Rs 8-20k; average stop distance 1.8%.
+- CODE (repo, NOT yet on the laptop - link was down at 00:10): tools/live-feed/fade-shadow.mjs (S1 inside the shadow module) + one line in sip-engine.mjs (passes the 5-min high/low).
+  - Records to data\s1-shadow-DATE.csv and the day summary (fade.s1). Virtual trades only; BASE paper trades untouched.
+  - Checks: replay of 5 days -> BASE trades identical; S1 trades close to the study (small differences: 5-day return source near the 7.6% line, entry one tick after the bar close). Live-path smoke test on the real 9 Nov ticks works (that day 2 sells, both stopped, -2,591).
+  - Install: at the next laptop link outside market hours. Undo: copy sip-engine-before-fade.mjs back, or set fadeShadow: false.
+- Method notes from the owner: entry = the first moment the factors are present (no fixed clock times); 09:20 Selection Search may enter before 09:20 when factors are decisive (not started).

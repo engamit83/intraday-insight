@@ -209,7 +209,7 @@ export class SipEngine {
     cand.sort((a, b) => b.rvol - a.rvol)
     this.gapSkipped = gapSkipped.sort((a, b) => b.rvol - a.rvol)
     this.picks = cand.slice(0, this.r.topK).map((p) => ({ ...p, book0: this.bookNow.get(p.sym) ?? null })); this.status = 'picked'; this.save()
-    if (this.fade) { try { this.fade.onPicks([...cand, ...gapSkipped].sort((a, b) => b.rvol - a.rvol).slice(0, this.r.topK).map((c) => { const o = this.or.get(c.sym); return { sym: c.sym, rvol: c.rvol, price: o?.last, rng5: o?.open > 0 ? +((o.high - o.low) / o.open * 100).toFixed(2) : null } }), ts) } catch { this.fade = null } } // SHADOW R3: same picks as replay S-RAW (before the gap filter)
+    if (this.fade) { try { this.fade.onPicks([...cand, ...gapSkipped].sort((a, b) => b.rvol - a.rvol).slice(0, this.r.topK).map((c) => { const o = this.or.get(c.sym); return { sym: c.sym, rvol: c.rvol, price: o?.last, high: o?.high, low: o?.low, rng5: o?.open > 0 ? +((o.high - o.low) / o.open * 100).toFixed(2) : null } }), ts) } catch { this.fade = null } } // SHADOW R3: same picks as replay S-RAW (before the gap filter)
     if (this.r.oneSidedHalf && this.picks.length >= 3) { const nb = this.picks.filter((p) => p.dir === 'BUY').length, share = Math.max(nb, this.picks.length - nb) / this.picks.length; this.oneSided = share >= this.r.oneSidedHalf ? (nb * 2 > this.picks.length ? 'BUY' : 'SELL') : null } // TEST 31 Oct
     if (this.r.trapPct || this.r.sectorRel) { // TEST 7 Nov: market + sector move over the first 5 minutes
       const n = this.or.get('NIFTY'); let a = 0, k = 0; const sm = new Map()
