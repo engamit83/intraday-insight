@@ -1908,3 +1908,10 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - DURING the move, Nifty/sector move the same way: BAJ 64-76%, ANGEL 28-38% (BAJ follows the market more, ANGEL moves more on its own).
 - TYPES: opening drive 41-53%; turn at the day extreme 32-36%; middle 11-27%.
 - CAUTION (to analyse tonight): "turn / at the extreme" is partly built in, because the start is chosen as the best price. Check: similar moments that did NOT become 2% moves are far more frequent (per-minute success only 1-6%). Next: a per-day, first-signal test to see if a usable entry exists.
+
+## 11 Nov 15:00 - REAL 2% ENTRY TEST: confirmed turn (z/turn.py) [OLD DATA - hint only]
+- Rule: 09:20-10:30; day volume >= 1.0x/1.5x normal. BUY when the close is 0.3/0.5/0.8% above the day low (SELL mirror). First trigger per day; stop at the day low/high (>=0.3%); target +2%; else 15:15.
+- Pass mark: >0 after costs in both periods.
+- BAJFINANCE: all 6 variants negative in both periods (-0.05 to -0.13% per trade; win 35-43%).
+- ANGELONE: near break-even. Best: volume 1.5x + confirm 0.5%: 22-24 -0.025%, 25-26 +0.085%; years -27/+25/-5/+6/+8%. NOT a pass (2022 and 2024 negative).
+- => A price-only turn confirmation does not separate real 2% starts from false ones. The candidate missing ingredient is order flow (buy vs sell quantity), which only live ticks carry.
