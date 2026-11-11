@@ -1,8 +1,8 @@
 # Analysis of ev2-SYM.json: every 2% move, when, what was present. Stable = same picture in 2022-24 and 2025-26.
 import json, numpy as np, sys, collections as C
-SYM=sys.argv[1]; J=json.load(open(f'ev2-{SYM}.json')); E=J['events']; B=J['baseline']
+SYM=sys.argv[1]; TAG=sys.argv[2] if len(sys.argv)>2 else ''; J=json.load(open(f'ev2{TAG}-{SYM}.json')); E=J['events']; B=J['baseline']
 P=lambda r: '22-24' if r['day']<'2025' else '25-26'
-print(f'################ {SYM}: 2% MOVES (+2% before -0.4% against), 2022-26 - old data, hint only ################')
+print(f'################ {SYM}: 2% MOVES (+2% clean move), 2022-26 - old data, hint only ################')
 print('\n1) HOW MANY')
 for y in ['2022','2023','2024','2025','2026']:
     e=[x for x in E if x['day'][:4]==y]; dd=C.Counter(x['day'] for x in e); nd=len({b['day'] for b in B if b['day'][:4]==y})

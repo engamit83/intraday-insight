@@ -1,6 +1,6 @@
 # CHECK LOOP for the 2% event study - independent code, raw minutes (not the grid code of ev2.py).
 import json, numpy as np, sys, random
-SYM=sys.argv[1]; random.seed(int(sys.argv[2])); J=json.load(open(f'ev2-{SYM}.json')); E=J['events']; B=J['baseline']
+SYM=sys.argv[1]; random.seed(int(sys.argv[2])); STOP=float(sys.argv[3]) if len(sys.argv)>3 else 0.4; TAG=sys.argv[4] if len(sys.argv)>4 else ''; J=json.load(open(f'ev2{TAG}-{SYM}.json')); E=J['events']; B=J['baseline']
 raw={}
 for y in range(2022,2027):
     q=np.load(f'npz{y}/{SYM}.npz')
@@ -17,7 +17,7 @@ def qualifies(d,m,dr):
         if d*1440+q not in pos: continue
         h,l=R['h'][pos[d*1440+q]],R['l'][pos[d*1440+q]]
         adv=(1-l/e)*100 if dr==1 else (h/e-1)*100; fav=(h/e-1)*100 if dr==1 else (1-l/e)*100
-        if adv>=0.4: return False
+        if adv>=STOP: return False
         if fav>=2.0: return True
     return False
 bad=0
@@ -25,7 +25,7 @@ def check(n,ok,info=''):
     global bad; print(f'  [{"OK" if ok else "MISTAKE"}] {n} {info}'); bad+=not ok
 S=random.sample(E,min(120,len(E)))
 q=sum(not qualifies(dn(e['day']),int(e['time']),e['dir']) for e in S)
-check('every sampled 2% move start really gives +2% before -0.4% (120 random moves)', q==0, f'({q} fail)')
+check('every sampled 2% move start really gives +2% before the stop (120 random moves)', q==0, f'({q} fail)')
 # turning point: the minute before the start, if it also qualifies, must have a worse-or-equal entry price
 tp=0
 for e in S:

@@ -6,7 +6,7 @@
 # and FACTORS: (a) just before the start, (b) the day, (c) the days before, (d) during the move (explanation only, not known at entry).
 # Baseline: every 5th ordinary minute 09:20-14:45 (not inside an event) with the same factor set, for comparison.
 import numpy as np, sys, json, os
-SYM, SEC = sys.argv[1], sys.argv[2]; T, STOP = 2.0, 0.4
+SYM, SEC = sys.argv[1], sys.argv[2]; T, STOP = 2.0, float(sys.argv[3]) if len(sys.argv)>3 else 0.4; TAG = sys.argv[4] if len(sys.argv)>4 else ''
 NW=json.load(open('fac/news.json')); G=json.load(open('fac/global.json'))
 def load(name):
     T_={k:[] for k in 'tohlcv'}
@@ -106,5 +106,5 @@ for k,d in enumerate(dl):
         if not used[i]:
             for dr in (1,-1):
                 f=factors(i,dr); f.update(day=iso(d),dir=dr,size=RUN[dr][i],mins_to_2pct=0,cluster_len=0); BL.append(f)
-json.dump({'events':EV,'baseline':BL},open(f'ev2-{SYM}.json','w'),default=lambda o: o.item() if hasattr(o,'item') else str(o))
+json.dump({'events':EV,'baseline':BL},open(f'ev2{TAG}-{SYM}.json','w'),default=lambda o: o.item() if hasattr(o,'item') else str(o))
 print(SYM,'events',len(EV),'on days',len({e['day'] for e in EV}),'baseline moments',len(BL))

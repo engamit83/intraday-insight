@@ -1915,3 +1915,20 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - BAJFINANCE: all 6 variants negative in both periods (-0.05 to -0.13% per trade; win 35-43%).
 - ANGELONE: near break-even. Best: volume 1.5x + confirm 0.5%: 22-24 -0.025%, 25-26 +0.085%; years -27/+25/-5/+6/+8%. NOT a pass (2022 and 2024 negative).
 - => A price-only turn confirmation does not separate real 2% starts from false ones. The candidate missing ingredient is order flow (buy vs sell quantity), which only live ticks carry.
+
+## 11 Nov 15:30 - CLEAN 2%+ MOVES (owner 14:45: at least 2% without coming back to the buy price; tolerance 0.05%) [OLD DATA - hint only]
+- Check loop: 2 clean rounds. Strict 0.00% tolerance gives almost the same counts (BAJ 432, ANGEL 1,376).
+- BAJFINANCE: 453 moves on 398 of 1,175 days (24-45% of days per year); median full move 2.6%; median 133 min to +2%; 45-47% start 09:20-09:35.
+- ANGELONE: 1,498 moves on 873 days (70-80% per year; 2+ moves on 81-97 days a year); median 3.0%; 57 min; 35-39% start 09:20-09:35.
+- Factors at the start (both stocks, both periods):
+  - first 30 min x5-6;
+  - turn (15 min before going the other way) x3-4;
+  - at the day's extreme against x2.6-3.3;
+  - day volume >1.5x x2.3-2.9;
+  - Nifty last 15 min against x2-2.9;
+  - 15-min volume >2x x1.6-2;
+  - results day (BAJ) x2.3-2.5;
+  - volatile lately x1.3-1.5.
+- No effect: gap, yesterday, 5-day trend, news, US night, breakouts.
+- During the move, Nifty/sector move the same way in BAJ 67-81% (ANGEL 28-38%).
+- Spreadsheet of every move: clean-2pct-moves-v2.xlsx (sent to the owner).
