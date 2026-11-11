@@ -1965,3 +1965,9 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - BAJFINANCE: at moves the order flow was WITH the move (day buy-sell share +0.11, book imbalance +0.12, vs 0 at other minutes).
   - ANGELONE: no difference.
   - Too few to make a rule; record daily.
+- 11 Nov 18:15 YEARS vs LIVE comparison (owner 17:28):
+  - Pre-defined "momentum with the market" rule (<=10:25, moved our way, near the day's extreme our way, Nifty our way), not mined:
+    - YEARS: loses every year (BAJ -0.05 to -0.20%/trade; ANGEL -0.03 to -0.19%).
+    - LIVE 9 days: positive (BAJ 7 trades +0.26%, with buyers stronger +0.60%; ANGEL +0.72% / +0.95%).
+  - => Live and years disagree; 7 trades of live is luck-sized (up-trend days). The only factor agreeing everywhere is TIME (09:20-10:25).
+  - BAJ buyer pressure: a candidate, not proven.
