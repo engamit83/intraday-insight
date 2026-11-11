@@ -1951,3 +1951,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - BAJ best: near 20-day extreme + sector strong since open + sector dipping last 15 min: 22-24 +0.23%/trade (114), 25-26 +0.007% (71). Technically passes, but about 0 on unseen years -> NOT real given the number of tries.
   - ANGEL: best 2022-24 rules +0.39 to +0.53%/trade ALL fail on 2025-26 (-0.18 to -0.34%) -> over-fitting, rejected.
 - Same or different: DIFFERENT. BAJ = market/sector-driven momentum stock (factors measurable). ANGEL = stock-specific (minute factors explain little; only time of day) -> probably needs order flow / news detail.
+
+## 11 Nov 18:00 - LIVE-TICK RULE TEST with ORDER FLOW (owner 17:02) - all ~515 stocks x 9 tick days [TICK, small sample]
+- z/tf.py: per tick, buyer/seller-initiated volume (price vs previous bid/offer), book imbalance, spread. Per minute x direction: of5/of15/ofDay (buy-sell share), bookImb, spread, mom15, fromOpen, posInDay, vol15rel, range, time. Outcome as before.
+- Build = 22-28 Oct (5 days), check = 29 Oct-9 Nov (4 unseen days).
+- Alone:
+  - order flow (of5/of15/ofDay) has NO consistent link to clean 2% moves;
+  - wider spread x2 (more volatile stocks); big early range x1.4-1.6;
+  - time strongest (09:20-10:25: 2.9%/2.3% vs after 13:40 0.5%/0.4%).
+- Rules (3,630 tried): best build +0.39%/trade -> check +0.02% (days +57/-88/+43/+12) => NOT real.
+  - Partly an artifact: with no direction condition the first signal is a buy at 09:20, so it rode market direction.
+- The 2 stocks (13 moves only):
+  - BAJFINANCE: at moves the order flow was WITH the move (day buy-sell share +0.11, book imbalance +0.12, vs 0 at other minutes).
+  - ANGELONE: no difference.
+  - Too few to make a rule; record daily.
