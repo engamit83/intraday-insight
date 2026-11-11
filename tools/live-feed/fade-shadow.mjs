@@ -17,7 +17,7 @@ import path from 'node:path'
 //   Exit: stop or 15:14. Rs 1 lakh, same costs. Old data 2022-26 (z/s1.py, hint only): sell +0.23%/trade in both periods, all 5 years positive;
 //   buy +0.38% (2022-24) / -0.01% (2025-26). Wins ~40% of trades (big winners, small losers); about 55% of its trade-days lose.
 //   File data\s1-shadow-DATE.csv. Virtual only - never touches the BASE paper trades.
-export const S1 = { ret5Min: 7.6, fromBar: 560, toBar: 625, extMaxAge: 30, offMin: 0.3, stopBeyond: 0.1 }
+export const S1 = { buySide: false, /* owner 11 Nov 23:41: SELL only (buy side removed; set true to bring it back) */ ret5Min: 7.6, fromBar: 560, toBar: 625, extMaxAge: 30, offMin: 0.3, stopBeyond: 0.1 }
 export const FADE = { ret5Min: 7.6, stopPct: 3, exitSec: 15 * 3600 + 14 * 60, notional: 100000, slipPct: 0.02, costPct: 0.10628, days: 5 }
 const istClock = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(11, 19)
 
@@ -36,7 +36,7 @@ export class FadeShadow {
   // picks: [{sym, rvol, price}] at 09:20
   onPicks(picks, ts) {
     if (!this.s1.size) for (const p of picks) { // S1 candidates (both sides)
-      const r5 = this.ret5(p.sym); if (r5 == null || Math.abs(r5) < S1.ret5Min || !(p.price > 0)) continue
+      const r5 = this.ret5(p.sym); if (r5 == null || Math.abs(r5) < S1.ret5Min || !(p.price > 0) || (r5 < 0 && !S1.buySide)) continue
       const dir = r5 > 0 ? 'SELL' : 'BUY', ext = dir === 'SELL' ? (p.high ?? p.price) : (p.low ?? p.price)
       this.s1.set(p.sym, { sym: p.sym, dir, ret5: +r5.toFixed(2), rvol: p.rvol, ext, extBar: 555, lastPx: p.price, lastBar: 559 })
     }

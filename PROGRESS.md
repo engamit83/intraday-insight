@@ -2020,3 +2020,8 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - Checks: replay of 5 days -> BASE trades identical; S1 trades close to the study (small differences: 5-day return source near the 7.6% line, entry one tick after the bar close). Live-path smoke test on the real 9 Nov ticks works (that day 2 sells, both stopped, -2,591).
   - Install: at the next laptop link outside market hours. Undo: copy sip-engine-before-fade.mjs back, or set fadeShadow: false.
 - Method notes from the owner: entry = the first moment the factors are present (no fixed clock times); 09:20 Selection Search may enter before 09:20 when factors are decisive (not started).
+
+## 12 Nov 00:30 - OWNER DECISIONS 11 Nov 23:41 -> S1 SELL ONLY + RULE 0l (enter at the first moment, 09:20 only as fallback)
+- S1 buy side removed (S1.buySide false in fade-shadow.mjs; undo = true).
+- Finding: 85% of S1 entries fire at the first allowed bar (09:20), 14% at 09:21-09:25 -> the turn usually exists BEFORE 09:20, so starting earlier matters.
+- Next: S1-EARLY test on old data (all stocks with a 5-day rise >=7.6%, active from the first minutes, entry from 09:16) before any code change.

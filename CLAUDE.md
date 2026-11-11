@@ -61,6 +61,11 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 >    a live rule change needs the shadow to prove itself on live tick days first.
 > 4. Every proposal states its evidence type: [TICK] or [OLD DATA - hint only].
 
+> **RULE 0l - ENTRY METHOD: DECIDE AS EARLY AS POSSIBLE (owner 11 Nov 23:14-23:41):** every entry rule/scenario is checked from the market open (09:15),
+> and we enter at the FIRST MOMENT its conditions are realised (not at fixed clock times, not "every minute" as a schedule). Only if it cannot be decided
+> before 09:20 does the decision fall back to 09:20. Each scenario (S1, ...) is ONE way to enter, recorded separately; no scenario is the only entry.
+> A good entry = the price then moves >=2% our way without coming back to the entry price - that is what every entry study measures.
+
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
