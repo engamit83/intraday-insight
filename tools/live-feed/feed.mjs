@@ -20,6 +20,7 @@ import { SipEngine } from './sip-engine.mjs'
 import { dailyReport } from './daily-report.mjs'
 import { DayRecorder } from './recorder.mjs'
 import { spawn } from 'node:child_process'
+import { kiteLogin, kiteInstruments, parseKiteBinary } from './kite-ticks.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
@@ -104,6 +105,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 function scrub(text) {
   let s = String(text)
   if (accessTokenInUse) s = s.split(accessTokenInUse).join('***')
+  if (process.env.KITE_API_KEY) s = s.split(process.env.KITE_API_KEY).join('***')
   return s.split(FEED_TOKEN).join('***')
 }
 
@@ -244,9 +246,111 @@ async function flushMoves() {
 
 const stats = { messages: 0, unreadable: 0, lastMessageAt: 0, lastPriceAt: 0, sessionStartAt: 0, symbolLastTick: new Map() }
 
+// ---------- Zerodha (Kite) live prices ----------
+const APP_SYMBOLS_FILE = path.join(process.env.RECORD_DIR || path.join(here, 'data'), 'app-symbols.json') // the app's stock list, remembered from the last Sharekhan session (tests: RECORD_DIR)
+const KITE_WS = process.env.KITE_WS_URL || 'wss://ws.kite.trade'
+const KITE_API = process.env.KITE_API_URL || 'https://api.kite.trade'
+let kiteBadUntil = 0 // after Zerodha refuses the login we try Sharekhan for 2 minutes before asking Zerodha again
+async function runKiteSession(login) {
+  accessTokenInUse = login.token
+  // stock list = the stocks-in-play baseline (same list as the history download) + record-extra.csv (more stocks + indices)
+  const wanted = new Set()
+  try { for (const k of Object.keys(JSON.parse(fs.readFileSync(path.join(here, 'data', 'sip-baseline.json'), 'utf8')).turnover ?? {})) wanted.add(k) } catch { /* no baseline yet */ }
+  for (const sym of loadExtras().values()) wanted.add(sym)
+  let appList = null
+  try { appList = JSON.parse(fs.readFileSync(APP_SYMBOLS_FILE, 'utf8')) } catch { /* not remembered yet */ }
+  for (const sym of appList ?? []) wanted.add(sym)
+  if (wanted.size === 0) throw new Error('No stock list on this laptop for Zerodha (data\\sip-baseline.json and record-extra.csv missing).')
+  let tokenToSymbol
+  try { tokenToSymbol = await kiteInstruments(here, login, wanted, { apiBase: KITE_API }) }
+  catch (e) { if (e.kite403) { kiteBadUntil = Date.now() + 120_000; say('! Zerodha refused the login. Run kite-login.bat again (double-click) and log in. Trying Sharekhan meanwhile.') } throw e }
+  if (tokenToSymbol.size === 0) throw new Error('Zerodha: none of our stocks found in its instrument list.')
+  uploadSymbols = new Set(appList ?? []) // only the app's own list goes to the database; if not remembered yet, nothing is uploaded (trading and recording still run)
+  say(`Zerodha: watching ${tokenToSymbol.size} stocks/indices (${wanted.size - tokenToSymbol.size} names not found at Zerodha).${appList ? '' : ' App stock list not remembered yet - candles are not uploaded to the app today.'}`)
+  const tokens = [...tokenToSymbol.keys()]
+  const ws = new WebSocket(`${KITE_WS}?api_key=${encodeURIComponent(login.key)}&access_token=${encodeURIComponent(login.token)}`)
+  await new Promise((resolve) => {
+    let timers = [], opened = false
+    const stopTimers = () => { timers.forEach(clearInterval); timers = [] }
+    ws.on('open', () => {
+      stats.sessionStartAt = Date.now(); opened = true; stats.lastMessageAt = Date.now()
+      say('Connected to Zerodha live feed.')
+      for (let i = 0; i < tokens.length; i += 500) { // subscribe in blocks, mode "full" = price + volume + best bid/offer
+        const part = tokens.slice(i, i + 500)
+        ws.send(JSON.stringify({ a: 'subscribe', v: part })); ws.send(JSON.stringify({ a: 'mode', v: ['full', part] }))
+      }
+      say('Asked for live prices.')
+      timers.push(setInterval(flush, FLUSH_EVERY_MS))
+      timers.push(setInterval(() => { if (TEST_IGNORE_MARKET_HOURS || inMarketHours(Date.now())) recorder.writeBook(Date.now()) }, BOOK_EVERY_MS))
+      timers.push(setInterval(saveDayFiles, CANDLE_FILE_EVERY_MS))
+      timers.push(setInterval(() => recorder.flushTicks(Date.now()), 2_000))
+      refreshOpenTrades()
+      timers.push(setInterval(refreshOpenTrades, Number(process.env.OPEN_TRADES_EVERY_MS || 60_000)))
+      timers.push(setInterval(sipTimer, 1_000))
+      timers.push(setInterval(flushMoves, 5_000))
+      timers.push(setInterval(() => {
+        const ago = stats.lastMessageAt ? Math.round((Date.now() - stats.lastMessageAt) / 1000) : '?'
+        say(`status (Zerodha): ${stats.messages} messages, ${builder.accepted} prices used, ${builder.symbolsSeen()}/${tokens.length} stocks seen, ${savedRows} candle saves, last message ${ago}s ago`)
+        const m = istMinuteOfDay(Date.now()), since = Date.now() - Math.max(stats.lastPriceAt, stats.sessionStartAt)
+        if ((TEST_IGNORE_MARKET_HOURS || (m >= 9 * 60 + 16 && m < 15 * 60 + 30)) && since > NO_PRICE_RECONNECT_MS) {
+          say(`! No prices for ${Math.round(since / 1000)}s while the market is open - reconnecting.`)
+          try { ws.close() } catch { /* ignore */ }
+          return
+        }
+        if (m >= STOP_AT_MINUTE && !TEST_IGNORE_MARKET_HOURS) ws.close()
+      }, STATUS_EVERY_MS))
+    })
+    ws.on('message', (data, isBinary) => {
+      stats.messages++; stats.lastMessageAt = Date.now()
+      if (!isBinary) { rawLog('KITE-TEXT', data.toString().slice(0, 300)); return } // errors / notices from Zerodha
+      const now = Date.now()
+      for (const t of parseKiteBinary(Buffer.isBuffer(data) ? data : Buffer.from(data))) {
+        const symbol = tokenToSymbol.get(t.token)
+        if (symbol) handleTick(symbol, t, now)
+      }
+    })
+    ws.on('unexpected-response', (_req, res) => {
+      say(`! Zerodha refused the connection (HTTP ${res.statusCode}).` + (res.statusCode === 403 || res.statusCode === 401 ? ' The Zerodha login has expired: run kite-login.bat (double-click) and log in. Trying Sharekhan meanwhile.' : ''))
+      if (res.statusCode === 403 || res.statusCode === 401) kiteBadUntil = Date.now() + 120_000
+    })
+    ws.on('error', (e) => say(`! Connection problem (Zerodha): ${scrub(e.message)}`))
+    ws.on('close', (code) => { stopTimers(); say(opened ? `Disconnected from Zerodha (code ${code}).` : 'Could not connect to Zerodha.'); resolve() })
+    currentStop = () => { stopTimers(); try { ws.close() } catch { /* ignore */ } }
+  })
+}
+
+// One price for one stock -> candles, recorder, stocks-in-play engine, tick exits. Used by BOTH sources (Sharekhan and Zerodha).
+function handleTick(symbol, t, now) {
+  builder.addTick({ symbol, price: t.price, volume: t.volume, cumulativeVolume: t.cumulativeVolume, ts: now })
+  if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) recorder.onTick(symbol, t, now)
+  else { const mm = istMinuteOfDay(now); if (mm >= 9 * 60 && mm < 9 * 60 + 15) { recorder.preOpen(symbol, t, now); if (sip) { try { sip.onPreOpen(symbol, { price: t.price, totBuy: t.totBuy, totSell: t.totSell, prevClose: t.prevClose, cum: t.cumulativeVolume }, now) } catch {} } } } // 25 Oct: pre-open study + virtual trades
+  stats.symbolLastTick.set(symbol, now)
+  if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) sipTick(symbol, t, now)
+  stats.lastPriceAt = now
+  if (TICK_EXITS && tickExits.trades.size && (TEST_IGNORE_MARKET_HOURS || inMarketHours(now))) {
+    for (const ev of tickExits.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask }, now)) {
+      if (ev.kind === 'close') onTickExit(ev)
+      else if (ev.kind === 'stopMoved') {
+        const tr = tickExits.trades.get(ev.id)
+        pendingMoves.set(ev.id, { id: ev.id, stop: ev.to, atBreakeven: !!tr?.atBreakeven, locked: !!tr?.locked, bestExc: tr?.bestExc })
+      }
+    }
+  }
+}
+
 async function runSession() {
+  // 12 Nov (owner: "now all things on zerodha", Sharekhan = backup): use Zerodha when today's Zerodha login exists on this laptop.
+  // FEED_SOURCE in .env: auto (default) | kite | sharekhan.   Undo: FEED_SOURCE=sharekhan
+  const src = (process.env.FEED_SOURCE || 'auto').toLowerCase()
+  if (src !== 'sharekhan' && Date.now() >= kiteBadUntil) {
+    const login = kiteLogin(here)
+    if (login) return runKiteSession(login)
+    if (src === 'kite') throw new Error('No Zerodha login for today on this laptop - run kite-login.bat (double-click) and log in.')
+    say('No Zerodha login for today (kite-login.bat not run yet) - trying Sharekhan as the backup.')
+  }
   say('Getting today\'s Sharekhan login from your database...')
   const info = await gateway('token')
+  try { fs.writeFileSync(APP_SYMBOLS_FILE, JSON.stringify(Object.keys(info.symbols || {}))) } catch { /* cache only */ }
   accessTokenInUse = info.accessToken
   const codeToSymbol = new Map()
   for (const [symbol, code] of Object.entries(info.symbols || {})) codeToSymbol.set(Number(code), symbol)
@@ -351,21 +455,7 @@ async function runSession() {
         if (t.exchange && t.exchange !== 'NC') continue
         const symbol = codeToSymbol.get(t.code)
         if (!symbol) continue
-        builder.addTick({ symbol, price: t.price, volume: t.volume, cumulativeVolume: t.cumulativeVolume, ts: now })
-        if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) recorder.onTick(symbol, t, now)
-        else { const mm = istMinuteOfDay(now); if (mm >= 9 * 60 && mm < 9 * 60 + 15) { recorder.preOpen(symbol, t, now); if (sip) { try { sip.onPreOpen(symbol, { price: t.price, totBuy: t.totBuy, totSell: t.totSell, prevClose: t.prevClose, cum: t.cumulativeVolume }, now) } catch {} } } } // 25 Oct: pre-open study + virtual trades
-        stats.symbolLastTick.set(symbol, now)
-        if (TEST_IGNORE_MARKET_HOURS || inMarketHours(now)) sipTick(symbol, t, now)
-        stats.lastPriceAt = now
-        if (TICK_EXITS && tickExits.trades.size && (TEST_IGNORE_MARKET_HOURS || inMarketHours(now))) {
-          for (const ev of tickExits.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask }, now)) {
-            if (ev.kind === 'close') onTickExit(ev)
-            else if (ev.kind === 'stopMoved') {
-              const tr = tickExits.trades.get(ev.id)
-              pendingMoves.set(ev.id, { id: ev.id, stop: ev.to, atBreakeven: !!tr?.atBreakeven, locked: !!tr?.locked, bestExc: tr?.bestExc })
-            }
-          }
-        }
+        handleTick(symbol, t, now)
       }
     })
 
