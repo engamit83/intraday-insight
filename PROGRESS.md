@@ -1884,3 +1884,27 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - Round 2: CLEAN (good/trade/fromOpen/breakout/VWAP/mom5/mom15/rvol5 re-computed for 300 random minutes each, 0 differences). Rule table re-computed independently: identical.
   - Round 3 (new random sample): CLEAN -> loop stopped.
   - Conclusions unchanged: no entry rule passes; all about -0.1 to -0.2% per trade after costs.
+
+## 11 Nov 15:30 - 2% MOVE EVENT STUDY (owner 14:14) - BAJFINANCE + ANGELONE 2022-26 [OLD DATA - hint only]
+- Move = +2% before -0.4% against (by 15:15). Start = the best-price minute of the move. Several moves per day allowed (a new one needs a >=1% pullback first).
+- CHECK LOOP:
+  - Round 1: MISTAKE, one trend counted up to ~10 times (4 Jun 2024) -> fixed.
+  - Rounds 2 and 3: CLEAN.
+- COUNTS:
+  - BAJ: 479 moves on 414 of 1,175 days (25-46% of days per year); median full move 2.6%; median 130 min to reach +2%.
+  - ANGEL: 1,664 moves on 902 days (72-82% per year; 3+ moves on 17-53 days a year); median 3.0%; 52 min to +2%.
+- START TIME: BAJ 51% at 09:20-09:35 and 70% before 10:00; ANGEL 40-44% at 09:20-09:35 and about 57% before 10:00. Same in both periods.
+- AT THE START (lift vs ordinary moments, both periods, both stocks):
+  - first 30 min x6-7;
+  - turn (15 min before going the other way) x3-4;
+  - at the day's extreme against x3-4;
+  - day volume >1.5x x2.6-3.2;
+  - 15-min volume >2x x1.7-2.2;
+  - Nifty last 15 min against x2-3 (stock turns with/before Nifty);
+  - results day x2.5-2.8;
+  - volatile lately x1.4-1.7;
+  - VIX>=16 (BAJ) x1.5.
+- No effect: gap, yesterday, 5-day trend, news (in general), US night, day-high breakouts (moves rarely start AT a breakout; it is the turn that matters).
+- DURING the move, Nifty/sector move the same way: BAJ 64-76%, ANGEL 28-38% (BAJ follows the market more, ANGEL moves more on its own).
+- TYPES: opening drive 41-53%; turn at the day extreme 32-36%; middle 11-27%.
+- CAUTION (to analyse tonight): "turn / at the extreme" is partly built in, because the start is chosen as the best price. Check: similar moments that did NOT become 2% moves are far more frequent (per-minute success only 1-6%). Next: a per-day, first-signal test to see if a usable entry exists.
