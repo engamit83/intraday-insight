@@ -57,16 +57,19 @@ for k,d in enumerate(dl):
             else:     win=np.nonzero(fl<=e*(1-UP/100))[0]; los=np.nonzero(fh>=e*(1+DN/100))[0]
             w=win[0] if len(win) else 99999; lz=los[0] if len(los) else 99999
             good=int(w<lz)
+            # realistic trade result (owner audit 11 Nov): +UP if target first, -DN if stop first, else exit at 15:15 close
+            eod=(c[end]/e-1)*100*d_
+            tr=UP if good else (-DN if lz<99999 and lz<=w else eod)
             # best move in direction before the stop (how big the move got)
             stop=lz if lz<99999 else len(fh)
             run=((fh[:stop].max()/e-1) if d_==1 else (1-fl[:stop].min()/e))*100 if stop>0 else 0.0
-            rows.append((d,mm[i],d_,good,run,
+            rows.append((d,mm[i],d_,good,run,tr,
                 d_*gap, d_*(c[i]/op-1)*100, d_*(c[i]/c[i-5]-1)*100, d_*(c[i]/c[max(i-15,0)]-1)*100,
                 v5[i]/base[mm[i]-555], int(c[i]>hi[i-1]) if d_==1 else int(c[i]<lo[i-1]),
                 int(c[i]>ph) if d_==1 else int(c[i]<pl), d_*(c[i]/vwap[i]-1)*100, (hi[i]/lo[i]-1)*100,
                 d_*(nc[i]/nc[max(i-15,0)]-1)*100, d_*(nc[i]/nop-1)*100, d_*(xc[i]/xc[max(i-15,0)]-1)*100, d_*(xc[i]/xop-1)*100,
                 d_*prev1, d_*r5, d_*r20, vx, (np.datetime64('1970-01-01')+np.timedelta64(int(d),'D')).astype(object).weekday()))
-cols=['day','mod','dir','good','run','gap','fromOpen','mom5','mom15','rvol5','brkDay','brkPrev','vwapDist','dayRange',
+cols=['day','mod','dir','good','run','trade','gap','fromOpen','mom5','mom15','rvol5','brkDay','brkPrev','vwapDist','dayRange',
       'nifty15','niftyOpen','sector15','sectorOpen','prev1','ret5d','ret20d','vix','weekday']
 A=np.array(rows,dtype=np.float64)
 np.savez_compressed(f'move-{SYM}.npz',A=A,cols=np.array(cols))

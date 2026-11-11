@@ -1854,3 +1854,26 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - Rising volume (rvol5 top fifth): 1.3x. High VIX: 1.4x.
   - Gap, previous-day move, 5/20-day trend: no clear effect.
 - All factors together (GBM built 2022-24, checked 2025-26): best good-rate BAJ 23%, ANGEL 31% -> below 39%. Not tradeable at +1%/-0.4% on these factors alone.
+
+## 11 Nov 12:30 - MOVE STUDY v2, AUDITED (owner 10:52 "be sure about your finds") - BAJFINANCE + ANGELONE 2022-26 [OLD DATA - hint only]
+- Fixes vs v1:
+  - Realistic trade (+1% target / -0.4% stop / else exit 15:15).
+  - One signal per day and direction (no double counting of consecutive minutes).
+  - Added news, results, US night, Asia morning, VIX.
+- Pass mark (written first): first-signal trades average >0 after costs in BOTH periods, n>=60.
+- A) Good moves are common:
+  - BAJ: up on 52-73% of days, down on 60-77%; median run 1.1-1.2%.
+  - ANGEL: up 82-94%, down 92-97%; median run 1.3-1.5%.
+  - Starts: 09h 27-33%, 10h 22-24%, then falling.
+- B) At move STARTS vs other minutes (stable in both periods):
+  - early 09:20-10:25: 37-46% vs 20%.
+  - volume >1.5x normal: 40-50% vs 29-34%.
+  - VIX>=16 (BAJ only): 46% vs 32%.
+  - Results/board day (BAJ only): 5% vs 3%.
+  - Momentum / VWAP / Nifty / sector / gap / news / US / Asia: no difference.
+  - NOTE: starts occur at turning points (last-15-min momentum is slightly AGAINST at starts), which can only be known afterwards.
+- C) Entry rules (break of day high/low, + early, + momentum/VWAP, + volume, + Nifty): NONE PASSES.
+  - All average -0.09% to -0.20% per trade after costs, i.e. about 0 before costs. Win 25-33%.
+- CONCLUSION: for these 2 stocks, price/volume/time/news/global at the minute level give NO entry edge for a +1%/-0.4% trade.
+  - The only lasting edges so far are selection-type (R3: fade stocks up >=7.6% in 5 days).
+  - Next candidates: order flow on tick days (buyers/sellers); other targets/stops; all stocks.
