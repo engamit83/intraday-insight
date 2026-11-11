@@ -1976,3 +1976,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - All -0.05 to -0.18%/trade after costs. Confirmation does not improve any setup; the opposite flow ("sellers stronger") is the same.
   - => Order flow as recorded (Sharekhan ~1 s snapshots, best bid/offer only) does not add an entry edge on these days.
   - No rule for the 2 stocks. Direction stays the unsolved part; R3 (selection/mean-reversion) is still the only edge.
+
+## 11 Nov 23:30 - R3 SUPPORT STUDY, SELL SIDE (owner 22:51-23:02) [OLD DATA - hint only]
+- Data: 1,716 R3 stock-days (09:20 pick with 5-day rise >=7.6%), every minute 09:20-14:45, 27 sell-side factors (z/r3f.py). Check loop: 2 clean rounds.
+- Outcome: clean = falls >=2% without going above the sell price (0.05%); trade = target -2% / stop +0.5% / else 15:15.
+- R3 sold at 09:20 with this tight trade: about 0 after costs (-0.006% / -0.017%), clean 2% on only 6% of trades, win 26%.
+  - => R3's edge (hold to 15:14, 3% stop) is NOT a clean move: these stocks swing up first. R3 needs room.
+- Support factors alone (both periods):
+  - day high made in the last 31 min x1.55; early <=10:25 x1.55;
+  - price ticked UP in the last 3 min x1.3; very high volume (15-min >=11x normal) x1.3;
+  - bigger run (5-day >=18%, 20-day >=28%) x1.25-1.35.
+  - Falling volume and weak Nifty: no help.
+- Rules (8,632 variants tried): the best on 2022-24 (+0.33 to +0.39%/trade) ALL fail on 2025-26 (-0.02 to -0.34%). No rule.
+- Owner's method note 23:18: entry = the first moment the factors are present (not fixed minutes); 09:20 is the fallback.
+- Next: buy side (5-day fall >=7.6%), same study, run separately (owner 23:02).
