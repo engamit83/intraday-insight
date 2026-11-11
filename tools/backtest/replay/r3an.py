@@ -1,8 +1,9 @@
 # R3 + SUPPORT FACTORS -> SELL NOW rule. Build 2022-24, check 2025-26. First signal per R3 stock-day.
 # Trade: sell, target -2%, stop +0.5%, else 15:15; cost 0.146%. Also report CLEAN % (2% fall, never above the sell price).
 # PASS MARK (written first): after costs > 0 in BOTH periods, >= 60 trades each, positive in >= 4 of 5 years; clean % higher than plain R3.
-import numpy as np
-z=np.load('r3f.npz'); A=z['A']; C=list(z['cols']); col=lambda k: A[:,C.index(k)]
+import numpy as np, sys
+BUY=len(sys.argv)>1 and sys.argv[1]=='buy'
+z=np.load('r3fb.npz' if BUY else 'r3f.npz'); A=z['A']; C=list(z['cols']); col=lambda k: A[:,C.index(k)]
 o=np.lexsort((col('time'),col('sd'))); A=A[o]
 sd=col('sd').astype(int); day=col('day').astype(int)
 yr=(np.datetime64('1970-01-01')+day.astype('timedelta64[D]')).astype('datetime64[Y]').astype(int)+1970

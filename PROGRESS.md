@@ -1990,3 +1990,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Rules (8,632 variants tried): the best on 2022-24 (+0.33 to +0.39%/trade) ALL fail on 2025-26 (-0.02 to -0.34%). No rule.
 - Owner's method note 23:18: entry = the first moment the factors are present (not fixed minutes); 09:20 is the fallback.
 - Next: buy side (5-day fall >=7.6%), same study, run separately (owner 23:02).
+
+## 11 Nov 23:55 - R3 SUPPORT STUDY, BUY SIDE (mirror: 09:20 pick with 5-day FALL >=7.6%) [OLD DATA - hint only]
+- 518 stock-days, every minute, same 27 factors mirrored (z/r3f.py buy -> r3fb.npz). Check loop: 2 clean rounds.
+- Buy at 09:20 with target +2% / stop 0.5%: +0.07% / -0.09% after costs; clean 2% on 6% of trades. Not a clean entry either.
+- Support factors alone (both periods):
+  - day LOW made in the last 28 min x1.6-1.9; price within 0.8% of the day low x1.5-1.6;
+  - first 5 min fell >=1.9% x1.35-1.4; price below the 20-day low by >=1.9% x1.35-1.6;
+  - down >=2.7% from the open x1.3-1.6; yesterday's delivery >=55% x1.3-1.4; early x1.3-1.5.
+- Rules (8,632 tried): ONE passes the mark:
+  - yesterday fell >=6.9% + price rose >=0.17% in the last 3 min + not up more than 0.6% in the last 30 min.
+  - 2022-24: 101 trades +0.42%; 2025-26: 80 trades +0.085%; years +12 +9 +21 +4 +3 (%). Clean 2% only 5-8%.
+  - Weak on unseen years and found among 8,632 tries -> CANDIDATE ONLY, not a rule.
+- All other top rules fail on 2025-26.
+- Both sides: the "clean 2% without going against" entry does not exist in these overheated/oversold stocks with minute factors; the reversal is real but needs room.
