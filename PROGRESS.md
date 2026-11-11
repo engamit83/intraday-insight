@@ -1932,3 +1932,8 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - No effect: gap, yesterday, 5-day trend, news, US night, breakouts.
 - During the move, Nifty/sector move the same way in BAJ 67-81% (ANGEL 28-38%).
 - Spreadsheet of every move: clean-2pct-moves-v2.xlsx (sent to the owner).
+
+## 11 Nov 15:46 - DAILY REVIEW: NO TRADING DAY (Sharekhan login blocked after wrong attempts; owner away from the laptop)
+- Feed: started 09:00 automatically, retried every 30s until 15:35, never got a Sharekhan token (some database timeouts after 12:52). Watchdog OK all day.
+- BASE 0 trades, V9 0 trades, R3 shadow 0 trades; no ticks recorded. Running totals unchanged. Not counted as a losing day (no trading).
+- Lesson: no early alert -> proposed an 08:55/09:05 login check plus a laptop ntfy alert (waiting for the owner's OK). Zerodha live feed planned as a second source (owner OK 10:27, to build).
