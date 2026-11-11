@@ -2025,3 +2025,12 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - S1 buy side removed (S1.buySide false in fade-shadow.mjs; undo = true).
 - Finding: 85% of S1 entries fire at the first allowed bar (09:20), 14% at 09:21-09:25 -> the turn usually exists BEFORE 09:20, so starting earlier matters.
 - Next: S1-EARLY test on old data (all stocks with a 5-day rise >=7.6%, active from the first minutes, entry from 09:16) before any code change.
+
+## 12 Nov 01:10 - S1-EARLY TEST (rule 0l) [OLD DATA - hint only] z/s1early.py - S1 on the laptop stays as installed
+- Universe: any liquid stock with a 5-day rise >=7.6%, active (day volume so far >=3x normal), SELL only, same entry/stop/exit as S1.
+- EARLY (entry possible from 09:16): 22-24 6,745 trades +0.094%/trade (+633k); 25-26 3,879 trades +0.030% (+116k); 2026 -20k. 81% of entries by 09:20 (51% at 09:16).
+- FALLBACK (same stocks, from 09:20): 22-24 +0.091% (+542k); 25-26 +0.038% (+128k); all 5 years positive.
+- => Entering before 09:20 gives NO advantage here (same per-trade result, 2026 worse). Waiting to 09:20 costs nothing for this scenario.
+- => The wide universe is much weaker than the top-10 picks version (+0.23%/trade both periods): the "most active 10" selection is what carries S1.
+- Clean 2% share 4-7% in both; losing trade-days 53-59%; worst days -Rs 12-37k (about 9 trades a day).
+- Installed 12 Nov 00:35 on the laptop (verified): S1 sell-only shadow (fade-shadow.mjs, sip-engine.mjs), CLAUDE.md rule 0l, PROGRESS.md.
