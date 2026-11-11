@@ -1971,3 +1971,8 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
     - LIVE 9 days: positive (BAJ 7 trades +0.26%, with buyers stronger +0.60%; ANGEL +0.72% / +0.95%).
   - => Live and years disagree; 7 trades of live is luck-sized (up-trend days). The only factor agreeing everywhere is TIME (09:20-10:25).
   - BAJ buyer pressure: a candidate, not proven.
+- 11 Nov 19:05 COMBINED (owner 18:53: the exact 95% from years + order flow from live ticks):
+  - Setups from years (MOMENTUM, TURN, EARLY) on live all-stock data, with and without buyer/seller/queue confirmation (6 variants each), build 22-28 Oct, check 29 Oct-9 Nov.
+  - All -0.05 to -0.18%/trade after costs. Confirmation does not improve any setup; the opposite flow ("sellers stronger") is the same.
+  - => Order flow as recorded (Sharekhan ~1 s snapshots, best bid/offer only) does not add an entry edge on these days.
+  - No rule for the 2 stocks. Direction stays the unsolved part; R3 (selection/mean-reversion) is still the only edge.
