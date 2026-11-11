@@ -1,0 +1,34 @@
+################ ANGELONE - rule finder (old data - hint only) ################
+rows 740672; clean-2% minutes: 22-24 2.2%  25-26 1.8%
+
+1) MUST-HAVES (present in >=90% of clean-2% minutes, both periods) and ALONE lift (clean-rate with condition / base), 334 conditions tried
+   must-haves: none (no single condition is in 90% of moves AND helps)
+   strongest ALONE (lift in both periods):
+      time<=625                    lift x1.56 | x1.68   (in 31% | 34% of clean moves)
+      time<=690                    lift x1.38 | x1.51   (in 55% | 61% of clean moves)
+
+2) RULES (beam search, 16959 rule variants tried -> strict bar). Top 12 by 2022-24, then checked on 2025-26 (never seen):
+     -  prevClosePos>=0.81 AND news==1 AND vwapReclaim==1
+        2022-24: 101 trades avg +0.533% | 2025-26: 59 trades avg -0.206% | per year total %: +2 +21 +31 -13 +1
+     -  prevClosePos>=0.81 AND prevDeliv>=39.9 AND mom3<=-0.11
+        2022-24: 113 trades avg +0.470% | 2025-26: 25 trades avg -0.270% | per year total %: +7 +13 +33 -2 -5
+     -  prevClosePos>=0.81 AND prevDeliv>=39.9 AND vwapReclaim==0
+        2022-24: 113 trades avg +0.452% | 2025-26: 25 trades avg -0.235% | per year total %: +8 +14 +30 -2 -4
+     -  prev1>=2 AND gap<=-0.191 AND mom3<=-0.11
+        2022-24: 111 trades avg +0.434% | 2025-26: 56 trades avg -0.225% | per year total %: +20 +8 +20 -9 -4
+     -  prevClosePos>=0.81 AND prevDeliv>=39.9 AND mom3<=0.11
+        2022-24: 113 trades avg +0.418% | 2025-26: 25 trades avg -0.242% | per year total %: +10 +10 +28 -2 -4
+     -  prevClosePos>=0.81 AND prevDeliv>=39.9 AND volDayx<=1.89
+        2022-24: 104 trades avg +0.403% | 2025-26: 25 trades avg -0.342% | per year total %: +4 +8 +30 -2 -7
+     -  prev1>=2 AND gap<=-0.191 AND vwapReclaim==0
+        2022-24: 111 trades avg +0.402% | 2025-26: 56 trades avg -0.214% | per year total %: +22 +8 +15 -7 -5
+     -  prevClosePos>=0.81 AND prevDeliv>=39.9 AND peer15>=-0.184
+        2022-24: 113 trades avg +0.398% | 2025-26: 25 trades avg -0.242% | per year total %: +4 +14 +27 -2 -4
+     -  prevClosePos>=0.81 AND prevDeliv>=39.9 AND mom3<=0
+        2022-24: 113 trades avg +0.394% | 2025-26: 25 trades avg -0.235% | per year total %: +7 +10 +27 -2 -4
+     -  gap<=-0.191 AND ret5>=5.51 AND mom3<=0.11
+        2022-24: 105 trades avg +0.394% | 2025-26: 56 trades avg -0.291% | per year total %: +24 +4 +13 -14 -3
+     -  prev1>=2 AND gap<=-0.191 AND mom3<=0.11
+        2022-24: 111 trades avg +0.393% | 2025-26: 56 trades avg -0.178% | per year total %: +23 +6 +15 -6 -4
+     -  prevClosePos>=0.81 AND prevDeliv>=39.9 AND roundDist>=0.479
+        2022-24: 113 trades avg +0.393% | 2025-26: 25 trades avg -0.178% | per year total %: +4 +7 +34 -2 -3

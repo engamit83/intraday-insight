@@ -1,0 +1,52 @@
+################ BAJFINANCE - rule finder (old data - hint only) ################
+rows 740672; clean-2% minutes: 22-24 0.7%  25-26 0.7%
+
+1) MUST-HAVES (present in >=90% of clean-2% minutes, both periods) and ALONE lift (clean-rate with condition / base), 334 conditions tried
+   must-haves: minsSinceExt<=204 (92%/95% of moves, lift x1.15/x1.20)
+   strongest ALONE (lift in both periods):
+      time<=625                    lift x1.94 | x2.05   (in 39% | 42% of clean moves)
+      results==1                   lift x3.00 | x1.76   (in 11% | 5% of clean moves)
+      vix>=18                      lift x1.67 | x1.93   (in 33% | 26% of clean moves)
+      time<=690                    lift x1.66 | x1.76   (in 67% | 71% of clean moves)
+      vol15x>=1.76                 lift x1.52 | x1.69   (in 30% | 35% of clean moves)
+      mom30>=0.228                 lift x1.52 | x1.48   (in 30% | 33% of clean moves)
+      time<=755                    lift x1.44 | x1.49   (in 87% | 90% of clean moves)
+      volDayx>=1.55                lift x1.44 | x1.46   (in 29% | 32% of clean moves)
+      pos20d>=0.867                lift x1.44 | x1.43   (in 29% | 25% of clean moves)
+      vix>=14.9                    lift x1.42 | x1.42   (in 57% | 47% of clean moves)
+      posInDay>=0.81               lift x1.44 | x1.40   (in 29% | 29% of clean moves)
+      nifty15>=0.075               lift x1.39 | x1.42   (in 28% | 28% of clean moves)
+      mom15>=0.152                 lift x1.43 | x1.34   (in 29% | 31% of clean moves)
+      peer15>=0.124                lift x1.47 | x1.34   (in 29% | 26% of clean moves)
+      rng20>=2.58                  lift x1.39 | x1.34   (in 28% | 27% of clean moves)
+      vsPrevClose>=0.843           lift x1.34 | x1.37   (in 27% | 33% of clean moves)
+      sector15>=0.092              lift x1.33 | x1.40   (in 27% | 27% of clean moves)
+      minsSinceExt<=61             lift x1.33 | x1.40   (in 54% | 54% of clean moves)
+      prevRange>=2.84              lift x1.33 | x1.38   (in 27% | 35% of clean moves)
+      mom3<=-0.075                 lift x1.44 | x1.32   (in 29% | 27% of clean moves)
+
+2) RULES (beam search, 16959 rule variants tried -> strict bar). Top 12 by 2022-24, then checked on 2025-26 (never seen):
+   PASS pos20d>=0.867 AND sectorOpen>=0.378 AND sector15<=-0.092
+        2022-24: 114 trades avg +0.233% | 2025-26: 71 trades avg +0.007% | per year total %: +13 +12 +2 +0 +0
+   PASS pos20d>=0.867 AND sectorOpen>=0.378 AND volDayx>=1.11
+        2022-24: 114 trades avg +0.195% | 2025-26: 79 trades avg +0.019% | per year total %: +11 +2 +9 +3 -2
+   PASS pos20d>=0.867 AND sectorOpen>=0.378 AND relStr>=0.733
+        2022-24: 106 trades avg +0.173% | 2025-26: 75 trades avg +0.038% | per year total %: +12 -3 +9 +3 +0
+     -  niftyOpen>=0.304 AND volDayx>=1.55 AND or5>=0.779
+        2022-24: 105 trades avg +0.168% | 2025-26: 107 trades avg -0.103% | per year total %: +6 +6 +6 -5 -6
+     -  climaxVol>=2.54 AND vix>=18 AND vol15x>=0.846
+        2022-24: 136 trades avg +0.167% | 2025-26: 62 trades avg -0.037% | per year total %: +21 -1 +3 +1 -3
+     -  dir==-1 (sell) AND expiry==1 AND volDayx>=0.883
+        2022-24: 117 trades avg +0.165% | 2025-26: 81 trades avg -0.231% | per year total %: +10 +6 +3 -11 -7
+     -  minsSinceExt>=18 AND rangeVs20>=1.02 AND vixChg<=-0.551
+        2022-24: 130 trades avg +0.161% | 2025-26: 115 trades avg -0.111% | per year total %: +8 +8 +5 -12 -1
+     -  niftyOpen>=0.304 AND volDayx>=1.55 AND rng20>=2.08
+        2022-24: 111 trades avg +0.161% | 2025-26: 91 trades avg -0.162% | per year total %: +6 +7 +5 -8 -7
+     -  climaxVol>=2.54 AND expiry==1 AND volDayx>=0.883
+        2022-24: 113 trades avg +0.160% | 2025-26: 80 trades avg -0.235% | per year total %: +22 +2 -6 -11 -7
+     -  dir==-1 (sell) AND expiry==1 AND gap<=0.0797
+        2022-24: 103 trades avg +0.160% | 2025-26: 53 trades avg -0.167% | per year total %: +13 +2 +1 -7 -2
+     -  dir==-1 (sell) AND expiry==1 AND ret20>=-7.25
+        2022-24: 114 trades avg +0.159% | 2025-26: 74 trades avg -0.147% | per year total %: +12 +6 -0 -8 -3
+     -  pos20d>=0.867 AND niftyOpen>=0.304 AND volDayx>=1.11
+        2022-24: 116 trades avg +0.159% | 2025-26: 71 trades avg -0.015% | per year total %: +0 +4 +14 +1 -2

@@ -1937,3 +1937,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Feed: started 09:00 automatically, retried every 30s until 15:35, never got a Sharekhan token (some database timeouts after 12:52). Watchdog OK all day.
 - BASE 0 trades, V9 0 trades, R3 shadow 0 trades; no ticks recorded. Running totals unchanged. Not counted as a losing day (no trading).
 - Lesson: no early alert -> proposed an 08:55/09:05 login check plus a laptop ntfy alert (waiting for the owner's OK). Zerodha live feed planned as a second source (owner OK 10:27, to build).
+
+## 11 Nov 17:30 - ALL-FACTOR RULE FINDER, BAJFINANCE + ANGELONE (owner 16:36-16:42) [OLD DATA - hint only]
+- Data (z/f3.py): every minute 09:20-14:45 x both directions, 2022(Mar)-2026, 49 factors (owner's + Claude's).
+  - Not available in minute data: market breadth per minute; buyer/seller quantities.
+  - Outcomes: clean 2% (no dip >0.05%); trade = +2% target / 0.5% stop / 15:15.
+- Check loop: data rows re-computed independently 2 rounds CLEAN. Rule table re-computed independently: identical.
+- Must-haves: BAJ none useful (only "within ~3.5 h of the day's extreme"); ANGEL none.
+- Alone (lift in both periods):
+  - BAJ: early <=10:25 x1.9-2.1; results day x1.8-3.0; VIX>=18 x1.7-1.9; 15-min volume >=1.8x x1.5-1.7; 30-min momentum our way x1.5; day volume >=1.55x x1.45; near 20-day high (buy)/low (sell) x1.45; Nifty/sector/peers moving our way x1.3-1.5.
+  - ANGEL: only time of day (early x1.6-1.7); nothing else >=1.3x in both periods.
+- Rules (beam search, 16,959 variants tried -> strict luck bar), first signal per day:
+  - BAJ best: near 20-day extreme + sector strong since open + sector dipping last 15 min: 22-24 +0.23%/trade (114), 25-26 +0.007% (71). Technically passes, but about 0 on unseen years -> NOT real given the number of tries.
+  - ANGEL: best 2022-24 rules +0.39 to +0.53%/trade ALL fail on 2025-26 (-0.18 to -0.34%) -> over-fitting, rejected.
+- Same or different: DIFFERENT. BAJ = market/sector-driven momentum stock (factors measurable). ANGEL = stock-specific (minute factors explain little; only time of day) -> probably needs order flow / news detail.
