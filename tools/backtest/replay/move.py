@@ -36,16 +36,34 @@ for k,d in enumerate(dl):
 for k,d in enumerate(dl):
     if k<21: continue
     pd=dl[k-1]; pc=dclose[pd]
-    base=np.median(np.array([prof[dl[j]] for j in range(k-20,k)]),axis=0)+1
-    m=(day==d)&(mod>=555)&(mod<=929); idx=np.nonzero(m)[0]
-    o,h,l,c,v=S['o'][idx],S['h'][idx],S['l'][idx],S['c'][idx],S['v'][idx]; mm=mod[idx]
-    op=o[0]; gap=(op/pc-1)*100; prev1=(pc/dclose[dl[k-2]]-1)*100; r5=(pc/dclose[dl[k-6]]-1)*100
+    PR=np.array([prof[dl[j]] for j in range(k-20,k)]); base=np.maximum(np.median(PR,axis=0),0.25*PR.mean(axis=0))+1  # check-loop fix 1: floor for quiet slots
+    m=(day==d)&(mod>=555)&(mod<=929); idx0=np.nonzero(m)[0]
+    # check-loop fix 2 (11 Nov): align to the full 375-minute grid; a missing minute = no trade (price carried, volume 0),
+    # so c[i-5] is always exactly 5 minutes earlier
+    mm=np.arange(555,930); slot=mod[idx0]-555
+    def grid(a,fill):
+        g=np.full(375,np.nan); g[slot]=a
+        if fill:
+            for q in range(375):
+                if np.isnan(g[q]): g[q]=g[q-1] if q>0 and not np.isnan(g[q-1]) else np.nan
+            first=np.nonzero(~np.isnan(g))[0][0]; g[:first]=g[first]
+        return g
+    c=grid(S['c'][idx0],True); o=grid(S['o'][idx0],False); h=grid(S['h'][idx0],False); l=grid(S['l'][idx0],False)
+    o=np.where(np.isnan(o),c,o); h=np.where(np.isnan(h),c,h); l=np.where(np.isnan(l),c,l)
+    v=np.zeros(375); v[slot]=S['v'][idx0]
+    idx=np.arange(375); tt_grid=d*1440+mm
+    op=S['o'][idx0[0]]; gap=(op/pc-1)*100; prev1=(pc/dclose[dl[k-2]]-1)*100; r5=(pc/dclose[dl[k-6]]-1)*100
     r20=(pc/dclose[dl[k-21]]-1)*100; ph,pl=dhigh[pd],dlow[pd]
     cumv=np.cumsum(v); vwap=np.cumsum(v*(h+l+c)/3)/np.maximum(cumv,1)
     hi=np.maximum.accumulate(h); lo=np.minimum.accumulate(l)
     v5=np.convolve(v,np.ones(5))[:len(v)]
-    tt=S['t'][idx].astype(int)
-    nc=np.array([N['c'][Nix[t]] if t in Nix else np.nan for t in tt]); xc=np.array([X['c'][Xix[t]] if t in Xix else np.nan for t in tt])
+    tt=tt_grid.astype(int)
+    def ff(a):
+        a=a.copy()
+        for q in range(1,len(a)):
+            if np.isnan(a[q]): a[q]=a[q-1]
+        return a
+    nc=ff(np.array([N['c'][Nix[t]] if t in Nix else np.nan for t in tt])); xc=ff(np.array([X['c'][Xix[t]] if t in Xix else np.nan for t in tt]))
     vx=next((V['o'][Vix[t]] for t in tt if t in Vix),np.nan)
     nop=nc[0]; xop=xc[0]
     end=np.nonzero(mm<=915)[0][-1]

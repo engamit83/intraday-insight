@@ -1877,3 +1877,10 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - CONCLUSION: for these 2 stocks, price/volume/time/news/global at the minute level give NO entry edge for a +1%/-0.4% trade.
   - The only lasting edges so far are selection-type (R3: fade stocks up >=7.6% in 5 days).
   - Next candidates: order flow on tick days (buyers/sellers); other targets/stops; all stocks.
+- CHECK LOOP (owner 11:03: repeat checks until 2 clean rounds in a row), z/verify_move.py + verify_an.py (independent code):
+  - Round 1: 2 MISTAKES.
+    (a) Missing minutes on ~9% of days made the 5/15-min moves look further back -> fixed: every day aligned to the full 375-minute grid.
+    (b) Quiet minutes gave near-zero "normal volume" -> fixed: floor 0.25x the mean. Datasets rebuilt.
+  - Round 2: CLEAN (good/trade/fromOpen/breakout/VWAP/mom5/mom15/rvol5 re-computed for 300 random minutes each, 0 differences). Rule table re-computed independently: identical.
+  - Round 3 (new random sample): CLEAN -> loop stopped.
+  - Conclusions unchanged: no entry rule passes; all about -0.1 to -0.2% per trade after costs.
