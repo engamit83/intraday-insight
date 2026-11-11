@@ -3,13 +3,15 @@
 # PASS MARK (written first): avg after costs > 0 in BOTH 2022-24 and 2025-26, >= 60 trades in each, and positive in >= 4 of 5 years.
 # Search: beam search over 1-3 conditions (thresholds at 2022-24 quintiles); every condition tried is counted (luck bar).
 import numpy as np, sys, json
-SYM=sys.argv[1]; z=np.load(f'f3-{SYM}.npz'); A=z['A']; C=list(z['cols']); COST=0.146
+SYM=sys.argv[1]; FILE=sys.argv[2] if len(sys.argv)>2 else f'f3-{SYM}.npz'; z=np.load(FILE); A=z['A']; C=list(z['cols']); COST=0.146
 o=np.lexsort((A[:,1],A[:,0])); A=A[o]; col=lambda k: A[:,C.index(k)]
 day=col('day').astype(int); yr=(np.datetime64('1970-01-01')+day.astype('timedelta64[D]')).astype('datetime64[Y]').astype(int)+1970
 P1=yr<=2024; P2=yr>=2025; clean=col('clean'); tr=col('tr')-COST
-F=[c for c in C if c not in ('day','dir','clean','tr')]
+F=[c for c in C if c not in ('day','dir','clean','tr','clean15')]
+c15=col('clean15') if 'clean15' in C else clean
+RANK=sys.argv[3] if len(sys.argv)>3 else 'trade'   # 'clean15' = rank rules by the share of entries that give a clean 1.5% move
 print(f'################ {SYM} - rule finder (old data - hint only) ################')
-print(f'rows {len(A)}; clean-2% minutes: 22-24 {100*clean[P1].mean():.1f}%  25-26 {100*clean[P2].mean():.1f}%')
+print(f'rows {len(A)}; clean-2% minutes: 22-24 {100*clean[P1].mean():.1f}%  25-26 {100*clean[P2].mean():.1f}% | clean-1.5%: {100*c15[P1].mean():.1f}% / {100*c15[P2].mean():.1f}%')
 # 1) MUST-HAVES: share of clean-2% minutes having the condition (>=90% = must-have)
 conds=[]
 for f in F:
@@ -47,7 +49,9 @@ for depth in range(3):
             if n in names: continue
             mm=m&c; tried+=1
             s,nt,_=score(mm,P1)
-            if nt>=100: cand.append((s,names+(n,)))   # memory fix: keep names only, rebuild mask later
+            if nt>=100:
+                if RANK=='clean15': s=c15[first(mm&P1)].mean()
+                cand.append((s,names+(n,)))   # memory fix: keep names only, rebuild mask later
     cand.sort(key=lambda t:-t[0]); seen=set(); beam=[]
     CD=dict(conds)
     for s,names in cand:
@@ -66,5 +70,6 @@ for s,names in allres[:12]:
     ys=[score(mm,yr==y)[0]*score(mm,yr==y)[1] for y in range(2022,2027)]
     ok=na>=60 and nb>=60 and a>0 and b>0 and sum(x>0 for x in ys)>=4
     out.append(dict(rule=' AND '.join(names),build=[round(a,3),na],check=[round(b,3),nb],years=[round(x,1) for x in ys],passed=bool(ok)))
-    print(f'   {"PASS" if ok else "  - "} {" AND ".join(names)}\n        2022-24: {na} trades avg {a:+.3f}% | 2025-26: {nb} trades avg {b:+.3f}% | per year total %: {" ".join(f"{x:+.0f}" for x in ys)}')
-json.dump(out,open(f'f3rules-{SYM}.json','w'))
+    f1=first(mm&P1); f2=first(mm&P2)
+    print(f'   {"PASS" if ok else "  - "} {" AND ".join(names)}\n        2022-24: {na} trades avg {a:+.3f}% clean1.5% {100*c15[f1].mean():.0f}% clean2% {100*clean[f1].mean():.0f}% | 2025-26: {nb} trades avg {b:+.3f}% clean1.5% {100*c15[f2].mean():.0f}% clean2% {100*clean[f2].mean():.0f}% | per year total %: {" ".join(f"{x:+.0f}" for x in ys)}')
+json.dump(out,open(FILE.replace('.npz','-rules.json'),'w'))

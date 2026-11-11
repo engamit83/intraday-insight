@@ -1,0 +1,40 @@
+################ TMPV - rule finder (old data - hint only) ################
+rows 749100; clean-2% minutes: 22-24 0.9%  25-26 0.8% | clean-1.5%: 1.8% / 1.9%
+
+1) MUST-HAVES (present in >=90% of clean-2% minutes, both periods) and ALONE lift (clean-rate with condition / base), 326 conditions tried
+   must-haves: minsSinceExt<=209 (91%/95% of moves, lift x1.14/x1.20)
+   strongest ALONE (lift in both periods):
+      time<=622                    lift x2.01 | x2.13   (in 40% | 43% of clean moves)
+      time<=688                    lift x1.61 | x1.80   (in 65% | 72% of clean moves)
+      mom30>=0.24                  lift x1.48 | x1.42   (in 30% | 31% of clean moves)
+      vwapReclaim==1               lift x1.41 | x1.57   (in 19% | 20% of clean moves)
+      minsSinceExt<=21             lift x1.37 | x1.56   (in 28% | 31% of clean moves)
+      time<=753                    lift x1.35 | x1.46   (in 81% | 88% of clean moves)
+      minsSinceExt<=65             lift x1.32 | x1.49   (in 53% | 59% of clean moves)
+      mom15>=0.168                 lift x1.43 | x1.31   (in 29% | 28% of clean moves)
+
+2) RULES (beam search, 16551 rule variants tried -> strict bar). Top 12 by 2022-24, then checked on 2025-26 (never seen):
+     -  or5>=1.13 AND gap>=-0.115 AND pos60d>=0.388
+        2022-24: 100 trades avg +0.022% clean1.5% 15% clean2% 11% | 2025-26: 106 trades avg -0.219% clean1.5% 4% clean2% 4% | per year total %: +4 -1 -0 -11 -12
+     -  or5>=1.13 AND posInDay>=0.806 AND spx>=-0.197
+        2022-24: 104 trades avg +0.171% clean1.5% 14% clean2% 11% | 2025-26: 128 trades avg -0.005% clean1.5% 5% clean2% 5% | per year total %: +11 +4 +2 +1 -1
+     -  or5>=1.13 AND posInDay>=0.806 AND spx>=-0.745
+        2022-24: 121 trades avg +0.162% clean1.5% 14% clean2% 10% | 2025-26: 148 trades avg -0.010% clean1.5% 5% clean2% 5% | per year total %: +8 +5 +7 +0 -2
+     -  monthEnd==1 AND mom30<=0.24 AND mom30>=-0.24
+        2022-24: 100 trades avg +0.064% clean1.5% 14% clean2% 9% | 2025-26: 66 trades avg -0.022% clean1.5% 3% clean2% 3% | per year total %: -4 +9 +2 -4 +3
+     -  monthEnd==1 AND mom30<=0.24 AND dir==1 (buy)
+        2022-24: 100 trades avg +0.038% clean1.5% 14% clean2% 8% | 2025-26: 66 trades avg -0.055% clean1.5% 5% clean2% 3% | per year total %: -6 +8 +2 -4 +0
+     -  monthEnd==1 AND posInDay<=0.806 AND dir==1 (buy)
+        2022-24: 100 trades avg -0.003% clean1.5% 14% clean2% 8% | 2025-26: 66 trades avg -0.014% clean1.5% 3% clean2% 2% | per year total %: -5 +7 -3 -4 +3
+     -  or5>=1.13 AND vsPrevClose>=-0.965 AND vixChg>=0.581
+        2022-24: 108 trades avg +0.006% clean1.5% 14% clean2% 9% | 2025-26: 131 trades avg -0.170% clean1.5% 5% clean2% 2% | per year total %: +4 -0 -3 -12 -10
+     -  or5>=1.13 AND gap>=-0.502 AND pos60d>=0.388
+        2022-24: 116 trades avg -0.034% clean1.5% 14% clean2% 10% | 2025-26: 130 trades avg -0.161% clean1.5% 4% clean2% 3% | per year total %: +0 -3 -1 -7 -14
+     -  or5>=1.13 AND gap>=-0.502 AND ret5>=-3.15
+        2022-24: 116 trades avg -0.027% clean1.5% 14% clean2% 9% | 2025-26: 137 trades avg -0.144% clean1.5% 3% clean2% 2% | per year total %: +5 +1 -9 -15 -4
+     -  or5>=1.13 AND vsPrevClose>=-0.965 AND ret5>=-3.15
+        2022-24: 125 trades avg +0.008% clean1.5% 14% clean2% 10% | 2025-26: 152 trades avg -0.058% clean1.5% 4% clean2% 3% | per year total %: +2 +4 -5 -6 -3
+     -  or5>=1.13 AND gap>=-0.115 AND ret5>=-3.15
+        2022-24: 103 trades avg +0.021% clean1.5% 14% clean2% 10% | 2025-26: 125 trades avg -0.106% clean1.5% 2% clean2% 2% | per year total %: +9 +1 -8 -12 -2
+     -  or5>=1.13 AND posInDay>=0.806 AND pos60d>=0.388
+        2022-24: 111 trades avg +0.189% clean1.5% 14% clean2% 11% | 2025-26: 134 trades avg -0.069% clean1.5% 7% clean2% 5% | per year total %: +4 +6 +10 +1 -10

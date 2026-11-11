@@ -1,0 +1,52 @@
+################ BAJFINANCE - rule finder (old data - hint only) ################
+rows 749760; clean-2% minutes: 22-24 0.7%  25-26 0.7% | clean-1.5%: 1.4% / 1.5%
+
+1) MUST-HAVES (present in >=90% of clean-2% minutes, both periods) and ALONE lift (clean-rate with condition / base), 334 conditions tried
+   must-haves: minsSinceExt<=203 (92%/95% of moves, lift x1.15/x1.20)
+   strongest ALONE (lift in both periods):
+      time<=622                    lift x1.98 | x2.07   (in 40% | 41% of clean moves)
+      results==1                   lift x2.97 | x1.79   (in 11% | 5% of clean moves)
+      time<=688                    lift x1.67 | x1.76   (in 67% | 70% of clean moves)
+      vix>=18                      lift x1.66 | x1.88   (in 33% | 25% of clean moves)
+      vol15x>=1.76                 lift x1.52 | x1.66   (in 30% | 34% of clean moves)
+      mom30>=0.228                 lift x1.50 | x1.47   (in 30% | 33% of clean moves)
+      time<=753                    lift x1.45 | x1.50   (in 87% | 90% of clean moves)
+      volDayx>=1.55                lift x1.44 | x1.44   (in 29% | 31% of clean moves)
+      pos20d>=0.867                lift x1.44 | x1.41   (in 29% | 25% of clean moves)
+      vix>=14.9                    lift x1.41 | x1.41   (in 57% | 47% of clean moves)
+      posInDay>=0.81               lift x1.43 | x1.40   (in 29% | 29% of clean moves)
+      nifty15>=0.0748              lift x1.36 | x1.42   (in 27% | 29% of clean moves)
+      mom15>=0.152                 lift x1.43 | x1.35   (in 29% | 31% of clean moves)
+      minsSinceExt<=59             lift x1.35 | x1.42   (in 54% | 54% of clean moves)
+      peer15>=0.124                lift x1.48 | x1.34   (in 30% | 26% of clean moves)
+      sector15>=0.092              lift x1.33 | x1.42   (in 27% | 28% of clean moves)
+      rng20>=2.58                  lift x1.38 | x1.32   (in 28% | 26% of clean moves)
+      vsPrevClose>=0.838           lift x1.32 | x1.36   (in 26% | 33% of clean moves)
+      mom3<=-0.0751                lift x1.44 | x1.32   (in 29% | 27% of clean moves)
+      prevRange>=2.84              lift x1.32 | x1.37   (in 27% | 35% of clean moves)
+
+2) RULES (beam search, 16959 rule variants tried -> strict bar). Top 12 by 2022-24, then checked on 2025-26 (never seen):
+     -  gap>=0.431 AND relStr>=0.206 AND prevClosePos>=0.389
+        2022-24: 106 trades avg -0.160% clean1.5% 11% clean2% 4% | 2025-26: 82 trades avg +0.036% clean1.5% 6% clean2% 6% | per year total %: -7 -2 -7 +2 +1
+     -  gap>=0.431 AND relStr>=0.206 AND climaxVol>=1.37
+        2022-24: 157 trades avg -0.097% clean1.5% 11% clean2% 5% | 2025-26: 129 trades avg -0.010% clean1.5% 4% clean2% 3% | per year total %: +0 -5 -11 +7 -8
+     -  prevClosePos>=0.804 AND volDayx>=0.883 AND gap>=-0.0797
+        2022-24: 148 trades avg -0.189% clean1.5% 11% clean2% 6% | 2025-26: 108 trades avg -0.152% clean1.5% 2% clean2% 1% | per year total %: -2 -16 -10 -9 -8
+     -  prevDeliv>=53.2 AND relStr>=0.206 AND pos60d<=0.614
+        2022-24: 102 trades avg -0.022% clean1.5% 11% clean2% 8% | 2025-26: 245 trades avg -0.128% clean1.5% 4% clean2% 2% | per year total %: -2 +1 -1 -6 -26
+     -  gap>=0.431 AND relStr>=0.206 AND ret5>=-0.933
+        2022-24: 102 trades avg -0.071% clean1.5% 11% clean2% 4% | 2025-26: 87 trades avg -0.069% clean1.5% 5% clean2% 5% | per year total %: +1 +2 -11 +1 -7
+     -  prevDeliv>=53.2 AND relStr>=0.206 AND pos20d>=0.133
+        2022-24: 132 trades avg -0.074% clean1.5% 11% clean2% 9% | 2025-26: 325 trades avg -0.092% clean1.5% 3% clean2% 2% | per year total %: -2 -4 -4 -7 -23
+     -  gap>=0.431 AND or15>=0.811 AND prevClosePos>=0.389
+        2022-24: 104 trades avg -0.110% clean1.5% 11% clean2% 6% | 2025-26: 132 trades avg -0.111% clean1.5% 3% clean2% 3% | per year total %: -3 -1 -7 -8 -6
+     -  prevDeliv>=53.2 AND volDayx>=0.883 AND asia>=-0.799
+        2022-24: 123 trades avg -0.102% clean1.5% 11% clean2% 7% | 2025-26: 276 trades avg -0.050% clean1.5% 4% clean2% 3% | per year total %: -4 +10 -19 -11 -3
+     -  prevDeliv>=53.2 AND peerOpen>=0.137 AND relStr>=-0.206
+        2022-24: 133 trades avg -0.096% clean1.5% 11% clean2% 8% | 2025-26: 323 trades avg -0.111% clean1.5% 4% clean2% 2% | per year total %: +1 +3 -16 -11 -24
+     -  prevDeliv>=53.2 AND relStr>=0.206 AND sectorOpen>=-0.0979
+        2022-24: 135 trades avg -0.080% clean1.5% 10% clean2% 7% | 2025-26: 330 trades avg -0.071% clean1.5% 3% clean2% 2% | per year total %: -2 -4 -5 -4 -20
+     -  prevClosePos>=0.804 AND volDayx>=0.883 AND spx>=0.197
+        2022-24: 116 trades avg -0.210% clean1.5% 10% clean2% 7% | 2025-26: 64 trades avg -0.226% clean1.5% 2% clean2% 2% | per year total %: -3 -15 -6 -8 -6
+     -  prevDeliv>=53.2 AND fromOpen>=0.225 AND sector15>=-0.0252
+        2022-24: 136 trades avg -0.059% clean1.5% 10% clean2% 7% | 2025-26: 330 trades avg -0.089% clean1.5% 4% clean2% 3% | per year total %: -2 -1 -5 -10 -19

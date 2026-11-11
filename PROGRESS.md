@@ -2034,3 +2034,24 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - => The wide universe is much weaker than the top-10 picks version (+0.23%/trade both periods): the "most active 10" selection is what carries S1.
 - Clean 2% share 4-7% in both; losing trade-days 53-59%; worst days -Rs 12-37k (about 9 trades a day).
 - Installed 12 Nov 00:35 on the laptop (verified): S1 sell-only shadow (fade-shadow.mjs, sip-engine.mjs), CLAUDE.md rule 0l, PROGRESS.md.
+
+## 12 Nov 01:40 - 09:20 SELECTION SEARCH per stock, rule 0l (entries from 09:16), target CLEAN 1.5%+ (owner 12 Nov 00:41-00:44) [OLD DATA - hint only]
+- Stocks: BAJFINANCE, ANGELONE, RELIANCE, Tata Motors (TMPV).
+  - TMPV demerger 14 Oct 2025: Zerodha's pre-demerger prices scaled by 0.8751 (NSE discovery base 400 vs Zerodha 457.15 back-adjustment); 14 Oct excluded.
+- 53 factors per minute 09:16-14:45, both directions; outcomes clean 1.5%+ / clean 2%+ (no return to entry, 0.05% tolerance) / trade 2%/0.5%.
+- CHECK LOOP:
+  - MISTAKE found after 2 "clean" rounds: tonight's or5 look-ahead fix accidentally commented out brkOR15, so every later column shifted by one.
+  - Fixed, rebuilt, and 2 new checks added (row width = column names; a late column re-computed).
+  - 2 clean rounds afterwards. The earlier f3 (09:20) datasets were confirmed unaffected.
+- Clean 1.5%+ chance at a random minute: BAJ 1.4-1.5%, ANGEL 3.0-3.2%, RELIANCE 1.0-1.2%, TMPV 1.8-1.9%.
+- Factors alone (lift in both periods):
+  - ALL 4: early (<=10:22) x1.6-2.3 (the only shared factor).
+  - BAJ: results day x1.8-3.0, VIX>=18 x1.7-1.9, 15-min volume x1.5-1.7, momentum x1.5, day volume x1.45.
+  - RELIANCE: 15-min volume x1.6, sector moving our way x1.6-1.8, wide opening range x1.4-1.7, momentum x1.5-1.6, peers (ONGC/BPCL) x1.5-1.6.
+  - TMPV: momentum x1.4-1.5, VWAP reclaim x1.4-1.6, fresh day extreme (<=21 min) x1.4-1.6.
+  - ANGEL: time only.
+- Rules (16,959 tried per stock), first signal per day, ranked by clean 1.5% share on 2022-24:
+  - best build shares 11-19% collapse to 0-8% on 2025-26.
+  - Trade results on 2025-26 are negative for every top rule except two at about 0 (TMPV -0.005%, BAJ +0.036%).
+  - NO rule passes for any of the 4 stocks.
+- Stocks DIFFER: each has its own helping factors (BAJ = events/VIX/volume; RELIANCE = sector/peers/opening range; TMPV = momentum/VWAP; ANGEL = none) -> per-stock treatment is right, but the factors are too weak for an entry rule.
