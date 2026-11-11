@@ -1839,3 +1839,18 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - => The two brokers build minute candles slightly differently (trades near the minute boundary go into different minutes). Neither is "the exact exchange record"; NSE publishes no official 1-min candles.
 - => No data source will match another 100%. The 33/53 trade mismatch comes from rules sitting on knife edges (tiny price or volume differences flip a pick, a breakout or a stop).
 - Next idea: make rules robust to tiny differences (breakout by a small margin, a buffer on the pick cut-off). Then the result is the same on any data source, and less luck-dependent live. Test: the A-vs-B match must rise without losing profit on ticks.
+
+## 11 Nov 11:30 - MOVE STUDY (owner 10:40): what starts a good move, any minute of the day - BAJFINANCE + ANGELONE 2022-26 [OLD DATA - hint only]
+- Good move (defined first): from a minute's close, +1.0% in the direction before -0.4% against, by 15:15. Every minute 09:20-14:45, both directions.
+- Moves are common:
+  - BAJFINANCE has an up move on 52-73% of days and a down move on 60-77%.
+  - ANGELONE has an up move on 82-94% and a down move on 92-97%.
+  - Starts by hour: 09h 27-33%, 10h 22-24%, 11h 16-17%, 12h 14%, 13h 9-12%, 14h 4-7%.
+- Base good-rate (random minute): BAJ 14%, ANGEL 22-23%. Break-even for a +1%/-0.4% trade after costs: 39%.
+- Factors, all STABLE across 2022-24 and 2025-26 but modest:
+  - Time 09:20-10:25: BAJ 23%, ANGEL 28-29%; after 13:40: 3-16%.
+  - Break of the day's high/low in the direction: BAJ 22%, ANGEL 27-30%.
+  - Momentum with the trade (15-min move, from open, above/below VWAP): about 1.3x.
+  - Rising volume (rvol5 top fifth): 1.3x. High VIX: 1.4x.
+  - Gap, previous-day move, 5/20-day trend: no clear effect.
+- All factors together (GBM built 2022-24, checked 2025-26): best good-rate BAJ 23%, ANGEL 31% -> below 39%. Not tradeable at +1%/-0.4% on these factors alone.
