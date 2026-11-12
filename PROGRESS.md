@@ -2128,3 +2128,14 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Running since BASE went live (10 Nov holiday, 11 Nov no feed): 1 trading day.
   - BASE -2,050 (1 losing day); V9 0. Days in a row without a losing day: BASE 0.
 - Diagnosis: on a strong up-open the sells against breadth lost. The breadth filter (part of V9) would have avoided all 3. Owner decides.
+
+## 12 Nov 17:40 - SAME FILTERS ON LIVE TICK DAYS (owner 17:16) [TICK - small sample: 10 days, 53 BASE entries] z/tickq.py
+- Entries: BASE replayed on the 9 Sharekhan tick days (replay = live, verified) + 12 Nov Zerodha live trades.
+- Baseline: win 53%, 30-min +0.36%, false BO 25%, clean 1.5% 8%, net +4,847, PF 1.27.
+- A, B: no information (true for 52-53 of 53).
+- C market trend (Nifty above/below its average in our direction): 32 trades, win 66%, 30-min +0.70%, false BO 16%, net +12,106, PF 2.66.
+  - BUT it FAILED on 5 years (worse in 2024 and 2025). Live is 32 trades -> not proven.
+- A+B+C+D: 15 trades, win 80%, PF 5.4 - too few trades.
+- D: +0.44% / PF 1.45. E RVOL>10: 10 trades only. F2 volume: +0.46% / PF 1.52; F1 worse.
+- LATE breakout (>=09:37): 11 trades, false BO 9% vs 29% for early (agrees with 5 years); 30-min +0.44% vs +0.34%; but net about 0 (-130).
+- => Live and 5 years agree only on: late breakouts fail less. They disagree on C (good live, bad on old data). More tick days needed; Zerodha now records daily.
