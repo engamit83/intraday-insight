@@ -2212,3 +2212,19 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - As ONE entry per stock-day (pick side): enter at 09:20 with no condition 11 of 92 clean (12%); first break of the range 6/62 (9.7%);
   first 1-min dip >=0.3% 6/91; >=0.5% 7/78; 5-min dip >=0.5% 5/86. -> no rule beats 'just enter at 09:20' yet; the breakout adds nothing.
 - Lead for next session: clean moves cluster EARLY and in fast-moving moments; the side (direction) is the missing piece, not the moment.
+
+## 13 Nov 02:00 - DIRECTION STUDY: what decides the side at 09:20? (owner 00:10) [OLD DATA ok for the 09:20 decision (rule 0k) + TICK check]
+- Data: every BASE 09:20 candidate 2022-26 (S-RAW picks, 10,954 stock-days, 1,164 days); 28 factors known at 09:20 (stock: gap, 5-min move,
+  range, vs Nifty, sector, 1/5/20-day returns, vs yesterday's high/low; market: Nifty gap + 5-min move, breadth, VIX, US/Europe of the
+  previous date). Targets: side right at 15:14 (from the 09:20 price) and clean >=1.5% on the chosen side. Tools: dirfac.py, dirAn2.py.
+- Pass mark (written before): right >=55% AND clean >=1.3x the current rule in every test year 2024-26, >=30% of picks kept, then tick days.
+- Current rule: right 51.6 / 50.1 / 48.2 / 48.9 / 51.0%, clean 6.0-7.5%.
+- Best single factor: FADE the market breadth (more than half the stocks up at 09:20 -> sell side, else buy):
+  right 55.5 / 56.5 / 56.7 / 55.8 / 55.3% (all 5 years), clean 7.5 / 7.5 / 8.3 / 6.5 / 8.0% -> right passes, clean does not (2025/26).
+  Fade the stock's gap and 'vs yesterday's low' also 52-57%. Breadth label re-computed independently from raw minutes: matches (no look-ahead).
+- Walk-forward models (all factors): logistic right 55.6 / 55.4 / 54.1%; boosted trees 55.9 / 54.9 / 54.5%.
+  Most confident 30% (boosted): right 60.1 / 58.1 / 58.1%, clean 11.0 / 8.4 / 9.8% vs current 6.0 / 6.3 / 7.5% -> passes on old data (barely in 2026).
+- [TICK] 10 tick days, 92 picks: current rule right 58/92 (63%); fade-breadth 44/92 (48%). Breadth is ONE number per day -> only 10
+  independent observations: cannot confirm or reject. Many ideas tried tonight -> stricter bar; nothing to install.
+- Next: record the model's side + fade-breadth side for every pick each day (shadow, needs owner 'do it'), judge on Zerodha days;
+  and replay BASE entries/exits with the new side on tick days.
