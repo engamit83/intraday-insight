@@ -2066,3 +2066,9 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Tests: test-kite 9/9 checks pass; existing feed tests pass; test-extras hangs exactly as before the change. Test leftovers removed.
 - Undo: FEED_SOURCE=sharekhan in .env, or copy feed-before-kite.mjs over feed.mjs.
 - Daily: the owner runs kite-login.bat at the laptop before 09:00 (the Zerodha login lasts until about 06:00 next day).
+
+## 12 Nov 12:30 - OWNER RULES 0m + 0n (recorded in CLAUDE.md)
+- 0m (12:29): Claude takes no decisions of its own; only tests/prepares/reports; every change needs the owner's "do it".
+- 0n (12:27-12:30): entry and exit rules are separate. Entry rules only enter; the exit rules take over for every trade.
+  - Consequence: the R3 and S1 shadows must hand their entries to the common exit rules (today they still use their own fixed exits: R3 = 15:14 or +3%; S1 = day-high stop or 15:14).
+  - To prepare after market hours: test on tick days, show numbers, install only on "do it".

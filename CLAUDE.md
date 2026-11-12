@@ -66,6 +66,12 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > before 09:20 does the decision fall back to 09:20. Each scenario (S1, ...) is ONE way to enter, recorded separately; no scenario is the only entry.
 > A good entry = the price then moves >=2% our way without coming back to the entry price - that is what every entry study measures.
 
+> **RULE 0m - CLAUDE TAKES NO DECISIONS OF ITS OWN (owner 12 Nov 12:29, replaces the "Claude decides" part of 0j):** Claude only tests, prepares and reports
+> with numbers. Nothing changes - laptop files, code, live/paper/shadow rules, scheduled tasks - without the owner's clear "do it". Auto mode = testing only.
+> **RULE 0n - ENTRY AND EXIT RULES ARE SEPARATE (owner 12 Nov 12:27-12:30):** an entry rule (BASE, R3, S1, any scenario) ONLY decides to enter the trade
+> (which stock, which side, when). Once in, the EXIT RULES take over for every trade, whatever entry opened it (range stop, fast-drop, stall,
+> profit-protect P8, trail, square-off). No entry rule carries its own exit.
+
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
