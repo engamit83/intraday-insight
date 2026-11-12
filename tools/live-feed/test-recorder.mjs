@@ -36,6 +36,15 @@ check('book snapshot file has header + one line per stock', () => {
   assert.equal(lines[0], 'time,symbol,price,day_volume,bid,bid_qty,offer,offer_qty,total_buy_qty,total_sell_qty')
   assert.equal(lines[1], '10:01:00,RELIANCE,1208,636419,1207.9,4180,1208.4,887,422027,463667')
 })
+check('tick file has total buy/sell qty on EVERY tick, added at the end (12 Nov)', () => {
+  rec.onTick('RELIANCE', { price: 1209, cumulativeVolume: 636700 }, ist(10, 1, 20)) // a tick without book fields -> empty, never stale
+  rec.flushTicks(ist(10, 1, 21))
+  const lines = fs.readFileSync(path.join(dir, 'ticks-2026-10-19.csv'), 'utf8').trim().split('\n')
+  assert.equal(lines[0], 'time,symbol,price,day_volume,bid,bid_qty,offer,offer_qty,total_buy_qty,total_sell_qty')
+  assert.equal(lines[1], '10:00:05.000,RELIANCE,1208,636419,1207.9,4180,1208.4,887,422027,463667')
+  assert.equal(lines[2], '10:01:20.000,RELIANCE,1209,636700,1207.9,4180,1208.4,887,,')
+  const [t, sym, price, cum, bid, , ask] = lines[1].split(','); assert.deepEqual([t, sym, +price, +cum, +bid, +ask], ['10:00:05.000', 'RELIANCE', 1208, 636419, 1207.9, 1208.4]) // old readers (replay, smart-watch) read the same first columns
+})
 check('candle file holds every 1-minute candle and is rewritten, not appended', () => {
   assert.equal(rec.writeCandles(b, ist(10, 2)), 2)
   assert.equal(rec.writeCandles(b, ist(10, 3)), 2)

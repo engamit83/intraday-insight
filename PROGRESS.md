@@ -2180,3 +2180,12 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Side facts: our BASE picks are cleaner than all-stock breakouts (13% vs 7.7%) -> stock selection adds value; buys 9.6% vs sells 6.4%.
 - Limit: one snapshot per minute (up to 60 s old at the break). A proper test needs buy/sell qty on every tick (Zerodha sends it) - recording
   change on the laptop needs the owner's "do it".
+
+## 12 Nov 21:45 - RECORD BUYERS/SELLERS ON EVERY TICK (owner 21:38 "yes we want it every tick")
+- Change (recording only, no trading rule changed): recorder.mjs adds total_buy_qty,total_sell_qty at the END of every line of
+  data\ticks-DAY.csv (empty when a tick has no book fields - never a stale copy). Old readers (replay, smart-watch, rpm) read the first
+  columns only -> unaffected. test-recorder 7/7 (new check added), test-kite 9/9, tick-e2e 4/4, tick-exits 7/7. test-sip fails the same
+  way before and after the change (old test, not related).
+- Status: committed in the repo; NOT yet on the laptop (not linked since ~18:00). Install at the next link, before 09:00:
+  back up D:\intraday\live-feed\recorder.mjs as recorder-before-ticksbook.mjs, copy the new one, run test-recorder there.
+  Takes effect at the next feed start. Undo: copy the backup back.

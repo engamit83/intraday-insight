@@ -44,7 +44,7 @@ export class DayRecorder {
       totBuy: t.totBuy ?? prev.totBuy ?? '', totSell: t.totSell ?? prev.totSell ?? '',
     })
     const b = this.book.get(symbol)
-    this.tickBuf.push(`${istTime(ts)}.${String(ts % 1000).padStart(3, '0')},${symbol},${t.price},${b.cumVol},${b.bid},${b.bidQty},${b.ask},${b.askQty}`)
+    this.tickBuf.push(`${istTime(ts)}.${String(ts % 1000).padStart(3, '0')},${symbol},${t.price},${b.cumVol},${b.bid},${b.bidQty},${b.ask},${b.askQty},${t.totBuy ?? ''},${t.totSell ?? ''}`) // 12 Nov (owner 'yes we want it every tick'): + total buy/sell qty on EVERY tick (columns added at the END, old readers unchanged)
     if (this.tickBuf.length > 200000) this.flushTicks(ts) // safety: never let memory grow
   }
 
@@ -63,7 +63,7 @@ export class DayRecorder {
     try {
       fs.mkdirSync(this.dir, { recursive: true })
       const file = path.join(this.dir, `ticks-${istDay(nowMs)}.csv`)
-      const header = fs.existsSync(file) ? '' : 'time,symbol,price,day_volume,bid,bid_qty,offer,offer_qty\n'
+      const header = fs.existsSync(file) ? '' : 'time,symbol,price,day_volume,bid,bid_qty,offer,offer_qty,total_buy_qty,total_sell_qty\n'
       fs.appendFileSync(file, header + lines.join('\n') + '\n')
       this.ticksWritten += lines.length
       return lines.length
