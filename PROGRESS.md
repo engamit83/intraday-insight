@@ -2079,3 +2079,7 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - The running feed keeps the code it started with, so R3/S1 still record until today's close.
   - From the next feed start (tomorrow 09:00) they are off. BASE paper trades were never affected.
 - Undo: fadeShadow true.
+- 14:09 owner "close all paper trades": BASE had no open trade (3 closed in the morning, net -2,050).
+  - The 5 open R3/S1 virtual sells were closed at the 14:09 price -> data\shadow-closed-2026-11-12.csv. Totals: R3 +1,295, S1 -43 for these closes.
+  - Day totals: R3 = -3,271 (KALYANKJIL stop) +1,295 = -1,976; S1 = -2,050 (2 stops) -43 = -2,093.
+  - The running feed still keeps them in memory until 15:14; its later rows are ignored. From tomorrow they are off.
