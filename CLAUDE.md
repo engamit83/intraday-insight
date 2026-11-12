@@ -72,6 +72,9 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > (which stock, which side, when). Once in, the EXIT RULES take over for every trade, whatever entry opened it (range stop, fast-drop, stall,
 > profit-protect P8, trail, square-off). No entry rule carries its own exit.
 
+> **RULE 0o - ENTRY = BASE RULES ONLY (owner 12 Nov 14:00):** "discard S1 and R3 entry rules ... we will use only our base rules for entry". R3 and S1 are
+> discarded (shadows switched off: fadeShadow false). Entries come only from the BASE entry rules; exits from the exit rules (0n).
+
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.

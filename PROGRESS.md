@@ -2072,3 +2072,10 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - 0n (12:27-12:30): entry and exit rules are separate. Entry rules only enter; the exit rules take over for every trade.
   - Consequence: the R3 and S1 shadows must hand their entries to the common exit rules (today they still use their own fixed exits: R3 = 15:14 or +3%; S1 = day-high stop or 15:14).
   - To prepare after market hours: test on tick days, show numbers, install only on "do it".
+
+## 12 Nov 14:00 - OWNER: R3 and S1 DISCARDED, entry = BASE rules only (rule 0o)
+- Reason (owner): neither gave clean entries today. On today's ticks every R3/S1 sell went back above its entry within 1-3 minutes; clean move 0.00-0.37%.
+- Done 14:05: sip-engine.mjs fadeShadow true -> false on the laptop (verified byte-equal).
+  - The running feed keeps the code it started with, so R3/S1 still record until today's close.
+  - From the next feed start (tomorrow 09:00) they are off. BASE paper trades were never affected.
+- Undo: fadeShadow true.

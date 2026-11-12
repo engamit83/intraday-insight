@@ -32,7 +32,7 @@ import { PreopenShadow } from './preopen-shadow.mjs'
 import { BreadthShadow } from './breadth-shadow.mjs'
 
 export const SIP_RULES = { orStart: 9 * 3600 + 15 * 60, orEnd: 9 * 3600 + 20 * 60, lastEntry: 10 * 3600 + 15 * 60, squareOff: 15 * 3600 + 15 * 60,
-  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, fadeShadow: true, preopenShadow: true, withBreadth: true, breadthBuyMin: 0, breadthSellMax: 100,
+  topK: 10, maxGapWithPct: 1, minRvol: 3, minTurnoverCr: 25, stopMinPct: 0.5, stopMaxPct: 1.5, riskRs: 1000, smartExit: true, warnTightR: 0.3, lossTightR: 0.3, entryBase: false, entryMinSigns: 3, entryNeedFlow: true, reentries: 1, reMinSigns: 3, reNeedFlow: false, reNeedVolume: true, circuitSafety: true, minCircuitRoomPct: 2, qualitySize: true, slipPct: 0.02, costPct: 0.10628, baselineDays: 10, lateStartSec: 20, lateShadow: true, fadeShadow: false, preopenShadow: true, withBreadth: true, breadthBuyMin: 0, breadthSellMax: 100,
   fastDropR: 0.5, fastSec: 60, stallMin: 10, stallBest: 0.5, // X3g FAST DROP + X3h STALL (owner 'do it' 27 Oct 16:43)
   protectAt: 0.8, protectFrac: 0.5, // P8 PROFIT PROTECT (owner 'do it' 5 Nov 21:57)
   trapPct: 0.2, trapMode: 'skip', trapSide: 'BOTH', qsBigRvol: 10, officialOpen: true } // BASE RULES LIVE (owner 10 Nov 00:40 'remove v9 that 2 filters I want trade all days for paper trade'): V9's 2 filters removed - minRvol 10->3 (stocks in play low bar), breadth 60/40 -> 0/100 (breadth still recorded, never blocks). Undo = V9: minRvol 10, breadthBuyMin 60, breadthSellMax 40 // V9 (Claude, rule 0e, 9 Nov 01:55 IST): minRvol 3->10 + breadth 45/55->60/40. Replay 2026 (209d): -41,566/90 losing days -> +11,315/16; 2025 unseen (247d): -24,230/111 -> +850/34. Undo: minRvol 3, breadthBuyMin 45, breadthSellMax 55 // DON'T CHASE + 1.5x ONLY AT >=10x VOLUME (owner 'Do it' 8 Nov 23:45): 2026 replay 209 days -61,706 -> -41,566, losing days 125 -> 90 // P8 PROFIT PROTECT (owner 'do it' 5 Nov 21:57): at +0.8R stop locks half the best profit until +1R. Ticks 22-30 Oct: +10,165 vs +8,719, losing days 2 vs 5
@@ -87,6 +87,7 @@ export class SipEngine {
     if (!this.day) { this.day = istDay(ts); this.restore() }
     if (this.r.lateShadow && this.shadow === undefined) { try { this.shadow = new LateShadow({ dataDir: this.dataDir, sw: this.sw, baseline: this.baseline, day: this.day }) } catch { this.shadow = null } }
     this.makePre()
+    // R3 + S1 shadows DISCARDED by the owner 12 Nov 14:00 ('discard S1 and R3 entry rules, immediate effect'): fadeShadow false. Code kept, switched off.
     if (this.r.fadeShadow && this.fade === undefined) { try { this.fade = new FadeShadow({ dataDir: this.dataDir, day: this.day, baseline: this.baseline }) } catch { this.fade = null } } // SHADOW R3 (10 Nov, step 2): virtual trades only
     const sec = istSec(ts), p = tick.price
     if (!(p > 0)) return ev
