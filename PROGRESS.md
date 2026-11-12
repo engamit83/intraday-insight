@@ -2202,3 +2202,13 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - CORRECTION: my 22:00 finding 're-entries 32% clean vs 12.8%' had the same error. From the entry price: first entries 9.9%,
   re-entries 10% (84 of 843). Re-entries are NOT cleaner. The 13% tick-day numbers were measured correctly (price at the entry moment).
 - From now on every entry study measures from the price at the entry moment (cleanq.py BASEPX=entry on old data).
+
+## 12 Nov 23:45 - WHERE DO CLEAN MOVES START? (owner's 11 Nov idea on OUR picks, 23:09-23:13) [TICK, first pass]
+- Data: the BASE 09:20 picks of the 10 tick days (92 stock-days); every 5 s 09:20-14:45, both sides; clean = >=1.5% before 0.05% back,
+  from the traded price at that moment. 717,600 moments, 3.23% clean, 1,408 'starts'. Tools: starts.py, startsAn.py.
+- Stable in both halves of the days: (1) TIME - 09:20-09:30 2.0x the average, 09:30-10:15 ~1.6x, after 13:00 0.5x.
+  (2) A sharp 1-5 min move just before (either way) ~1.3-1.65x (the market is moving), a dip against us a bit more than a rise.
+  No help: volume burst (1.0x), being beyond the opening range (1.0x), VWAP, position in the day, our 09:20 side (with 1.06x / against 0.94x).
+- As ONE entry per stock-day (pick side): enter at 09:20 with no condition 11 of 92 clean (12%); first break of the range 6/62 (9.7%);
+  first 1-min dip >=0.3% 6/91; >=0.5% 7/78; 5-min dip >=0.5% 5/86. -> no rule beats 'just enter at 09:20' yet; the breakout adds nothing.
+- Lead for next session: clean moves cluster EARLY and in fast-moving moments; the side (direction) is the missing piece, not the moment.

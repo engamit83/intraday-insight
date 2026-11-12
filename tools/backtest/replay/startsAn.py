@@ -1,0 +1,27 @@
+import pandas as pd, numpy as np
+R=pd.read_csv('starts-rows.csv')
+H1=set(sorted(R.day.unique())[:5]); R['half']=np.where(R.day.isin(H1),1,2)
+base=R.c15.mean(); b1=R[R.half==1].c15.mean(); b2=R[R.half==2].c15.mean()
+print(f'all moments {len(R)} | clean>=1.5% {100*base:.2f}% (half1 {100*b1:.2f}%, half2 {100*b2:.2f}%) | starts {R.start.sum()} | clean>=2% {100*R.c20.mean():.2f}%')
+R['hour']=(R.t//1800)*0.5/3600*3600/1800  # half-hour slot index
+R['slot']=pd.cut(R.t,[33600,34200,35100,36900,40500,46800,53100],labels=['09:20-09:30','09:30-09:45','09:45-10:15','10:15-11:15','11:15-13:00','13:00-14:45'],right=False)
+def tab(col,bins=None,labels=None):
+    x=R[col] if bins is None else pd.cut(R[col],bins,labels=labels)
+    g=R.groupby(x,observed=True)
+    print(f'\n{col}: clean rate per bin (x baseline) | half1 | half2 | share of all moments')
+    for k,d in g:
+        a=d.c15.mean(); a1=d[d.half==1].c15.mean(); a2=d[d.half==2].c15.mean()
+        print(f'  {str(k):22} {100*a:5.2f}% ({a/base:4.2f}x) | {100*a1:5.2f}% ({a1/b1:4.2f}x) | {100*a2:5.2f}% ({a2/b2:4.2f}x) | {100*len(d)/len(R):4.1f}% | starts {int(d.start.sum())}')
+tab('slot')
+tab('withPick',[-1,0.5,2],['against pick side','with pick side'])
+tab('fromOpen',[-99,-2,-1,-0.3,0.3,1,2,99])
+tab('vwapDist',[-99,-1,-0.3,0,0.3,1,99])
+tab('posInDay',[-0.01,0.2,0.4,0.6,0.8,0.95,1.01])
+tab('pullback',[-99,-2,-1,-0.5,-0.2,-0.0001,99])
+tab('mom1',[-99,-0.3,-0.1,0,0.1,0.3,99])
+tab('mom5',[-99,-0.5,-0.2,0,0.2,0.5,99])
+tab('mom15',[-99,-1,-0.3,0,0.3,1,99])
+tab('vol1x',[-1,0.5,1,2,4,1e9])
+tab('beyondOR',[-1,0.5,2],['inside/other side of OR','beyond OR our way'])
+tab('nifty15',[-99,-0.2,-0.05,0.05,0.2,99])
+tab('niftyOpen',[-99,-0.5,-0.15,0.15,0.5,99])
