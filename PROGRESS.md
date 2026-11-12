@@ -2139,3 +2139,20 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - D: +0.44% / PF 1.45. E RVOL>10: 10 trades only. F2 volume: +0.46% / PF 1.52; F1 worse.
 - LATE breakout (>=09:37): 11 trades, false BO 9% vs 29% for early (agrees with 5 years); 30-min +0.44% vs +0.34%; but net about 0 (-130).
 - => Live and 5 years agree only on: late breakouts fail less. They disagree on C (good live, bad on old data). More tick days needed; Zerodha now records daily.
+
+## 12 Nov 19:45 - DIRECTION TEST: step 2 from the WHOLE 09:15-09:20 path (owner 17:48-17:57) - NOT PASSED
+- Idea (owner): the side should come from all prices 09:15-09:20, not only the 09:20 price vs the open (loophole).
+- Test: full BASE rules, ONLY step 2 changed (test copy tools/backtest/replay/sip-engine-dirtest.mjs; live engine untouched).
+  D6a count = share of time above/below the open; D6b avg = time-weighted average vs open; D6c vwap = volume-weighted average vs open.
+  'Not clear' band 0 / small / large, unclear -> skip or first breakout. 15 versions + D0 (current rule).
+- Pass mark (written before): side right more often than D0 AND net better than D0 in every walk-forward test year (2024, 2025, 2026).
+- Checks: D0 test copy = live engine on 22 Oct and 12 Nov (12 Nov -2,050 exact); D0 old data = earlier S-BASE replay (same trades every day,
+  50/1184 days differ by a few rupees of rounding); 6 Nov path values re-computed independently from raw ticks = engine choices.
+- [TICK] 10 days, 53 trades: D0 +4,847, 5 losing days, side right 59.8%. Best new: count-0.2-skip +4,580 (5), avg +4,461, vwap +3,983.
+  The path flips the side on only 2-4 of ~92 picks. TITAN 6 Nov (82% of the time below open, above at 09:20): current BUY made +1,186.
+- [OLD DATA - hint only] 2022-26 side right: D0 51.7 / 50.2 / 51.2 / 50.9 / 52.1%; every new version 49-53%, none better in all test years.
+  Walk-forward: count/avg/vwap all 'not better' (side right never above D0; avg/vwap net worse in 2026).
+  Side note: 'skip stocks whose path is mixed' (count-0.2-skip) lost less in 2024/25/26 (-43,932/-82,845/-30,965 vs -63,082/-85,381/-45,184)
+  because it trades ~8% less, not because the side is better; on tick days it was -267 vs D0. A possible filter, not a direction fix.
+- Conclusion: the 09:20 loophole is real but rare; the whole path does not choose the side better. Direction stays a coin toss (~50%)
+  on 5 years. Nothing changed live.
