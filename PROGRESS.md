@@ -2189,3 +2189,16 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Status: committed in the repo; NOT yet on the laptop (not linked since ~18:00). Install at the next link, before 09:00:
   back up D:\intraday\live-feed\recorder.mjs as recorder-before-ticksbook.mjs, copy the new one, run test-recorder there.
   Takes effect at the next feed start. Undo: copy the backup back.
+
+## 13 Nov 00:30 - PROOF ENTRY P1/P2/P3 (owner 21:57 "test it now") - NOT PASSED + CORRECTION of my 22:00 claim
+- Versions (all = BASE + extra; exits unchanged; test engine tools/backtest/replay/sip-engine-dirtest.mjs, options p1Proof/p2Retest):
+  P1 = volume burst (must) + >=3 of 5 signs at the breakout; P2 = break, back inside the range, re-break + the same proof;
+  P3a/P3b = P1/P2 only from 09:37.
+- [TICK] 10 days (clean >=1.5% from the traded price at the entry moment): BASE 7 of 53 (13%); P1 7 of 43 (16%); P2 7 of 40 (18%);
+  P3a 2 of 33; P3b 2 of 30. P1/P2 only drop entries that went nowhere, no new clean ones. Net with exits: BASE +4,847, P1 +3,119, P2 +1,888.
+- CHECK-LOOP CATCH: on 5 years, measured from the breakout LEVEL, P1/P2/P3 looked like 32-44% clean. That was a measuring error:
+  late entries happen far beyond the level, so 'from the level' counts moves that happened BEFORE the entry.
+  Measured from the price AT ENTRY (fill minus slip/spread): BASE 9.9%, P1 9.4%, P2 10.1%, P3a 9.1%, P3b 9.4% -> no gain, every year ~8-12%.
+- CORRECTION: my 22:00 finding 're-entries 32% clean vs 12.8%' had the same error. From the entry price: first entries 9.9%,
+  re-entries 10% (84 of 843). Re-entries are NOT cleaner. The 13% tick-day numbers were measured correctly (price at the entry moment).
+- From now on every entry study measures from the price at the entry moment (cleanq.py BASEPX=entry on old data).

@@ -3,7 +3,7 @@
 # to the entry price (tolerance 0.05%; strict 0% also shown)? Also: reached +1.5% at all (even after coming back).
 # Tick days: real ticks. Old data: 1-minute bars (hint only); a bar that touches both is counted as 'came back first' (strict).
 import json, glob, os, sys, numpy as np, pandas as pd, collections as C
-TAGS=[t for t,_ in json.load(open('dirvars.json'))]
+TAGS=[t for t,_ in json.load(open(os.environ.get('VARS','dirvars.json')))]; TPFX=os.environ.get('TPFX','tickdir')
 IST=19800
 def judge(sg,e,path_hi,path_lo):
     # path arrays in time order (ticks: hi=lo=price). returns dict of flags
@@ -26,7 +26,7 @@ if mode=='tick':
     days=['2026-10-22','2026-10-23','2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-11-06','2026-11-09','2026-11-12']
     R={t:[] for t in TAGS}
     for day in days:
-        J=json.load(open(f'tickdir-{day}.json'))
+        J=json.load(open(f'{TPFX}-{day}.json'))
         syms={x['sym'] for t in TAGS for x in J[t]['trades']}
         tf='/mnt/user-data/uploads/live-feed/data/ticks-2026-11-12.csv' if day=='2026-11-12' else f'tmp/to-{day}.csv'
         df=pd.read_csv(tf,usecols=['time','symbol','price']); df=df[df.symbol.isin(syms)&(df.price>0)&(df.time<'15:15:00')]
@@ -62,8 +62,9 @@ else:
                 em=int(((x['inTs']//1000+IST)%86400)//60)
                 k=mm>em; sg=1 if x['dir']=='BUY' else -1
                 lvl=orh if sg==1 else l[mm<560].min()      # BASE = the breakout level (09:15-09:20 high/low) = trigger price
+                if os.environ.get('BASEPX')=='entry': lvl=x['entry']*fct/(1+sg*0.0003)   # check-loop 12 Nov: late entries (P1/P3) happen far beyond the level -> measure from the price AT ENTRY (fill minus 0.02% slip + 0.01% half-spread)
                 R[t].append({**judge(sg,lvl,h[k],l[k]),'re':x.get('re',0),'day':day})
-    json.dump({t:R[t] for t in TAGS},open('cleanq-old.json','w'))
+    json.dump({t:R[t] for t in TAGS},open(os.environ.get('OUTJ','cleanq-old.json'),'w'))
 for t in TAGS:
     print(f'{t:18} ALL {summary(R[t])}')
 print()

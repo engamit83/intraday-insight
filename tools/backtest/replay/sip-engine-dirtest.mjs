@@ -256,6 +256,11 @@ export class SipEngine {
       if (this.r.maxGapWithPct != null && pk.gapWith != null && pk.gapWith > this.r.maxGapWithPct) { pk.dead = true; pk.dir = 'BOTH'; return [] }
     }
     const B = pk.dir === 'BUY', sg = B ? 1 : -1, lvl = B ? pk.high : pk.low
+    if (this.r.p2Retest && !confirmed) { // TEST 12 Nov P2: first entry like the re-entry - break, come back inside the range, then break again
+      const beyond = B ? tick.price > lvl : tick.price < lvl
+      if (!pk.p2b) { if (beyond) { pk.p2b = true; this.save() } return [] }
+      if (!pk.p2r) { if (!beyond) { pk.p2r = true; this.save() } return [] }
+    }
     // TEST 8 Nov (Version 1 goal: no losing day) - day-level safety, all OFF unless set. dayNet = closed trades today (Rs)
     const dayNet = this.closed.reduce((a, t) => a + (t.netRs ?? 0), 0)
     if (this.r.dayLossStop && dayNet <= -this.r.dayLossStop) return []
@@ -276,6 +281,12 @@ export class SipEngine {
         if (!pk.ranAway) { if ((tick.price - lvl) * sg > band) pk.ranAway = true; return [] }
         if ((tick.price - lvl) * sg > band) return []   // wait for the pull-back to the level
       }
+    }
+    if (this.r.p1Proof && !confirmed) { // TEST 12 Nov P1: the re-entry proof at the first entry - volume burst (must) + >= p1MinSigns of the other 5 signs; else wait (until 10:15)
+      const f = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0, ts)
+      const others = f ? f.score - (f.signs.volume ? 1 : 0) : 0
+      if (!f || !f.signs.volume || others < (this.r.p1MinSigns ?? 3)) { pk.waited = (pk.waited ?? 0) + 1; return [] }
+      pk.entrySigns = Object.keys(f.signs).filter((k) => f.signs[k])
     }
     if (this.r.entryBase && !confirmed) { // BASE RULES (owner 25 Oct): enter only if the favour signs agree; otherwise wait (price must still be beyond the level)
       const f = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0, ts)
