@@ -2168,3 +2168,15 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   First entries 12.8% clean vs re-entries ~32% (270 of 843) - re-entries (rearm + volume burst + signs) are cleaner (tick days: 1 of 6).
 - Verdict by the owner's yardstick: the ENTRY is the weak part (about 1 in 7 clean); the direction method does not change it.
   Separately (exit side): 2 in 3 entries reach +1.5% later on tick days, which exits mostly do not capture.
+
+## 12 Nov 22:15 - BUYERS vs SELLERS at the breakout (owner 21:31 "try doing it") [TICK, 8 Sharekhan days with book-DAY.csv] - NOT PASSED
+- Fact check (owner thought we had none): book-DAY.csv has total buy/sell qty for every stock once a minute, 22 Oct - 6 Nov (8 days);
+  ticks have best bid/offer qty; preopen files have total buy/sell. 9 + 12 Nov not in the copy here (laptop not linked). Old 5-year data: none.
+- Events: every liquid stock's first break of its 09:15-09:20 range (09:20-10:15, either side): 2,585. Outcome = clean >=1.5% from the
+  breakout price (entry alone). Factor = buy/sell qty on our side at the last snapshot before the break (tool: tools/backtest/replay/bookq.py).
+- All breakouts clean 7.7%. Book <0.5: 5.6% | 0.5-0.8: 9.0% | balanced: 6.5% | 1.25-2: 8.3% | >=2 (strongly with us): 7.8%.
+  Quintiles 7.5 / 7.2 / 6.8 / 9.7 / 7.2% - no pattern; halves disagree. Book rising over 5 min: 7.2% vs falling 8.4%. Pass mark failed.
+- Our BASE first entries (same stock + side): 36, clean 3; book >=1.25: 3 of 23, <1.25: 0 of 13 - too few to mean anything.
+- Side facts: our BASE picks are cleaner than all-stock breakouts (13% vs 7.7%) -> stock selection adds value; buys 9.6% vs sells 6.4%.
+- Limit: one snapshot per minute (up to 60 s old at the break). A proper test needs buy/sell qty on every tick (Zerodha sends it) - recording
+  change on the laptop needs the owner's "do it".
