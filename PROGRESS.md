@@ -2091,3 +2091,20 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - Round 2: written rules -> same 10 picks, same 3 gap-skipped, same entries as live. Engine replay of today's ticks -> same 10 picks, same 3 entries (09:20:46, 09:20:47, 09:40:04 re-entry).
   - Round 3: same results again -> stopped.
 - Today: Nifty rose +0.34% in 09:15-09:20, so the trap filter skipped all 8 BUY picks (5 of them broke their level). Only the 2 SELL picks traded.
+
+## 12 Nov 16:00 - ENTRY-QUALITY RESEARCH (owner brief 14:50: what pre-entry conditions give the strongest continuation) [OLD DATA - hint only; entry decisions only on tick days (0k)]
+- Data: every BASE entry 2022-26 from replay v2 (6,758 entries, 842 re-entries), z/e2.py.
+  - Continuation measured from the breakout level at minute ends (exact): 5/10/15/30-min moves, MFE, MAE, false breakout (closes back >=30% of the range inside within 10 min).
+  - P&L from the existing exit rules (replay; pessimistic for exits).
+- Check loop: rows re-computed independently (or-range, 30-min move, VWAP, RS, MFE, MAE, false BO); 2 clean rounds (the first "mistake" was a float32 tolerance, not data).
+- Baseline: win 41.8%, 30-min +0.14%, MFE +2.09%, MAE -1.64%, false BO 24.4%, clean 1.5% 9.4%, expectancy -Rs 47/trade, PF 0.85.
+- Brief's filters (walk-forward, test years 2024/2025/2026):
+  - A VWAP and B relative strength: already true for 98-99% of breakouts -> no information.
+  - C market trend, D sector, E RVOL>5/7/10, F breakout approach/volume and all combinations: NONE better in all 3 test years -> all rejected.
+  - RVOL>10 was very good in 2026 (+0.49% 30-min, PF 1.20) but worse in 2024.
+- Task 1 found one factor consistent in ALL 5 years: breakout TIME.
+  - Entries >=17 min after 09:20 (09:37-10:15): 30-min +0.19 to +0.37% vs baseline +0.09 to +0.23%; false breakouts 9-12% vs 22-26%; clean 1.5% 11-14% vs 8-11.5%.
+  - Expectancy with the current exits: better in 4 of 5 years (2025 worse).
+  - Entries >=5 min: same direction, smaller effect.
+- Gap against our way >=0.85% (already in quality-size): better 30-min in all years, mixed expectancy.
+- Proposal (owner decides): LATE-BREAKOUT test as a shadow on live tick days (record only).

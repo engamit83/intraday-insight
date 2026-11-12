@@ -1,0 +1,107 @@
+================ TASK 1: factor vs continuation (every BASE entry, replay 2022-26; old data - hint only for P&L, exact for minute-end moves)
+  rank-correlation with 30-min continuation (2022-24 | 2025-26) and with MFE; quintile means of 30-min move (2022-24 | 2025-26):
+  rvol         r30 -0.019|+0.041  rMFE +0.081|+0.098 | [3..3.7] +0.15|+0.16 [3.7..4.6] +0.19|+0.08 [4.6..5.8] +0.19|+0.11 [5.8..8.7] +0.07|+0.11 [8.7..7.1e+02] +0.11|+0.23
+  gap          r30 -0.051|-0.052  rMFE -0.071|-0.078 | [-95..-2.5] +0.29|+0.24 [-2.5..-0.85] +0.16|+0.18 [-0.85..0] +0.01|+0.12 [0..0.49] +0.11|+0.04 [0.49..1] +0.16|+0.16
+  rangePct     r30 +0.034|-0.020  rMFE +0.288|+0.246 | [0.22..1.3] +0.05|+0.12 [1.3..1.8] +0.12|+0.20 [1.8..2.4] +0.16|+0.15 [2.4..3.3] +0.19|+0.11 [3.3..12] +0.18|+0.11
+  niftyPre     r30 -0.014|-0.024  rMFE -0.010|-0.020 | [-1.2..-0.16] +0.10|+0.16 [-0.16..-0.056] +0.24|+0.24 [-0.056..0.028] +0.15|+0.20 [0.028..0.12] +0.06|-0.00 [0.12..0.99] +0.17|+0.08
+  sectorPre    r30 +0.015|-0.020  rMFE +0.000|-0.012 | [-1.9..-0.19] +0.11|+0.15 [-0.19..-0.012] +0.11|+0.26 [-0.012..0.14] +0.12|+0.08 [0.14..0.34] +0.17|+0.10 [0.34..2.6] +0.17|+0.16
+  secVsNifty   r30 +0.018|-0.015  rMFE +0.009|-0.006 | [-1.4..-0.13] +0.11|+0.15 [-0.13..0.0087] +0.18|+0.21 [0.0087..0.14] +0.11|+0.15 [0.14..0.33] +0.09|+0.08 [0.33..2.7] +0.17|+0.16
+  vwapDist     r30 -0.012|-0.058  rMFE +0.243|+0.197 | [-0.82..0.45] +0.21|+0.25 [0.45..0.64] +0.12|+0.16 [0.64..0.84] +0.10|+0.16 [0.84..1.2] +0.17|+0.14 [1.2..5.8] +0.11|+0.02
+  rsOR         r30 +0.013|-0.031  rMFE +0.192|+0.168 | [-0.15..0.47] +0.15|+0.14 [0.47..0.94] +0.07|+0.17 [0.94..1.5] +0.12|+0.14 [1.5..2.3] +0.19|+0.13 [2.3..11] +0.18|+0.09
+  niftyVsTwap  r30 -0.001|-0.021  rMFE +0.012|-0.016 | [-0.49..-0.048] +0.14|+0.21 [-0.048..-0.013] +0.14|+0.17 [-0.013..0.016] +0.15|-0.01 [0.016..0.059] +0.10|+0.13 [0.059..0.9] +0.17|+0.16
+  entryMin     r30 +0.053|+0.047  rMFE -0.006|-0.029 | [0..0] +0.10|+0.07 [0..1] +0.09|+0.13 [1..5] +0.06|+0.12 [5..17] +0.16|+0.12 [17..54] +0.32|+0.27
+  approach     r30 +0.002|-0.007  rMFE +0.032|+0.047 | [-0.76..0.096] +0.13|+0.17 [0.096..0.22] +0.18|+0.06 [0.22..0.37] +0.11|+0.20 [0.37..0.55] +0.12|+0.18 [0.55..1.2] +0.16|+0.09
+  volBO        r30 +0.008|-0.001  rMFE +0.076|+0.102 | [0..0.2] +0.14|+0.10 [0.2..0.38] +0.12|+0.13 [0.38..0.55] +0.14|+0.24 [0.55..0.83] +0.14|+0.10 [0.83..15] +0.18|+0.11
+
+================ TASK 2+3: all years together (thresholds for F from 2022-24 only)
+  Baseline                                     n  6758 kept 100% | win 41.8% | 30-min +0.140% | MFE +2.09% MAE -1.64% | false BO 24.4% clean1.5 9.4% | exp Rs   -47 PF 0.85 DD Rs -334340 R -0.062
+  A VWAP alignment                             n  6703 kept  99% | win 41.8% | 30-min +0.130% | MFE +2.08% MAE -1.65% | false BO 24.5% clean1.5 9.0% | exp Rs   -48 PF 0.85 DD Rs -333314 R -0.062
+  B relative strength vs Nifty                 n  6647 kept  98% | win 41.7% | 30-min +0.141% | MFE +2.11% MAE -1.65% | false BO 24.2% clean1.5 9.4% | exp Rs   -48 PF 0.85 DD Rs -331738 R -0.062
+  C market trend (Nifty above/below its avg)   n  3473 kept  51% | win 41.5% | 30-min +0.127% | MFE +2.07% MAE -1.65% | false BO 24.4% clean1.5 9.1% | exp Rs   -54 PF 0.82 DD Rs -213052 R -0.070
+  D sector vs Nifty                            n  3480 kept  51% | win 41.2% | 30-min +0.128% | MFE +2.06% MAE -1.59% | false BO 24.5% clean1.5 8.8% | exp Rs   -47 PF 0.85 DD Rs -179751 R -0.062
+  E RVOL>5                                     n  3663 kept  54% | win 42.4% | 30-min +0.137% | MFE +2.19% MAE -1.70% | false BO 23.3% clean1.5 10.0% | exp Rs   -50 PF 0.85 DD Rs -196440 R -0.061
+  E RVOL>7                                     n  2163 kept  32% | win 41.9% | 30-min +0.121% | MFE +2.28% MAE -1.79% | false BO 21.6% clean1.5 11.1% | exp Rs   -51 PF 0.86 DD Rs -132761 R -0.061
+  E RVOL>10                                    n  1166 kept  17% | win 42.9% | 30-min +0.164% | MFE +2.43% MAE -1.81% | false BO 21.3% clean1.5 11.1% | exp Rs   -35 PF 0.92 DD Rs  -86825 R -0.042
+  F1 approach momentum (top half, WF)          n  3260 kept  48% | win 42.9% | 30-min +0.145% | MFE +2.19% MAE -1.74% | false BO 28.5% clean1.5 10.2% | exp Rs   -48 PF 0.84 DD Rs -180798 R -0.062
+  F2 breakout volume (top half, WF)            n  3244 kept  48% | win 41.7% | 30-min +0.151% | MFE +2.26% MAE -1.79% | false BO 29.1% clean1.5 10.4% | exp Rs   -55 PF 0.82 DD Rs -195174 R -0.076
+  A+B                                          n  6593 kept  98% | win 41.7% | 30-min +0.131% | MFE +2.09% MAE -1.65% | false BO 24.4% clean1.5 9.1% | exp Rs   -48 PF 0.85 DD Rs -331537 R -0.062
+  B+D                                          n  3429 kept  51% | win 41.1% | 30-min +0.129% | MFE +2.08% MAE -1.60% | false BO 24.5% clean1.5 8.8% | exp Rs   -47 PF 0.85 DD Rs -179768 R -0.062
+  A+B+C                                        n  3374 kept  50% | win 41.3% | 30-min +0.117% | MFE +2.07% MAE -1.67% | false BO 24.4% clean1.5 8.7% | exp Rs   -55 PF 0.82 DD Rs -208743 R -0.071
+  A+B+D                                        n  3398 kept  50% | win 41.1% | 30-min +0.121% | MFE +2.07% MAE -1.61% | false BO 24.7% clean1.5 8.5% | exp Rs   -47 PF 0.85 DD Rs -176142 R -0.061
+  A+B+C+D                                      n  1707 kept  25% | win 40.9% | 30-min +0.120% | MFE +2.04% MAE -1.61% | false BO 24.5% clean1.5 8.8% | exp Rs   -59 PF 0.81 DD Rs -114824 R -0.074
+  B+F2                                         n  3204 kept  47% | win 41.5% | 30-min +0.151% | MFE +2.27% MAE -1.80% | false BO 29.0% clean1.5 10.4% | exp Rs   -57 PF 0.81 DD Rs -198486 R -0.078
+  A+B+F2                                       n  3176 kept  47% | win 41.5% | 30-min +0.139% | MFE +2.26% MAE -1.81% | false BO 29.2% clean1.5 9.9% | exp Rs   -57 PF 0.81 DD Rs -198758 R -0.078
+
+================ WALK-FORWARD (rolling): thresholds from all earlier years, tested on the next year; + = beats baseline that year
+--- test year 2024 (train 2022-2023)
+  Baseline                                     n  1604 kept 100% | win 43.0% | 30-min +0.100% | MFE +2.22% MAE -1.82% | false BO 25.4% clean1.5 8.6% | exp Rs   -43 PF 0.87 DD Rs  -84681 R -0.054
+  A VWAP alignment                             n  1591 kept  99% | win 42.9% | 30-min +0.092% | MFE +2.21% MAE -1.82% | false BO 25.5% clean1.5 8.2% | exp Rs   -42 PF 0.87 DD Rs  -84417 R -0.052
+  B relative strength vs Nifty                 n  1578 kept  98% | win 42.6% | 30-min +0.098% | MFE +2.23% MAE -1.83% | false BO 25.3% clean1.5 8.6% | exp Rs   -47 PF 0.85 DD Rs  -90750 R -0.059
+  C market trend (Nifty above/below its avg)   n   821 kept  51% | win 41.7% | 30-min +0.082% | MFE +2.17% MAE -1.87% | false BO 25.7% clean1.5 8.6% | exp Rs   -57 PF 0.82 DD Rs  -56898 R -0.067
+  D sector vs Nifty                            n   822 kept  51% | win 41.6% | 30-min +0.068% | MFE +2.14% MAE -1.78% | false BO 25.4% clean1.5 7.7% | exp Rs   -50 PF 0.84 DD Rs  -50703 R -0.063
+  E RVOL>5                                     n   912 kept  57% | win 43.4% | 30-min +0.078% | MFE +2.24% MAE -1.90% | false BO 24.6% clean1.5 8.9% | exp Rs   -48 PF 0.86 DD Rs  -57866 R -0.055
+  E RVOL>7                                     n   540 kept  34% | win 43.1% | 30-min +0.025% | MFE +2.37% MAE -2.01% | false BO 24.1% clean1.5 10.0% | exp Rs   -55 PF 0.86 DD Rs  -41463 R -0.064
+  E RVOL>10                                    n   306 kept  19% | win 45.1% | 30-min -0.008% | MFE +2.72% MAE -2.06% | false BO 24.2% clean1.5 10.8% | exp Rs   -29 PF 0.93 DD Rs  -25574 R -0.041
+  F1 approach momentum (top half, WF)          n   750 kept  47% | win 42.1% | 30-min +0.053% | MFE +2.28% MAE -1.95% | false BO 31.3% clean1.5 8.3% | exp Rs   -83 PF 0.75 DD Rs  -69490 R -0.088
+  F2 breakout volume (top half, WF)            n   745 kept  46% | win 40.8% | 30-min +0.067% | MFE +2.35% MAE -2.00% | false BO 31.8% clean1.5 9.0% | exp Rs   -96 PF 0.70 DD Rs  -78315 R -0.110
+  A+B                                          n  1566 kept  98% | win 42.5% | 30-min +0.090% | MFE +2.22% MAE -1.84% | false BO 25.5% clean1.5 8.1% | exp Rs   -47 PF 0.85 DD Rs  -89100 R -0.058
+  B+D                                          n   809 kept  50% | win 41.2% | 30-min +0.066% | MFE +2.14% MAE -1.79% | false BO 25.3% clean1.5 7.5% | exp Rs   -55 PF 0.83 DD Rs  -53275 R -0.068
+  A+B+C                                        n   803 kept  50% | win 41.1% | 30-min +0.073% | MFE +2.17% MAE -1.89% | false BO 25.9% clean1.5 8.3% | exp Rs   -64 PF 0.81 DD Rs  -60107 R -0.073
+  A+B+D                                        n   801 kept  50% | win 41.1% | 30-min +0.058% | MFE +2.14% MAE -1.79% | false BO 25.6% clean1.5 7.0% | exp Rs   -54 PF 0.83 DD Rs  -52454 R -0.067
+  A+B+C+D                                      n   399 kept  25% | win 40.1% | 30-min +0.059% | MFE +2.11% MAE -1.85% | false BO 25.1% clean1.5 7.5% | exp Rs   -90 PF 0.73 DD Rs  -37762 R -0.101
+  B+F2                                         n   737 kept  46% | win 40.4% | 30-min +0.065% | MFE +2.36% MAE -2.01% | false BO 31.6% clean1.5 9.0% | exp Rs   -98 PF 0.69 DD Rs  -79159 R -0.112
+  A+B+F2                                       n   729 kept  45% | win 40.5% | 30-min +0.056% | MFE +2.36% MAE -2.01% | false BO 32.0% clean1.5 8.4% | exp Rs   -97 PF 0.70 DD Rs  -79183 R -0.110
+--- test year 2025 (train 2022-2024)
+  Baseline                                     n  1429 kept 100% | win 40.2% | 30-min +0.093% | MFE +1.91% MAE -1.65% | false BO 22.0% clean1.5 8.0% | exp Rs   -59 PF 0.82 DD Rs  -96875 R -0.077
+  A VWAP alignment                             n  1423 kept 100% | win 40.1% | 30-min +0.087% | MFE +1.91% MAE -1.65% | false BO 22.1% clean1.5 7.9% | exp Rs   -59 PF 0.82 DD Rs  -96554 R -0.078
+  B relative strength vs Nifty                 n  1399 kept  98% | win 39.9% | 30-min +0.095% | MFE +1.93% MAE -1.65% | false BO 21.7% clean1.5 8.1% | exp Rs   -61 PF 0.81 DD Rs  -97696 R -0.079
+  C market trend (Nifty above/below its avg)   n   740 kept  52% | win 39.6% | 30-min +0.065% | MFE +1.83% MAE -1.67% | false BO 22.4% clean1.5 6.6% | exp Rs   -90 PF 0.72 DD Rs  -78070 R -0.108
+  D sector vs Nifty                            n   728 kept  51% | win 39.8% | 30-min +0.106% | MFE +1.90% MAE -1.52% | false BO 22.0% clean1.5 7.8% | exp Rs   -46 PF 0.85 DD Rs  -57544 R -0.059
+  E RVOL>5                                     n   882 kept  62% | win 40.0% | 30-min +0.068% | MFE +1.99% MAE -1.70% | false BO 21.8% clean1.5 7.5% | exp Rs   -64 PF 0.82 DD Rs  -68116 R -0.076
+  E RVOL>7                                     n   534 kept  37% | win 40.8% | 30-min +0.081% | MFE +2.09% MAE -1.79% | false BO 20.4% clean1.5 9.2% | exp Rs   -48 PF 0.88 DD Rs  -49474 R -0.051
+  E RVOL>10                                    n   308 kept  22% | win 41.2% | 30-min +0.111% | MFE +2.15% MAE -1.83% | false BO 19.2% clean1.5 8.8% | exp Rs   -49 PF 0.89 DD Rs  -37471 R -0.047
+  F1 approach momentum (top half, WF)          n   631 kept  44% | win 42.5% | 30-min +0.098% | MFE +2.02% MAE -1.75% | false BO 24.1% clean1.5 9.0% | exp Rs   -43 PF 0.87 DD Rs  -37585 R -0.052
+  F2 breakout volume (top half, WF)            n   638 kept  45% | win 40.9% | 30-min +0.066% | MFE +2.00% MAE -1.88% | false BO 24.9% clean1.5 9.1% | exp Rs   -55 PF 0.82 DD Rs  -43519 R -0.088
+  A+B                                          n  1393 kept  97% | win 39.8% | 30-min +0.090% | MFE +1.92% MAE -1.65% | false BO 21.8% clean1.5 8.0% | exp Rs   -61 PF 0.81 DD Rs  -97375 R -0.080
+  B+D                                          n   715 kept  50% | win 39.9% | 30-min +0.109% | MFE +1.92% MAE -1.52% | false BO 21.5% clean1.5 8.0% | exp Rs   -45 PF 0.86 DD Rs  -57663 R -0.058
+  A+B+C                                        n   712 kept  50% | win 39.0% | 30-min +0.062% | MFE +1.84% MAE -1.66% | false BO 22.2% clean1.5 6.5% | exp Rs   -95 PF 0.71 DD Rs  -79089 R -0.114
+  A+B+D                                        n   712 kept  50% | win 39.9% | 30-min +0.102% | MFE +1.91% MAE -1.52% | false BO 21.6% clean1.5 7.9% | exp Rs   -45 PF 0.86 DD Rs  -57617 R -0.057
+  A+B+C+D                                      n   362 kept  25% | win 40.3% | 30-min +0.113% | MFE +1.89% MAE -1.46% | false BO 21.5% clean1.5 7.2% | exp Rs   -58 PF 0.81 DD Rs  -34020 R -0.065
+  B+F2                                         n   624 kept  44% | win 40.5% | 30-min +0.069% | MFE +2.01% MAE -1.88% | false BO 24.7% clean1.5 9.1% | exp Rs   -60 PF 0.81 DD Rs  -45617 R -0.092
+  A+B+F2                                       n   621 kept  43% | win 40.4% | 30-min +0.058% | MFE +2.00% MAE -1.88% | false BO 24.8% clean1.5 8.9% | exp Rs   -61 PF 0.80 DD Rs  -46172 R -0.094
+--- test year 2026 (train 2022-2025)
+  Baseline                                     n  1138 kept 100% | win 41.8% | 30-min +0.190% | MFE +2.16% MAE -1.58% | false BO 24.6% clean1.5 9.8% | exp Rs   -39 PF 0.87 DD Rs  -56872 R -0.066
+  A VWAP alignment                             n  1130 kept  99% | win 41.7% | 30-min +0.180% | MFE +2.14% MAE -1.59% | false BO 24.8% clean1.5 9.4% | exp Rs   -40 PF 0.87 DD Rs  -57278 R -0.067
+  B relative strength vs Nifty                 n  1122 kept  99% | win 41.9% | 30-min +0.187% | MFE +2.17% MAE -1.59% | false BO 24.6% clean1.5 9.9% | exp Rs   -38 PF 0.88 DD Rs  -55450 R -0.065
+  C market trend (Nifty above/below its avg)   n   601 kept  53% | win 41.4% | 30-min +0.191% | MFE +2.14% MAE -1.55% | false BO 24.5% clean1.5 9.8% | exp Rs   -24 PF 0.92 DD Rs  -26702 R -0.068
+  D sector vs Nifty                            n   591 kept  52% | win 42.0% | 30-min +0.170% | MFE +2.15% MAE -1.59% | false BO 25.0% clean1.5 10.7% | exp Rs   -19 PF 0.94 DD Rs  -28049 R -0.042
+  E RVOL>5                                     n   671 kept  59% | win 44.1% | 30-min +0.284% | MFE +2.32% MAE -1.62% | false BO 21.8% clean1.5 12.1% | exp Rs   -17 PF 0.95 DD Rs  -29046 R -0.045
+  E RVOL>7                                     n   422 kept  37% | win 43.6% | 30-min +0.315% | MFE +2.40% MAE -1.65% | false BO 19.4% clean1.5 12.8% | exp Rs   -13 PF 0.96 DD Rs  -22662 R -0.049
+  E RVOL>10                                    n   225 kept  20% | win 47.6% | 30-min +0.492% | MFE +2.65% MAE -1.64% | false BO 16.0% clean1.5 16.0% | exp Rs   +76 PF 1.20 DD Rs  -13502 R +0.041
+  F1 approach momentum (top half, WF)          n   541 kept  48% | win 42.9% | 30-min +0.215% | MFE +2.28% MAE -1.68% | false BO 27.9% clean1.5 11.5% | exp Rs   -20 PF 0.93 DD Rs  -25355 R -0.049
+  F2 breakout volume (top half, WF)            n   527 kept  46% | win 42.1% | 30-min +0.219% | MFE +2.44% MAE -1.73% | false BO 27.7% clean1.5 9.7% | exp Rs   -48 PF 0.84 DD Rs  -30111 R -0.083
+  A+B                                          n  1114 kept  98% | win 41.7% | 30-min +0.177% | MFE +2.15% MAE -1.60% | false BO 24.8% clean1.5 9.4% | exp Rs   -39 PF 0.87 DD Rs  -55856 R -0.066
+  B+D                                          n   585 kept  51% | win 42.1% | 30-min +0.169% | MFE +2.16% MAE -1.60% | false BO 25.3% clean1.5 10.8% | exp Rs   -17 PF 0.94 DD Rs  -27139 R -0.040
+  A+B+C                                        n   586 kept  51% | win 41.5% | 30-min +0.176% | MFE +2.15% MAE -1.57% | false BO 24.6% clean1.5 9.6% | exp Rs   -22 PF 0.92 DD Rs  -25678 R -0.068
+  A+B+D                                        n   583 kept  51% | win 42.0% | 30-min +0.169% | MFE +2.16% MAE -1.60% | false BO 25.4% clean1.5 10.6% | exp Rs   -17 PF 0.94 DD Rs  -27028 R -0.040
+  A+B+C+D                                      n   304 kept  27% | win 41.8% | 30-min +0.198% | MFE +2.16% MAE -1.55% | false BO 25.7% clean1.5 11.2% | exp Rs    +7 PF 1.03 DD Rs  -12704 R -0.042
+  B+F2                                         n   521 kept  46% | win 42.0% | 30-min +0.209% | MFE +2.44% MAE -1.74% | false BO 27.8% clean1.5 9.6% | exp Rs   -50 PF 0.83 DD Rs  -30819 R -0.086
+  A+B+F2                                       n   517 kept  45% | win 41.8% | 30-min +0.195% | MFE +2.42% MAE -1.75% | false BO 28.0% clean1.5 9.1% | exp Rs   -50 PF 0.83 DD Rs  -30745 R -0.087
+
+================ VERDICT (pass mark: better 30-min continuation AND expectancy in all 3 test years, false BO not worse, >=30% trades kept)
+  reject A VWAP alignment                             years better (cont/exp/falseBO/kept): -+-+ ---+ ---+ | d30-min -0.008 -0.005 -0.010 | dExp Rs +1 -0 -1
+  reject B relative strength vs Nifty                 years better (cont/exp/falseBO/kept): --++ +-++ -+++ | d30-min -0.002 +0.003 -0.003 | dExp Rs -5 -2 +1
+  reject C market trend (Nifty above/below its avg)   years better (cont/exp/falseBO/kept): ---+ ---+ ++++ | d30-min -0.018 -0.028 +0.001 | dExp Rs -15 -31 +15
+  reject D sector vs Nifty                            years better (cont/exp/falseBO/kept): ---+ ++++ -+-+ | d30-min -0.032 +0.013 -0.020 | dExp Rs -8 +13 +20
+  reject E RVOL>5                                     years better (cont/exp/falseBO/kept): --++ --++ ++++ | d30-min -0.022 -0.025 +0.094 | dExp Rs -6 -5 +22
+  reject E RVOL>7                                     years better (cont/exp/falseBO/kept): --++ -+++ ++++ | d30-min -0.075 -0.011 +0.125 | dExp Rs -12 +11 +26
+  reject E RVOL>10                                    years better (cont/exp/falseBO/kept): -++- +++- +++- | d30-min -0.107 +0.018 +0.302 | dExp Rs +13 +10 +115
+  reject F1 approach momentum (top half, WF)          years better (cont/exp/falseBO/kept): ---+ ++-+ ++-+ | d30-min -0.047 +0.006 +0.025 | dExp Rs -40 +16 +19
+  reject F2 breakout volume (top half, WF)            years better (cont/exp/falseBO/kept): ---+ -+-+ +--+ | d30-min -0.033 -0.026 +0.029 | dExp Rs -54 +4 -9
+  reject A+B                                          years better (cont/exp/falseBO/kept): ---+ --++ -+-+ | d30-min -0.010 -0.003 -0.013 | dExp Rs -4 -2 +0
+  reject B+D                                          years better (cont/exp/falseBO/kept): --++ ++++ -+-+ | d30-min -0.034 +0.017 -0.021 | dExp Rs -12 +14 +22
+  reject A+B+C                                        years better (cont/exp/falseBO/kept): ---+ ---+ -+++ | d30-min -0.027 -0.031 -0.013 | dExp Rs -21 -36 +17
+  reject A+B+D                                        years better (cont/exp/falseBO/kept): ---+ ++++ -+-+ | d30-min -0.042 +0.010 -0.021 | dExp Rs -12 +14 +22
+  reject A+B+C+D                                      years better (cont/exp/falseBO/kept): --+- +++- ++-- | d30-min -0.041 +0.021 +0.008 | dExp Rs -48 +1 +46
+  reject B+F2                                         years better (cont/exp/falseBO/kept): ---+ ---+ +--+ | d30-min -0.035 -0.024 +0.019 | dExp Rs -56 -1 -11
+  reject A+B+F2                                       years better (cont/exp/falseBO/kept): ---+ ---+ +--+ | d30-min -0.044 -0.035 +0.005 | dExp Rs -55 -2 -11
