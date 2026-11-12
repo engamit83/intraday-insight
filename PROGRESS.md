@@ -2083,3 +2083,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - The 5 open R3/S1 virtual sells were closed at the 14:09 price -> data\shadow-closed-2026-11-12.csv. Totals: R3 +1,295, S1 -43 for these closes.
   - Day totals: R3 = -3,271 (KALYANKJIL stop) +1,295 = -1,976; S1 = -2,050 (2 stops) -43 = -2,093.
   - The running feed still keeps them in memory until 15:14; its later rows are ignored. From tomorrow they are off.
+
+## 12 Nov 14:40 - BASE ENTRY RULES, VERIFIED (owner 14:15: "list all again precisely, loop until no mistake and same results")
+- Source of truth: the live engine settings (SIP_RULES) + its entry code.
+- CHECK LOOP on today's real data (z/verify_entry.py = the written rules re-applied with independent code; rp12 = replay of today's ticks through the engine):
+  - Round 1: MISTAKE in my check, not in the engine: I used our saved 9 Nov close as the previous close, but the engine uses the feed's official previous close (11 Nov) and only accepts a saved close from the previous trading day. Fixed.
+  - Round 2: written rules -> same 10 picks, same 3 gap-skipped, same entries as live. Engine replay of today's ticks -> same 10 picks, same 3 entries (09:20:46, 09:20:47, 09:40:04 re-entry).
+  - Round 3: same results again -> stopped.
+- Today: Nifty rose +0.34% in 09:15-09:20, so the trap filter skipped all 8 BUY picks (5 of them broke their level). Only the 2 SELL picks traded.
