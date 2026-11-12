@@ -2108,3 +2108,23 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - Entries >=5 min: same direction, smaller effect.
 - Gap against our way >=0.85% (already in quality-size): better 30-min in all years, mixed expectancy.
 - Proposal (owner decides): LATE-BREAKOUT test as a shadow on live tick days (record only).
+
+## 12 Nov 15:50 - DAILY REVIEW Thu 12 Nov (first day on the ZERODHA feed; BASE rules live)
+- Feed: Zerodha from 09:00:14, 513/513 stocks.
+  - Gap 11:58-12:47 (laptop internet/DNS lost, 186 failed retries, reconnected by itself). Clean close 15:35.
+  - Watchdog OK all day. Candles not uploaded to the app (app stock list not yet known to the Zerodha path).
+- Market: Nifty +0.34% in the first 5 min -> the trap filter skipped all 8 BUY picks; only the 2 SELL picks traded.
+- (a) BASE live, 3 trades, 1 winner, net -2,050:
+  - HINDCOPPER SELL 09:20:46 stop -1,722;
+  - GODFRYPHLP SELL 09:20:47 trail +547;
+  - HINDCOPPER SELL re-entry 09:40:04 stop -875.
+  - All 3 sells went against breadth 73-76% up.
+- (b) V9 (rvol>=10 AND breadth BUY>=60 / SELL<=40): 0 trades, Rs 0.
+  - HINDCOPPER rvol 11.5, but a SELL with breadth 72.8% -> blocked; GODFRYPHLP rvol 8.3 -> blocked.
+  - The 2 filters helped today by +2,050.
+- Replay vs live: today's ticks replayed through the engine -> same 10 picks and the same 3 entries (exact).
+- Shadows (record only): R3 -1,976, S1 -2,093 (closed 14:09 by the owner; both discarded, off from tomorrow).
+  - Late-entry shadow: 218 virtual, -30,533. Pre-open shadow: 10 virtual, -3,333.
+- Running since BASE went live (10 Nov holiday, 11 Nov no feed): 1 trading day.
+  - BASE -2,050 (1 losing day); V9 0. Days in a row without a losing day: BASE 0.
+- Diagnosis: on a strong up-open the sells against breadth lost. The breadth filter (part of V9) would have avoided all 3. Owner decides.
