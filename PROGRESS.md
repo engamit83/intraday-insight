@@ -2055,3 +2055,14 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   - Trade results on 2025-26 are negative for every top rule except two at about 0 (TMPV -0.005%, BAJ +0.036%).
   - NO rule passes for any of the 4 stocks.
 - Stocks DIFFER: each has its own helping factors (BAJ = events/VIX/volume; RELIANCE = sector/peers/opening range; TMPV = momentum/VWAP; ANGEL = none) -> per-stock treatment is right, but the factors are too weak for an entry rule.
+
+## 12 Nov 08:41 - INSTALLED ON LAPTOP: ZERODHA (KITE) LIVE FEED as the main source, Sharekhan as backup (owner 11 Nov 23:48-23:57 "now all things on zerodha")
+- Files: feed.mjs (source choice + Kite session), new kite-ticks.mjs (Kite websocket full-mode parser).
+  - Before replacing, the laptop's feed.mjs was verified equal to the pre-Zerodha version. Backup kept: D:\intraday\live-feed\feed-before-kite.mjs. All 3 files verified byte-equal after copy.
+- Behaviour: FEED_SOURCE auto (default):
+  - Zerodha when data\kite-token.json is from today's login (owner logged in 08:39).
+  - If Zerodha refuses (403) -> Sharekhan.
+  - Everything downstream unchanged (candles, ticks, book, BASE paper, R3 + S1 shadows, watchdog).
+- Tests: test-kite 9/9 checks pass; existing feed tests pass; test-extras hangs exactly as before the change. Test leftovers removed.
+- Undo: FEED_SOURCE=sharekhan in .env, or copy feed-before-kite.mjs over feed.mjs.
+- Daily: the owner runs kite-login.bat at the laptop before 09:00 (the Zerodha login lasts until about 06:00 next day).
