@@ -2156,3 +2156,15 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   because it trades ~8% less, not because the side is better; on tick days it was -267 vs D0. A possible filter, not a direction fix.
 - Conclusion: the 09:20 loophole is real but rare; the whole path does not choose the side better. Direction stays a coin toss (~50%)
   on 5 years. Nothing changed live.
+
+## 12 Nov 22:00 - ENTRY ALONE (owner 21:13: "entry rule = number of trades + how many went clean >=1.5%; exits separate, don't mix")
+- Measure: from the breakout price at the entry moment, did the price go >=+1.5% / +2% our way before coming back to it (0.05% tolerance)?
+  Exits ignored (followed to 15:15). Tool: tools/backtest/replay/cleanq.py. Our fill (ask+0.02%) is ~0.12% worse than the breakout price:
+  measured from the fill only 2/53 tick entries were clean.
+- [TICK] 10 days, current rule: 53 entries, clean >=1.5% 7 (13%), clean >=2% 6 (11%), reached +1.5% at some point 34 (64%).
+  Best direction versions: 8 clean of 51-52 (+1 entry = noise). Most entries come back to the breakout price within ~30 s.
+- [OLD DATA - hint only] 2022-26, current rule: 6,762 entries, clean >=1.5% 15.2% (1,029), clean >=2% 11.8%, reached +1.5% 50.2%.
+  Per year 17.8 / 14.9 / 14.6 / 13.9 / 15.6%. Every direction version 14.7-15.1% -> none better.
+  First entries 12.8% clean vs re-entries ~32% (270 of 843) - re-entries (rearm + volume burst + signs) are cleaner (tick days: 1 of 6).
+- Verdict by the owner's yardstick: the ENTRY is the weak part (about 1 in 7 clean); the direction method does not change it.
+  Separately (exit side): 2 in 3 entries reach +1.5% later on tick days, which exits mostly do not capture.
