@@ -2228,3 +2228,8 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   independent observations: cannot confirm or reject. Many ideas tried tonight -> stricter bar; nothing to install.
 - Next: record the model's side + fade-breadth side for every pick each day (shadow, needs owner 'do it'), judge on Zerodha days;
   and replay BASE entries/exits with the new side on tick days.
+
+## 13 Nov 15:55 - DAILY REVIEW NOT POSSIBLE: laptop not linked all day
+- Link checks 08:20, 08:40, 15:55 (2 tries each) failed. No feed/trade/tick files for 13 Nov reachable; feed status unknown.
+- Not done: every-tick buyer/seller recorder install (ready in repo, owner approved 12 Nov 21:38), PROGRESS/CLAUDE copy to laptop,
+  BASE vs V9 review for 13 Nov, Friday history pull check. All to be done at the next link (13 Nov files stay on the laptop).
