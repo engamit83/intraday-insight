@@ -2233,3 +2233,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Link checks 08:20, 08:40, 15:55 (2 tries each) failed. No feed/trade/tick files for 13 Nov reachable; feed status unknown.
 - Not done: every-tick buyer/seller recorder install (ready in repo, owner approved 12 Nov 21:38), PROGRESS/CLAUDE copy to laptop,
   BASE vs V9 review for 13 Nov, Friday history pull check. All to be done at the next link (13 Nov files stay on the laptop).
+
+## 14 Nov 10:10 - WEEKLY REVIEW (week of 9-13 Nov) - laptop NOT linked (13 Nov files unreachable)
+- Week by day: Mon 9 V9 live 0 trades (BASE would have -1,124) | Tue 10 NSE holiday | Wed 11 no trading (Sharekhan blocked) |
+  Thu 12 BASE live -2,050 (V9 would have 0: breadth blocked the sells) | Fri 13 unknown (laptop not linked all day).
+  Known days: BASE -3,174 with 2 losing days of 2; V9 0 / 0 losing days -> the 2 V9 filters helped this week.
+- All 10 tick days (BASE replay = live): +4,847, 5 losing days; entries clean >=1.5% only 13%.
+- weekly_tests.py is outdated (hard-coded October days/paths, rule variants since replaced) -> not re-run; this week's tests were done
+  directly (see 12-13 Nov entries): direction from the whole 5-min path (no), proof entry P1-P3 (no), buyer/seller book at breakout (no),
+  clean-move starts (time matters, breakout adds nothing), 5-year direction study (fade breadth 55-57% every year; model 58-60% confident).
+- Pre-open contrarian, 7 days with pre-open files (26 Oct - 9 Nov, 70 picks): crowd = market-wide pre-open buy/sell (<1 on 6 of 7 days).
+  Fade the crowd: right at 15:14 44/70 (62.9%) vs current rule 42/70 (60.0%) - same contrarian direction as the 5-year breadth finding, but 7 days.
+- PROPOSALS (owner decides): (1) P8 keep 10% [TICK +2,685 on 9 days]; (2) test fast-drop = exit now (HINDCOPPER 12 Nov -1,722 -> ~-700);
+  (3) direction SHADOW: record model side + fade-breadth + fade-pre-open side per pick daily; (4) install every-tick buyer/seller recording
+  (approved 12 Nov, waiting for the laptop link); (5) decide BASE vs V9 filters (this week V9 better, over 10 tick days BASE ahead).
