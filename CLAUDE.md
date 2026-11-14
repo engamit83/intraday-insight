@@ -135,6 +135,8 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > every EXIT (stop, fast-drop 60 s, stall, trail, P8, square-off), re-entry, order flow (total buy/sell, 5-level depth, OI), pre-open book, anything within a
 > minute. Old data may only HINT here (it cannot see the order inside a minute) and the tick days DECIDE.
 > 'Clean >=1.5% move' on old data = hint (strict when a minute touches both sides); on ticks = exact.
+> Owner 14 Nov 19:31 (for the TICK-ONLY factors): still test them on old data as a hint, then on tick days. Both agree -> good candidate (shadow, then
+> promote by 0v). They disagree -> the live TICK result wins; the old-data result is never taken as correct on its own.
 
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
