@@ -2296,3 +2296,16 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 
 ## 14 Nov 19:30 - LIVE-READY CRITERIA written (owner 19:11; he will never go live, Claude only informs) - see CLAUDE.md under rule 0d.
 - Current status vs the criteria: 0 of 20 days (last losing day 12 Nov: -2,050; 13 Nov no feed). Rules are still being improved, so the count has not started.
+
+## 14 Nov 21:50 - NIGHT BLOCK 1: DIRECTION CONFIRMATION (rule 0s) - a real lead for SELLS, shadow started
+- Test (tools/backtest/replay/dirconf.py): 09:20 side + supporting factor, 5 years walk-forward vs BOTH baselines (same-side current rule, always-that-side).
+  Pass mark written first: >= +3 points over both baselines every test year, clean >= 1.2x, >= 1 pick a day.
+- SELL picks that GAPPED UP > 1% at the open [OLD DATA - decides for the 09:20 side, rule 0w]:
+  right at 15:14 60.7 / 64.9 / 60.0 / 59.8 / 59.4% (2022-26) vs other sells 57.1 / 54.1 / 52.8 / 52.2 / 55.6% and always-sell 55-57%;
+  clean >=1.5% down 10.3 / 9.2 / 8.4 / 8.6 / 11.9% vs other sells 6.7 / 6.7 / 5.0 / 6.9 / 7.6% (1.24-1.68x); avg move our way +0.29 to +0.61%.
+  ~1.3 such sells a day. Walk-forward-chosen combo (gap>1 or 5-day rise>5%) passed the side bar only partly (clean 1.06-1.18x) -> the simple gap>1% wins.
+- [TICK] 10 days: gap-up sells right 17/28 (61%, same level as 5 years); other sells 15/24 (63%) -> no separation yet (small). Traded gap-up sells +1,795 (14).
+  HINDCOPPER 12 Nov (gap up 5.97%): side RIGHT (fell by the close) but the trade lost -1,722 -> entry/exit problem, not direction.
+- BUY side: no confirming factor works; BASE buys are right only 42.7-46.5% at 15:14 on 5 years, but 26/40 (65%) on the 10 tick days -> old vs tick disagree, no action.
+- DECISION (0v): no live change. Added to the SCOREBOARD as D1 = "sells only when gapped up > 1%" and D2 = "no buys"; the 10 replayed tick days count,
+  so D1 needs 10 more live days (20 total incl. up and down days) before it can be promoted.
