@@ -28,6 +28,16 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > Daily report must show the streak: "X days in a row without a losing day" and the losing days so far.
 > **V1 READY SIGNAL (owner 8 Nov 17:29):** when paper trading has a full month with every day in profit across all market situations (up/down/flat/narrow/wild days), Claude tells the owner "Version 1 is ready - we can consider live trading", with the full month's numbers. Real-money orders stay the owner's own action (Claude never places real trades or moves money).
 
+> **LIVE-READY CRITERIA (owner 14 Nov 19:11, "when will you know the app is ready for live money, you have to inform me ... tell me the criteria ...
+> you will just tell me about it but I will never go live"):** Claude only INFORMS; the owner has said he will never go live; Claude never places real orders.
+> Claude says "Version 1 is ready - the live-money criteria are met" (with the full numbers) only when ALL hold on PAPER with the SAME frozen rules:
+> (1) 20 trading days in a row, every day >= Rs 0 after ALL costs (brokerage, STT, exchange, SEBI, GST, stamp duty + slippage and spread);
+> (2) the 20 days include every market type: >= 3 up days, >= 3 down days, >= 3 flat/narrow days, >= 2 wild days (big Nifty range or VIX jump);
+> (3) no rule change during those 20 days (a change restarts the count); (4) replay = live every day, no feed outage on any day (an outage day = restart);
+> (5) safety: no trade loss bigger than 1.2R, worst day >= Rs 0, no single day > 30% of the month's profit, at least ~3 trades a day on average;
+> (6) fills realistic: every paper entry/exit price traded on that tick with enough quantity for our size;
+> (7) the same rules are not losing on the 5 years where old data is valid (0k).
+
 > **RULE 0e - (REPLACED by 0g on 9 Nov 12:04)** CLAUDE MAY MAKE RULES LIVE (owner 9 Nov 00:11, PAPER TRADING ONLY): "u are market expert u decide ... make the rules and make it live if u are confident".
 > Claude's own bar before installing a rule: (1) better on losing days AND net over all 2026 days, (2) better in BOTH halves of 2026, (3) still better on 2025 (unseen data),
 > (4) installed only outside market hours (not 09:00-15:30 IST), engine checked on the laptop, (5) the owner is told the same day exactly what changed, the numbers, and how to undo it.

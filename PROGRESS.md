@@ -2293,3 +2293,6 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   not failing on 5 years where valid; max one promotion a week.
 - SCOREBOARD (starts Mon 16 Nov; first candidates): E0 = live BASE | X1 P8 keep 10% | X2 fast-drop = exit at once | D1 sell only after a gap-up /
   5-day rise (+ buy mirror) | V9 filters (rvol >= 10 + breadth) | F1 skip mixed 5-min path (count-0.2-skip).
+
+## 14 Nov 19:30 - LIVE-READY CRITERIA written (owner 19:11; he will never go live, Claude only informs) - see CLAUDE.md under rule 0d.
+- Current status vs the criteria: 0 of 20 days (last losing day 12 Nov: -2,050; 13 Nov no feed). Rules are still being improved, so the count has not started.
