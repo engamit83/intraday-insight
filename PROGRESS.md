@@ -2247,3 +2247,16 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - PROPOSALS (owner decides): (1) P8 keep 10% [TICK +2,685 on 9 days]; (2) test fast-drop = exit now (HINDCOPPER 12 Nov -1,722 -> ~-700);
   (3) direction SHADOW: record model side + fade-breadth + fade-pre-open side per pick daily; (4) install every-tick buyer/seller recording
   (approved 12 Nov, waiting for the laptop link); (5) decide BASE vs V9 filters (this week V9 better, over 10 tick days BASE ahead).
+
+## 14 Nov 14:50 - OWNER HANDS THE APP TO CLAUDE (rules 0p-0t) + FULL ZERODHA RECORDING INSTALLED
+- Owner 14:24-14:36: Claude runs the app on its own, PAPER only, changes rules itself when data proves it, loop until the goal; entry and exit
+  refined separately; take ALL Zerodha data; direction first (09:20 rule + other factors that confirm); basics first; record every instruction;
+  keep .md files current on git + laptop. Written into CLAUDE.md as rules 0p, 0q, 0r, 0s, 0t (0m replaced).
+- 13 Nov: NO files at all on the laptop for that day (no feed log, no watchdog, no ticks) -> the laptop/feed did not run. No trading, no data.
+- INSTALLED on the laptop (Saturday, outside market hours; laptop files verified = tested code, byte for byte):
+  recorder.mjs + kite-ticks.mjs: (a) ticks-DAY.csv gets total_buy_qty,total_sell_qty on every tick (approved 12 Nov);
+  (b) NEW kite-full-DAY.csv.gz = EVERY Zerodha field of every packet 09:00-15:30 (50 columns: last qty, avg price, volume, total buy/sell,
+  day OHLC, last trade time, OI, exchange time, 5 bids + 5 offers with qty/price/orders; indices OHLC/change). Gzip, est. ~200-300 MB/day.
+  Tests: test-kite 11/11 (3 new), test-recorder 7/7, tick-e2e 4/4, tick-exits 7/7. Recording errors can never stop the feed.
+  Backups on the laptop: recorder-before-full.mjs, kite-ticks-before-full.mjs. Undo: copy them back over recorder.mjs / kite-ticks.mjs.
+  Starts with the next feed start (Mon 16 Nov). Limit: no shell on the laptop from here (only file copy), so tests ran here on the same files.

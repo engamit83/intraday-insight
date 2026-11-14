@@ -5,14 +5,20 @@
 //                           quantity waiting (tells us whether buyers or sellers are stronger)
 //   ticks-YYYY-MM-DD.csv    EVERY price tick (added 21 Oct, owner: everything at tick level) - time to the millisecond,
 //                           price, day volume, best bid/offer and sizes. Written every 2 seconds. ~150-250 MB per day.
+//   kite-full-YYYY-MM-DD.csv.gz  (14 Nov, owner rule 0r 'take ALL Zerodha data') EVERY Zerodha field of every packet, 09:00-15:30:
+//                           last qty, avg price, volume, total buy/sell, day OHLC, last trade time, OI (+day high/low), exchange time,
+//                           5 bids + 5 offers (qty, price, number of orders); indices: OHLC, change. Gzip members appended every 2 s.
 //   preopen-YYYY-MM-DD.csv  every message 09:00-09:15 (pre-open auction + gap to the open; added 25 Oct, expert audit):
 //                           price, day volume, bid/offer, total buy/sell waiting, circuit limits, yesterday's close.
 // Recording problems are reported but can never stop the feed.
 
 import fs from 'node:fs'
+import zlib from 'node:zlib'
 import path from 'node:path'
 import { IST_OFFSET_MS } from './candles.mjs'
 
+const DEPTH_COLS = ['b1', 'b2', 'b3', 'b4', 'b5', 'a1', 'a2', 'a3', 'a4', 'a5'].flatMap((x) => [x + '_qty', x + '_price', x + '_orders'])
+export const KITE_FULL_HEADER = ['time', 'symbol', 'token', 'kind', 'ltp', 'last_qty', 'avg_price', 'volume', 'total_buy_qty', 'total_sell_qty', 'open', 'high', 'low', 'close', 'change', 'last_trade_time', 'oi', 'oi_day_high', 'oi_day_low', 'exchange_time', ...DEPTH_COLS].join(',')
 const istDay = (ms) => new Date(ms + IST_OFFSET_MS).toISOString().slice(0, 10)
 const istTime = (ms) => new Date(ms + IST_OFFSET_MS).toISOString().slice(11, 19)
 
@@ -24,17 +30,33 @@ export class DayRecorder {
     this.tickBuf = []
     this.ticksWritten = 0
     this.preBuf = []
+    this.kfBuf = [] // 14 Nov: full Zerodha packets
+    this.kfWritten = 0
   }
 
   // 09:00-09:15 (pre-open): record everything Sharekhan sends, for the pre-open study
   preOpen(symbol, t, ts) {
     if (!symbol) return
+    this.kiteFull(symbol, t, ts)
     this.preBuf.push([`${istTime(ts)}.${String(ts % 1000).padStart(3, '0')}`, symbol, t.price ?? '', t.cumulativeVolume ?? '', t.bid ?? '', t.ask ?? '', t.totBuy ?? '', t.totSell ?? '', t.upCkt ?? '', t.loCkt ?? '', t.prevClose ?? ''].join(','))
     if (this.preBuf.length > 200000) this.flushTicks(ts)
   }
 
+  // 14 Nov (rule 0r): one line per Zerodha packet with ALL its fields; never throws
+  kiteFull(symbol, t, ts) {
+    const k = t?.kf
+    if (!k) return
+    try {
+      const dep = k.depth ? k.depth.map((d) => d.join(',')).join(',') : ',,,,,,,,,,,,,,,,,,,,,,,,,,,,,'
+      this.kfBuf.push([`${istTime(ts)}.${String(ts % 1000).padStart(3, '0')}`, symbol, t.token ?? '', k.kind, t.price, k.ltq ?? '', k.atp ?? '', k.vol ?? '', k.tb ?? '', k.ts ?? '',
+        k.open ?? '', k.high ?? '', k.low ?? '', k.close ?? '', k.change ?? '', k.ltt ?? '', k.oi ?? '', k.oiH ?? '', k.oiL ?? '', k.exTs ?? '', dep].join(','))
+      if (this.kfBuf.length > 200000) this.flushTicks(ts)
+    } catch { this.errors++ }
+  }
+
   onTick(symbol, t, ts) {
     if (!symbol || !(t.price > 0)) return
+    this.kiteFull(symbol, t, ts)
     const prev = this.book.get(symbol) ?? {}
     this.book.set(symbol, {
       ts, price: t.price,
@@ -56,6 +78,16 @@ export class DayRecorder {
         fs.mkdirSync(this.dir, { recursive: true })
         const pf = path.join(this.dir, `preopen-${istDay(nowMs)}.csv`)
         fs.appendFileSync(pf, (fs.existsSync(pf) ? '' : 'time,symbol,price,day_volume,bid,offer,total_buy_qty,total_sell_qty,upper_circuit,lower_circuit,prev_close\n') + pl.join('\n') + '\n')
+      } catch (e) { this.errors++ }
+    }
+    if (this.kfBuf.length) {
+      const kl = this.kfBuf; this.kfBuf = []
+      try {
+        fs.mkdirSync(this.dir, { recursive: true })
+        const kfile = path.join(this.dir, `kite-full-${istDay(nowMs)}.csv.gz`)
+        const head = fs.existsSync(kfile) ? '' : KITE_FULL_HEADER + '\n'
+        fs.appendFileSync(kfile, zlib.gzipSync(head + kl.join('\n') + '\n')) // each flush = one gzip member; members chain into one valid .gz
+        this.kfWritten += kl.length
       } catch (e) { this.errors++ }
     }
     if (this.tickBuf.length === 0) return 0

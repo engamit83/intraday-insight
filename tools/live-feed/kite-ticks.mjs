@@ -65,8 +65,17 @@ export function parseKiteBinary(buf) {
     const token = p.readInt32BE(0), t = { token, price: p.readInt32BE(4) / 100 }
     if (!(t.price > 0)) continue
     const index = (token & 0xff) === 9
-    if (index) { if (len >= 28) t.prevClose = p.readInt32BE(20) / 100 }
-    else if (len >= 44) {
+    if (index) {
+      if (len >= 28) t.prevClose = p.readInt32BE(20) / 100
+      // 14 Nov (owner rule 0r: take ALL Zerodha data): every index field -> t.kf (recorded in kite-full-DAY.csv.gz)
+      if (len >= 28) t.kf = { kind: 'I', high: p.readInt32BE(8) / 100, low: p.readInt32BE(12) / 100, open: p.readInt32BE(16) / 100, close: p.readInt32BE(20) / 100, change: p.readInt32BE(24) / 100, exTs: len >= 32 ? p.readInt32BE(28) : '' }
+    } else if (len >= 44) {
+      // 14 Nov (rule 0r): every quote/full field -> t.kf. Full packet: +LTT, OI, OI day high/low, exchange time, 5 bids + 5 offers (qty, price, orders)
+      const kf = { kind: len >= 184 ? 'F' : 'Q', ltq: p.readInt32BE(8), atp: p.readInt32BE(12) / 100, vol: p.readInt32BE(16), tb: p.readInt32BE(20), ts: p.readInt32BE(24),
+        open: p.readInt32BE(28) / 100, high: p.readInt32BE(32) / 100, low: p.readInt32BE(36) / 100, close: p.readInt32BE(40) / 100 }
+      if (len >= 64) { kf.ltt = p.readInt32BE(44); kf.oi = p.readInt32BE(48); kf.oiH = p.readInt32BE(52); kf.oiL = p.readInt32BE(56); kf.exTs = p.readInt32BE(60) }
+      if (len >= 184) { kf.depth = []; for (let d = 0; d < 10; d++) { const q = 64 + d * 12; kf.depth.push([p.readInt32BE(q), p.readInt32BE(q + 4) / 100, p.readInt16BE(q + 8)]) } }
+      t.kf = kf
       t.cumulativeVolume = p.readInt32BE(16); t.totBuy = p.readInt32BE(20); t.totSell = p.readInt32BE(24); t.prevClose = p.readInt32BE(40) / 100
       if (len >= 184) {
         const bq = p.readInt32BE(64), bp = p.readInt32BE(68) / 100, aq = p.readInt32BE(124), ap = p.readInt32BE(128) / 100
