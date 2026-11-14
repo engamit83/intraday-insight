@@ -126,6 +126,16 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > it is better in BOTH halves of the period, it doesn't add losing days, and (where old data is valid, 0k) it doesn't fail on 5 years. More candidates tried
 > -> stricter bar. At most one promotion a week, so each change's effect stays measurable. Weekly review = read the board; daily review = update it.
 
+> **RULE 0w - WHICH DATA TESTS WHAT (owner 14 Nov 19:25, "factors which can work on past data can only be tested with past data, what needs tick feeds
+> should be tested on days which we have ticks"):** every test first names its data type (0k):
+> OLD MINUTE DATA (2017-2026, ~2,400 days; = ticks wherever only minute prices/volumes at a minute boundary are used): stock selection at 09:20 (rvol,
+> turnover - proven 95% equal), DIRECTION at 09:20 (price vs open, gap, the stock's previous days, sector, Nifty, breadth, VIX, global markets),
+> day-level/market filters, calendar effects, multi-day factors, end-of-day direction. Here old data DECIDES (large sample, walk-forward).
+> TICK DAYS ONLY (live recorded Zerodha ticks): the exact entry trigger and timing (first tick beyond a level), fills (bid/ask, spread, slippage, quantity),
+> every EXIT (stop, fast-drop 60 s, stall, trail, P8, square-off), re-entry, order flow (total buy/sell, 5-level depth, OI), pre-open book, anything within a
+> minute. Old data may only HINT here (it cannot see the order inside a minute) and the tick days DECIDE.
+> 'Clean >=1.5% move' on old data = hint (strict when a minute touches both sides); on ticks = exact.
+
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
