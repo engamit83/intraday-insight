@@ -2285,3 +2285,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - New test test-kite-only.mjs (4/4): starts with no login -> no Sharekhan request, retries; login appears 4 s later -> connects to Zerodha, ticks recorded.
   All feed tests pass: kite 11, e2e 11, tick-e2e 4, watchdog 3, recorder 7, tick-exits 7. The laptop watchdog is source-independent (unchanged).
 - Installed on the laptop (backup feed-before-kiteonly.mjs; undo = copy it back). Rule 0u updated in CLAUDE.md.
+
+## 14 Nov 19:20 - RULE 0v: SHADOW SCOREBOARD + TEST PERIODS (owner 19:10)
+- Candidates run as shadows by replaying them on every live day's recorded Zerodha ticks after the close (no risk to the live engine, unlimited number).
+- Periods by evidence: entry/exit >= 100 live trades (~4 weeks); exit refinements on the same entries >= 50 trades (~2 weeks); day-level direction/market
+  filters >= 20 live days with up and down days. Promote only if > 2 standard errors better after costs, better in both halves, no extra losing days,
+  not failing on 5 years where valid; max one promotion a week.
+- SCOREBOARD (starts Mon 16 Nov; first candidates): E0 = live BASE | X1 P8 keep 10% | X2 fast-drop = exit at once | D1 sell only after a gap-up /
+  5-day rise (+ buy mirror) | V9 filters (rvol >= 10 + breadth) | F1 skip mixed 5-min path (count-0.2-skip).

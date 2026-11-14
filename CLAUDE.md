@@ -106,6 +106,16 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > Owner 14 Nov 17:39: "Sharekhan we are not working, you work on Zerodha only, if feed doesn't start keep looking for Zerodha" -> the feed is
 > ZERODHA ONLY: no login / refused login -> it keeps retrying Zerodha (within 30 s), never Sharekhan (only if FEED_SOURCE=sharekhan is set on purpose).
 
+> **RULE 0v - SHADOW SCOREBOARD + TEST PERIOD BY LOGIC (owner 14 Nov 19:10, "you decide what time frame to keep the testing period ... with proper logic,
+> keep as shadow and keep testing multiple rules, whichever works best during the live period, then only decide as a rule"):**
+> SHADOWS = every candidate rule is replayed on EACH live day's own recorded ticks after the close (replay = live, checked daily), so any number of rules
+> run side by side without touching the live engine. A running SCOREBOARD (PROGRESS.md) holds each candidate vs the live rule.
+> PERIOD = set by the amount of evidence, not the calendar: entry/exit rules >= 100 live trades (~4 weeks at ~5 trades a day); exit refinements compared
+> trade-by-trade on the SAME entries >= 50 trades (~2 weeks); day-level direction/market filters >= 20 live days incl. both up and down market days.
+> PROMOTE a candidate to live only when: the period is complete, it beats the live rule after costs by more than noise (difference > 2 standard errors),
+> it is better in BOTH halves of the period, it doesn't add losing days, and (where old data is valid, 0k) it doesn't fail on 5 years. More candidates tried
+> -> stricter bar. At most one promotion a week, so each change's effect stays measurable. Weekly review = read the board; daily review = update it.
+
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
