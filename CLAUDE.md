@@ -66,7 +66,7 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > before 09:20 does the decision fall back to 09:20. Each scenario (S1, ...) is ONE way to enter, recorded separately; no scenario is the only entry.
 > A good entry = the price then moves >=2% our way without coming back to the entry price - that is what every entry study measures.
 
-> **RULE 0m - CLAUDE TAKES NO DECISIONS OF ITS OWN (owner 12 Nov 12:29, replaces the "Claude decides" part of 0j):** Claude only tests, prepares and reports
+> **RULE 0m - (REPLACED by 0p on 14 Nov 14:36)** CLAUDE TAKES NO DECISIONS OF ITS OWN (owner 12 Nov 12:29, replaces the "Claude decides" part of 0j): Claude only tests, prepares and reports
 > with numbers. Nothing changes - laptop files, code, live/paper/shadow rules, scheduled tasks - without the owner's clear "do it". Auto mode = testing only.
 > **RULE 0n - ENTRY AND EXIT RULES ARE SEPARATE (owner 12 Nov 12:27-12:30):** an entry rule (BASE, R3, S1, any scenario) ONLY decides to enter the trade
 > (which stock, which side, when). Once in, the EXIT RULES take over for every trade, whatever entry opened it (range stop, fast-drop, stall,
@@ -74,6 +74,27 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 
 > **RULE 0o - ENTRY = BASE RULES ONLY (owner 12 Nov 14:00):** "discard S1 and R3 entry rules ... we will use only our base rules for entry". R3 and S1 are
 > discarded (shadows switched off: fadeShadow false). Entries come only from the BASE entry rules; exits from the exit rules (0n).
+
+> **RULE 0p - CLAUDE RUNS THE APP ON ITS OWN, PAPER ONLY (owner 14 Nov 14:24-14:36, replaces 0m):** "I don't have time to work with you on this app ...
+> continue on your own without live money trade, only paper trade ... weekly or anytime you feel you need to change rules ... always make the loop till we
+> reach our goal". Claude decides and installs PAPER rule changes itself (no "do it" needed) when the data proves them: better than the current rule on
+> live tick days (and on 5 years where old data is valid, rule 0k), one change at a time, installed outside 09:00-15:30, backup + undo kept,
+> the owner told every change in a short message (what, why, numbers, undo) and it is logged (0f). Real money: never - owner only.
+> The loop never stops until the goal (0d: profit every day, ~zero loss); 3 failed rounds -> question the idea one level up (0j).
+> ENTRY and EXIT are refined SEPARATELY (0n): ENTRY's only job = a good entry (price goes >=1.5-2% our way from the entry moment without coming back);
+> EXIT's job once in = protect from loss (cut bad trades early) and protect profit (don't give back gains). Exit rules are refined, never removed (0k).
+> Owner's part: Zerodha login (kite-login.bat) before 09:00 and the laptop on with the Claude app open on market days.
+> **RULE 0q - KEEP THE .md FILES CURRENT + RECORD EVERY INSTRUCTION (owner 14 Nov 14:36):** every owner instruction goes into CLAUDE.md;
+> PROGRESS.md and CLAUDE.md updated in git AND on the laptop (D:\intraday\intraday-insight) every time. Every session/review STARTS by re-reading
+> CLAUDE.md + PROGRESS.md and checking the goal before any work.
+> **RULE 0r - TAKE ALL ZERODHA DATA (owner 14 Nov 14:36, "I paid 500 for Zerodha this month - get all the data it is providing, don't miss any
+> even though it is not useful, take it"):** record every field Zerodha gives (full tick: price, qty, avg price, OHLC, volume, total buy/sell,
+> 5-level depth both sides, OI, timestamps; instruments list; historical candles for all stocks/indices/F&O it allows; anything else on the API).
+> **RULE 0s - DIRECTION BEFORE ENTRY (owner 14 Nov 14:36):** keep the 09:20 rule, but also check OTHER factors that make us sure about the direction,
+> and only then jump in. Direction is the first thing to prove.
+> **RULE 0t - BASICS FIRST, THINK HOW TO USE THE DATA BEST (owner 14 Nov 14:36, "make it a rule"):** before ANY test or decision: (1) is the base
+> idea proven at all (e.g. don't build entry rules on a direction that is only 50% right - the mistake of 12 Nov); (2) is this the most relevant
+> thing for the goal right now; (3) which of ALL our data answers it best, and how to use it better. Don't do irrelevant work.
 
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
