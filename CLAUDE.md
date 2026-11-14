@@ -92,6 +92,8 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > 5-level depth both sides, OI, timestamps; instruments list; historical candles for all stocks/indices/F&O it allows; anything else on the API).
 > **RULE 0s - DIRECTION BEFORE ENTRY (owner 14 Nov 14:36):** keep the 09:20 rule, but also check OTHER factors that make us sure about the direction,
 > and only then jump in. Direction is the first thing to prove.
+> Owner 14 Nov 17:24: "9:20 rule - if you want, change it or keep it as it is, but make sure you have some more factors to support the direction".
+> -> Claude may replace or keep the 09:20 rule; whichever side rule is live must be backed by supporting factors proven on data (0t, 0k).
 > **RULE 0t - BASICS FIRST, THINK HOW TO USE THE DATA BEST (owner 14 Nov 14:36, "make it a rule"):** before ANY test or decision: (1) is the base
 > idea proven at all (e.g. don't build entry rules on a direction that is only 50% right - the mistake of 12 Nov); (2) is this the most relevant
 > thing for the goal right now; (3) which of ALL our data answers it best, and how to use it better. Don't do irrelevant work.

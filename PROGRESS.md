@@ -2260,3 +2260,13 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   Tests: test-kite 11/11 (3 new), test-recorder 7/7, tick-e2e 4/4, tick-exits 7/7. Recording errors can never stop the feed.
   Backups on the laptop: recorder-before-full.mjs, kite-ticks-before-full.mjs. Undo: copy them back over recorder.mjs / kite-ticks.mjs.
   Starts with the next feed start (Mon 16 Nov). Limit: no shell on the laptop from here (only file copy), so tests ran here on the same files.
+
+## 14 Nov 17:40 - CORRECTION: the "fade the market breadth 55-57%" finding (13 Nov 02:00 + weekly review) WAS A BUG
+- Check-loop while answering the owner (17:24): in dirAn2.py the single-factor rule used sign(factor); breadth is 0-100 (never negative),
+  so "FADE breadth" was really "ALWAYS SELL". Always-sell right at 15:14: 55.5 / 56.5 / 56.7 / 55.8 / 55.3% (2022-26) = the numbers I reported.
+  The real fade-breadth (sell if >50% of stocks up at 09:20, else buy): 47.5 / 50.4 / 47.0 / 47.9 / 48.4% -> no edge (follow-breadth ~50-53%).
+- The 5-year models (54-56%; confident 58-60%) are NOT better than simply always selling (55-57%) -> they mainly learned the sell bias.
+- What IS real on 5 years: BASE picks (high volume at the open) end lower than their 09:20 price 55-57% of the time every year, and
+  clean down moves are more frequent than up (6.5-8.3% vs 4.9-5.4%). On the 10 tick days: always-sell 50%, current rule 63% -> not seen live yet.
+- From now on every direction test is compared against BOTH baselines (current rule AND always-sell/always-buy), and every factor is centered
+  (breadth - 50, etc.) before taking a side from it. Rule 0s updated with the owner's 17:24 instruction.
