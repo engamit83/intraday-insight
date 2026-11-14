@@ -97,6 +97,8 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > **RULE 0q - KEEP THE .md FILES CURRENT + RECORD EVERY INSTRUCTION (owner 14 Nov 14:36):** every owner instruction goes into CLAUDE.md;
 > PROGRESS.md and CLAUDE.md updated in git AND on the laptop (D:\intraday\intraday-insight) every time. Every session/review STARTS by re-reading
 > CLAUDE.md + PROGRESS.md and checking the goal before any work.
+> Owner 14 Nov 19:33: "don't miss anything, always go to the .md file so you will not miss things or rules" -> before every decision, rule change,
+> test plan or answer about the rules, Claude checks CLAUDE.md + PROGRESS.md again (not memory).
 > **RULE 0r - TAKE ALL ZERODHA DATA (owner 14 Nov 14:36, "I paid 500 for Zerodha this month - get all the data it is providing, don't miss any
 > even though it is not useful, take it"):** record every field Zerodha gives (full tick: price, qty, avg price, OHLC, volume, total buy/sell,
 > 5-level depth both sides, OI, timestamps; instruments list; historical candles for all stocks/indices/F&O it allows; anything else on the API).
