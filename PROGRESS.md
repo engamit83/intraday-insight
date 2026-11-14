@@ -2278,3 +2278,10 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   connected + ticks flowing, then every 30 min to 15:15; problems -> one-line message to the owner at once; each check schedules the next.
 - Note: I staged kite-token.json by mistake while listing files (17:30) and deleted the staged copy immediately without opening it. From now on only its
   date is checked from the folder listing.
+
+## 14 Nov 18:20 - FEED = ZERODHA ONLY (owner 17:39 "Sharekhan we are not working, work on Zerodha only, if feed doesn't start keep looking for Zerodha")
+- feed.mjs: no Zerodha login yet or login refused -> the feed says so and retries Zerodha (back-off 3 s -> 30 s), never falls back to Sharekhan.
+  Sharekhan path kept in the code, used only if FEED_SOURCE=sharekhan is set on purpose (undo) - the old Sharekhan tests now set it.
+- New test test-kite-only.mjs (4/4): starts with no login -> no Sharekhan request, retries; login appears 4 s later -> connects to Zerodha, ticks recorded.
+  All feed tests pass: kite 11, e2e 11, tick-e2e 4, watchdog 3, recorder 7, tick-exits 7. The laptop watchdog is source-independent (unchanged).
+- Installed on the laptop (backup feed-before-kiteonly.mjs; undo = copy it back). Rule 0u updated in CLAUDE.md.

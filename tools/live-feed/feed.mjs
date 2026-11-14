@@ -263,7 +263,7 @@ async function runKiteSession(login) {
   if (wanted.size === 0) throw new Error('No stock list on this laptop for Zerodha (data\\sip-baseline.json and record-extra.csv missing).')
   let tokenToSymbol
   try { tokenToSymbol = await kiteInstruments(here, login, wanted, { apiBase: KITE_API }) }
-  catch (e) { if (e.kite403) { kiteBadUntil = Date.now() + 120_000; say('! Zerodha refused the login. Run kite-login.bat again (double-click) and log in. Trying Sharekhan meanwhile.') } throw e }
+  catch (e) { if (e.kite403) { kiteBadUntil = Date.now() + 120_000; say('! Zerodha refused the login. Run kite-login.bat again (double-click) and log in. Trying Zerodha again shortly.') } throw e }
   if (tokenToSymbol.size === 0) throw new Error('Zerodha: none of our stocks found in its instrument list.')
   uploadSymbols = new Set(appList ?? []) // only the app's own list goes to the database; if not remembered yet, nothing is uploaded (trading and recording still run)
   say(`Zerodha: watching ${tokenToSymbol.size} stocks/indices (${wanted.size - tokenToSymbol.size} names not found at Zerodha).${appList ? '' : ' App stock list not remembered yet - candles are not uploaded to the app today.'}`)
@@ -310,7 +310,7 @@ async function runKiteSession(login) {
       }
     })
     ws.on('unexpected-response', (_req, res) => {
-      say(`! Zerodha refused the connection (HTTP ${res.statusCode}).` + (res.statusCode === 403 || res.statusCode === 401 ? ' The Zerodha login has expired: run kite-login.bat (double-click) and log in. Trying Sharekhan meanwhile.' : ''))
+      say(`! Zerodha refused the connection (HTTP ${res.statusCode}).` + (res.statusCode === 403 || res.statusCode === 401 ? ' The Zerodha login has expired: run kite-login.bat (double-click) and log in. Trying Zerodha again shortly.' : ''))
       if (res.statusCode === 403 || res.statusCode === 401) kiteBadUntil = Date.now() + 120_000
     })
     ws.on('error', (e) => say(`! Connection problem (Zerodha): ${scrub(e.message)}`))
@@ -339,14 +339,15 @@ function handleTick(symbol, t, now) {
 }
 
 async function runSession() {
-  // 12 Nov (owner: "now all things on zerodha", Sharekhan = backup): use Zerodha when today's Zerodha login exists on this laptop.
-  // FEED_SOURCE in .env: auto (default) | kite | sharekhan.   Undo: FEED_SOURCE=sharekhan
+  // 14 Nov (owner: "Sharekhan we are not working, you work on Zerodha only, if feed doesn't start keep looking for Zerodha"): ZERODHA ONLY.
+  // No login yet / login refused -> keep retrying Zerodha (the loop below tries again within 30 s). Sharekhan runs ONLY if FEED_SOURCE=sharekhan
+  // is set on purpose (undo / tests). (12 Nov: auto = Zerodha with Sharekhan as backup.)
   const src = (process.env.FEED_SOURCE || 'auto').toLowerCase()
-  if (src !== 'sharekhan' && Date.now() >= kiteBadUntil) {
+  if (src !== 'sharekhan') {
+    if (Date.now() < kiteBadUntil) throw new Error('Zerodha refused the login - run kite-login.bat (double-click) and log in again. Trying Zerodha again shortly.')
     const login = kiteLogin(here)
     if (login) return runKiteSession(login)
-    if (src === 'kite') throw new Error('No Zerodha login for today on this laptop - run kite-login.bat (double-click) and log in.')
-    say('No Zerodha login for today (kite-login.bat not run yet) - trying Sharekhan as the backup.')
+    throw new Error('No Zerodha login for today on this laptop yet - run kite-login.bat (double-click) and log in. Trying Zerodha again shortly.')
   }
   say('Getting today\'s Sharekhan login from your database...')
   const info = await gateway('token')

@@ -65,6 +65,7 @@ const child = spawn(process.execPath, ['feed.mjs'], {
   cwd: here,
   env: {
     ...process.env,
+    FEED_SOURCE: 'sharekhan', // 14 Nov: the feed is Zerodha-only unless this is set; these tests check the (kept) Sharekhan path
     GATEWAY_URL: `http://127.0.0.1:${gwPort}`,
     FEED_TOKEN,
     SHAREKHAN_WS_URL: `ws://127.0.0.1:${wsPort}`,

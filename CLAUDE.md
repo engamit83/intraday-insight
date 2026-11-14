@@ -103,6 +103,8 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > (feed log says 'Connected to Zerodha live feed', ticks file growing) and every 30 min to 15:15 (feed log + ticks fresh < 3 min, watchdog OK).
 > Laptop unreachable or feed off/stale -> owner told at once in one line with what to do; all fine -> one line at 09:17, silent after.
 > Each check schedules the next (chain). The laptop watchdog task (IntradayFeed-Watchdog, every 5 min) keeps restarting the feed meanwhile.
+> Owner 14 Nov 17:39: "Sharekhan we are not working, you work on Zerodha only, if feed doesn't start keep looking for Zerodha" -> the feed is
+> ZERODHA ONLY: no login / refused login -> it keeps retrying Zerodha (within 30 s), never Sharekhan (only if FEED_SOURCE=sharekhan is set on purpose).
 
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line

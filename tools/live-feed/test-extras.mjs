@@ -49,7 +49,7 @@ async function scenario(mode) {
     })
   })
   await new Promise((r) => gw.listen(0, r))
-  const child = spawn(process.execPath, ['feed.mjs'], { cwd: dir, env: { ...process.env, GATEWAY_URL: `http://127.0.0.1:${gw.address().port}`, FEED_TOKEN,
+  const child = spawn(process.execPath, ['feed.mjs'], { cwd: dir, env: { ...process.env, FEED_SOURCE: 'sharekhan', GATEWAY_URL: `http://127.0.0.1:${gw.address().port}`, FEED_TOKEN,
     SHAREKHAN_WS_URL: `ws://127.0.0.1:${wss.address().port}`, TEST_IGNORE_MARKET_HOURS: '1', EXTRA_CHECK_MS: '1500' } })
   let out = ''; child.stdout.on('data', (d) => (out += d)); child.stderr.on('data', (d) => (out += d))
   await new Promise((r) => setTimeout(r, 7000))
