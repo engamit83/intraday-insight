@@ -2270,3 +2270,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   clean down moves are more frequent than up (6.5-8.3% vs 4.9-5.4%). On the 10 tick days: always-sell 50%, current rule 63% -> not seen live yet.
 - From now on every direction test is compared against BOTH baselines (current rule AND always-sell/always-buy), and every factor is centered
   (breadth - 50, etc.) before taking a side from it. Rule 0s updated with the owner's 17:24 instruction.
+
+## 14 Nov 18:00 - FEED ON/OFF CHECK FOR ZERODHA (owner 17:27, rule 0u)
+- Existing on the laptop: IntradayFeed-Start-0900 / Stop-1540 (wake laptop, start if missed) + IntradayFeed-Watchdog every 5 min (12 Nov: OK all day
+  on Zerodha). Missing: an alert to the owner. 13 Nov: no logs at all -> laptop was off; the watchdog cannot help then.
+- Added: a check chain from this session through the laptop link (first Mon 16 Nov 08:50): 08:50 login file dated today (mtime only), 09:17 Zerodha
+  connected + ticks flowing, then every 30 min to 15:15; problems -> one-line message to the owner at once; each check schedules the next.
+- Note: I staged kite-token.json by mistake while listing files (17:30) and deleted the staged copy immediately without opening it. From now on only its
+  date is checked from the folder listing.

@@ -98,6 +98,12 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > idea proven at all (e.g. don't build entry rules on a direction that is only 50% right - the mistake of 12 Nov); (2) is this the most relevant
 > thing for the goal right now; (3) which of ALL our data answers it best, and how to use it better. Don't do irrelevant work.
 
+> **RULE 0u - CONTINUOUS ZERODHA FEED CHECK (owner 14 Nov 17:27, "make a provision for checking the feed is started or not for Zerodha ... you have to continuously check ... if feed is on or off"):**
+> Zerodha is the main feed now. Each market day Claude checks through the laptop link at 08:50 (login file dated today - never opened), 09:17
+> (feed log says 'Connected to Zerodha live feed', ticks file growing) and every 30 min to 15:15 (feed log + ticks fresh < 3 min, watchdog OK).
+> Laptop unreachable or feed off/stale -> owner told at once in one line with what to do; all fine -> one line at 09:17, silent after.
+> Each check schedules the next (chain). The laptop watchdog task (IntradayFeed-Watchdog, every 5 min) keeps restarting the feed meanwhile.
+
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
