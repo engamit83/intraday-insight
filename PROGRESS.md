@@ -2341,3 +2341,14 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - C2 gap size >= 0.76%: false BO 36% vs 12%, win 46% vs 60%, net +633 vs +4,214 -> ticks DISAGREE with 5 years -> REJECTED (ticks win, owner 14 Nov 19:31).
 - C3 Thu/Fri: net +6,659 vs -1,812, but clean 11% vs 17%, false BO 26% vs 22%; only 6 Thu/Fri days -> mixed, KEEP at lowest priority.
 - Scoreboard: E0 | X1 | X2 | D1 | D2 | V9 | F1 | C1 | C3 (C2 removed).
+
+## 15 Nov 16:10 - SAME CONFIRMATION TEST ON THE 10 LIVE TICK DAYS (owner 15:39) [TICK, 53 entries, small]
+- Tool e3tick.py: outcomes from the traded price at the entry moment; false breakout measured on ticks; cut = old-data median (2022-25).
+- All entries: clean 7/53 (13%), false BO 26%, 15-min +0.36%, 30-min +0.39%, net +4,847.
+- C1 VWAP >= 0.84%: 34 vs 19 entries: 30-min +0.68% vs -0.11%, net +9,321 vs -4,474 (AGREE on continuation/money); clean 3/34 vs 4/19 and
+  false BO 26% vs 26% (do NOT agree). CORRECTION: my 15:55 note said false BO 21% vs 32% - that used minute closes; on ticks it is equal. -> C1 kept.
+- C2 gap >= 0.76%: false BO 36% vs 16%, net +633 vs +4,214 -> DISAGREES with old data -> ticks win (owner 19:31 rule) -> C2 DROPPED.
+- C3 Thu/Fri: net +6,659 vs -1,812, 30-min +0.53% vs +0.14% (agree); false BO 29% vs 22% (worse) -> kept, low priority.
+- Others on ticks (not selected, noted): Nifty above its own average our way 32 vs 21 entries, net +12,106 vs -7,259 (old data: failed);
+  low rvol (<= 5.3) clean 5/15 vs 2/38 (old data: same side better in 4/5 years, WF 0/3); sector vs Nifty: ticks and old data point opposite ways.
+- Scoreboard: E0 | X1 | X2 | D1 | D2 | V9 | F1 | C1 VWAP | C3 Thu/Fri (C2 removed).
