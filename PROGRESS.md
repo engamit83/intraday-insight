@@ -2334,3 +2334,10 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   C2 gap size >= 0.76% (either way): false breakouts lower 5/5 years (-2 to -6.5 points); clean mixed (3/5).
   C3 Thursday/Friday: 30-min continuation better 5/5 years, false BO lower 4/5; clean mixed. Weak market logic -> lowest priority.
 - Scoreboard now: E0 BASE | X1 P8 10% | X2 fast-drop exit | D1 gap-up sells | D2 no buys | V9 | F1 | C1 VWAP>=0.84% | C2 gap>=0.76% | C3 Thu/Fri.
+
+## 15 Nov 16:05 - SELECTED RULES CHECKED ON THE 10 LIVE TICK DAYS (owner 15:38) [TICK, 53 BASE entries; rule 0w: ticks decide entry factors]
+- All BASE: clean 7/53 (13%), false BO 25%, win 53%, net +4,847.
+- C1 VWAP >= 0.84%: 34 entries, false BO 21% vs 32%, win 59% vs 42%, net +9,321 vs -4,474 (agrees with 5 years); clean 3 (9%) vs 4 (21%) (disagrees) -> KEEP as candidate.
+- C2 gap size >= 0.76%: false BO 36% vs 12%, win 46% vs 60%, net +633 vs +4,214 -> ticks DISAGREE with 5 years -> REJECTED (ticks win, owner 14 Nov 19:31).
+- C3 Thu/Fri: net +6,659 vs -1,812, but clean 11% vs 17%, false BO 26% vs 22%; only 6 Thu/Fri days -> mixed, KEEP at lowest priority.
+- Scoreboard: E0 | X1 | X2 | D1 | D2 | V9 | F1 | C1 | C3 (C2 removed).
