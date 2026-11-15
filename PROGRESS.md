@@ -2323,3 +2323,14 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Conclusion (rule 0j escape): 4 rounds of entry-confirmation studies (12, 13, 14, 15 Nov) found nothing that makes the 09:20-range breakout continue.
   The breakout entry itself has ~no edge after costs. Next level up: the entry IDEA (where/when we enter), not more filters - see the 'clean-move
   starts' lead (time 09:20-10:15 strongest) and the gap-up sell lead (side right 59-65%). Shadow D1 continues.
+
+## 15 Nov 15:55 - CORRECTION + RULES SELECTED from the confirmation study (owner 15:37 "I never said this ... do select the rules")
+- Correction: I wrote "factors that help only one or two years are ignored, as you asked" - wrong to put that on the owner. Selection is now by the
+  owner's yardstick (rule 0l: a good entry = clean move, few false breakouts), years counted 2022-26, threshold = median of 2022-25.
+- SELECTED (go to the shadow scoreboard, rule 0v; entry factors -> tick days decide, rule 0w):
+  C1 VWAP distance >= 0.84% (entry price well beyond the day's VWAP our way) [OLD DATA hint]: clean >=1.5% 12.2/13.2/10.7/10.5/12.3% vs 10.6/7.1/8.6/5.8/8.3%
+     (better 5/5 years), false breakouts 21.7/21.6/23.7/19.8/22.0% vs 27.0/28.6/27.3/24.6/28.0% (lower 5/5). [TICK] 34 vs 19 entries: net +9,321 vs -4,474,
+     false BO 21% vs 32% (agree); clean 3/34 vs 4/19 (not yet) -> best candidate.
+  C2 gap size >= 0.76% (either way): false breakouts lower 5/5 years (-2 to -6.5 points); clean mixed (3/5).
+  C3 Thursday/Friday: 30-min continuation better 5/5 years, false BO lower 4/5; clean mixed. Weak market logic -> lowest priority.
+- Scoreboard now: E0 BASE | X1 P8 10% | X2 fast-drop exit | D1 gap-up sells | D2 no buys | V9 | F1 | C1 VWAP>=0.84% | C2 gap>=0.76% | C3 Thu/Fri.
