@@ -94,6 +94,8 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > ENTRY and EXIT are refined SEPARATELY (0n): ENTRY's only job = a good entry (price goes >=1.5-2% our way from the entry moment without coming back);
 > EXIT's job once in = protect from loss (cut bad trades early) and protect profit (don't give back gains). Exit rules are refined, never removed (0k).
 > Owner's part: Zerodha login (kite-login.bat) before 09:00 and the laptop on with the Claude app open on market days.
+> Owner 15 Nov 16:44: ORDER OF WORK = ENTRY FIRST. Judge every entry alone (clean >=1.5%/2% from the entry price, exits ignored). Once entries
+> are good, if trades still lose or earn too little, the EXITS are the weak part -> then refine the exits (on tick days, never removing one).
 > **RULE 0q - KEEP THE .md FILES CURRENT + RECORD EVERY INSTRUCTION (owner 14 Nov 14:36):** every owner instruction goes into CLAUDE.md;
 > PROGRESS.md and CLAUDE.md updated in git AND on the laptop (D:\intraday\intraday-insight) every time. Every session/review STARTS by re-reading
 > CLAUDE.md + PROGRESS.md and checking the goal before any work.

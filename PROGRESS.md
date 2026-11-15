@@ -2352,3 +2352,8 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Others on ticks (not selected, noted): Nifty above its own average our way 32 vs 21 entries, net +12,106 vs -7,259 (old data: failed);
   low rvol (<= 5.3) clean 5/15 vs 2/38 (old data: same side better in 4/5 years, WF 0/3); sector vs Nifty: ticks and old data point opposite ways.
 - Scoreboard: E0 | X1 | X2 | D1 | D2 | V9 | F1 | C1 VWAP | C3 Thu/Fri (C2 removed).
+
+## 15 Nov 16:50 - PLAN (owner 16:44): ENTRY FIRST, then exits
+- Next test: E1 = enter AT 09:20 (no breakout wait) on BASE picks only when the side is confirmed (sell after a gap-up > 1% and/or price >= 0.84%
+  beyond VWAP); exits unchanged. Judged alone by the clean rate from the entry price vs BASE (10-13% now), every year + tick days, >= ~1 trade a day.
+- Once entries are clearly better: if trades still lose or earn too little -> the exits are the weak part -> exit refinement on tick days.
