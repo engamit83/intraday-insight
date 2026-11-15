@@ -2357,3 +2357,16 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Next test: E1 = enter AT 09:20 (no breakout wait) on BASE picks only when the side is confirmed (sell after a gap-up > 1% and/or price >= 0.84%
   beyond VWAP); exits unchanged. Judged alone by the clean rate from the entry price vs BASE (10-13% now), every year + tick days, >= ~1 trade a day.
 - Once entries are clearly better: if trades still lose or earn too little -> the exits are the weak part -> exit refinement on tick days.
+
+## 15 Nov 22:10 - NIGHT BLOCK 2: E1 (enter AT 09:20 with a confirmed side) - REJECTED; correction about the breakout
+- E1 = BASE picks, enter at 09:20 (no breakout wait) only if confirmed (sell after gap-up > 1% and/or price >= 0.84% beyond VWAP our way). Judged alone.
+  Pass mark (written first): clean >=1.5% >= 1.3x the BASE breakout entry every year + tick days agree.
+- [OLD DATA hint] clean >=1.5%: E1 7.5 / 6.7 / 5.9 / 5.3 / 5.7% vs BASE breakout 11.3 / 9.7 / 9.8 / 8.3 / 10.6% (x0.54-0.69). All picks at 09:20 without
+  confirmation only 4.4-5.2%. The confirmation does pick the right side (end-of-day right 55-60% vs 50-52%) but entering at 09:20 is NOT clean.
+- [TICK] 10 days: E1 3 of 41 clean (7%), all picks at 09:20 9/92 (10%), BASE breakout 7/53 (13%). Old data and ticks AGREE -> E1 rejected.
+- CORRECTION of my 15 Nov 16:20 note ("waiting for the breakout adds nothing", 12% vs 10%): that used the traded price without slippage on a 5-s grid.
+  Measured the same way as all entries now, the breakout entry IS cleaner than entering at 09:20 (ticks 13% vs 10%, old data 8-11% vs 4-5%).
+- Breakout entry + gap-up sell (the D1 shadow, at the BASE breakout): clean 10.2 / 8.2 / 8.2 / 8.7 / 12.2% vs other sells 10.6 / 6.5 / 6.1 / 5.9 / 8.6%
+  (better 4/5 years), 30-min move better than other sells 5/5 years. BUT breakout BUYS are cleaner than all sells (9.2-12.2%) -> D2 "no buys" would
+  cut clean entries -> D2 dropped from the scoreboard; D1 stays (it only filters sells).
+- Laptop not linked tonight (owner told 21:30) -> .md copy to the laptop at the next link (0c).
