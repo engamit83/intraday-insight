@@ -2309,3 +2309,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - BUY side: no confirming factor works; BASE buys are right only 42.7-46.5% at 15:14 on 5 years, but 26/40 (65%) on the 10 tick days -> old vs tick disagree, no action.
 - DECISION (0v): no live change. Added to the SCOREBOARD as D1 = "sells only when gapped up > 1%" and D2 = "no buys"; the 10 replayed tick days count,
   so D1 needs 10 more live days (20 total incl. up and down days) before it can be promoted.
+
+## 15 Nov 15:10 - CONFIRMATION-FACTOR STUDY (owner prompt 14:06): direction + breakout FIXED - NO factor survives
+- Data: 6,637 BASE entries 2022-26 (replay D0), 26 factors known before entry (opening range, timing, volume, rvol, gap, breadth (centered), Nifty,
+  sector, vs Nifty, VWAP, previous days, weekday, expiry). Outcomes from the ENTRY price: 5/10/15/30-min continuation, MFE/MAE 30 min, false breakout,
+  clean >=1.5%. Pass mark written first: chosen half better in all 3 walk-forward years (2024-26) on 30 AND 15 min, clean and false-BO not worse,
+  helps buys AND sells in >= 2 of 3 years, >= 4 of 5 years overall. Tools: e3.py, e3an.py. Check: 60 random rows re-computed from raw minutes = 0 differ.
+- Direction rule: traded entries end the day on our side of the 09:20 price 59.5-61.4% every year (sells 65-69%, buys 55-56%), but that is mostly the
+  move BEFORE entry (the breakout itself). AFTER entry the average move is ~0: 30-min +0.11 / +0.03 / -0.02 / +0.01 / +0.09% (2022-26), below costs.
+  False breakouts 24-29%, clean >=1.5% 8-11%.
+- Factors: 0 of 26 survive. Closest: weekday (Thu/Fri better, WF 2/3, 5/5 years), VWAP distance (WF 2/3, more clean moves but one sided), gap size
+  (WF 2/3), expiry day (5/5 years but WF 1/3). Volume, rvol, breadth, Nifty, sector, opening range, breakout time: 0/3.
+- Conclusion (rule 0j escape): 4 rounds of entry-confirmation studies (12, 13, 14, 15 Nov) found nothing that makes the 09:20-range breakout continue.
+  The breakout entry itself has ~no edge after costs. Next level up: the entry IDEA (where/when we enter), not more filters - see the 'clean-move
+  starts' lead (time 09:20-10:15 strongest) and the gap-up sell lead (side right 59-65%). Shadow D1 continues.
