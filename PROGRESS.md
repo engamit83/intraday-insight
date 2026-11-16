@@ -2378,3 +2378,20 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   To do at the first link: stage feed-2026-11-16.log + sip-state/sip-trades, find the cause; if the 14 Nov change broke it, restore the backups
   (feed-before-kiteonly.mjs, recorder-before-full.mjs, kite-ticks-before-full.mjs) outside market hours and tell the owner.
 - Owner told 3 times how to link (open this chat in the laptop's Claude app and send a message). Reminders limited to one an hour.
+
+## 16 Nov 22:00 - NIGHT BLOCK 3: SHADOW SCOREBOARD v1 (rule 0v) [TICK, 10 days 22 Oct - 12 Nov; 16 Nov not reachable]
+- Tool: tools/backtest/replay/sbrun.py (engine replays E0/X1/X2/V9) + sboard.py (board; F1 from the direction replays; D1/C1/C3 as filters on E0
+  entries, a skipped stock also loses its re-entry). Entry quality = clean >=1.5% from the traded price at the entry moment. Replay = live: 12 Nov -2,050 = -2,050.
+  cand  trades  clean     net     losing days  worst   half1   half2  | daily diff vs E0 (SE, t)
+  E0      53    7 (13%)  +4,847       5        -2,355  +7,194  -2,347 |
+  X1      53    7 (13%)  +7,532       5        -2,355 +10,013  -2,481 | +268 (215, t +1.25)   P8 keep 10%
+  X2      63    9 (14%)  -5,371       7        -3,740  +1,764  -7,135 | -1,022 (634, t -1.61) fast-drop = exit at once -> clearly WORSE
+  V9       1    0          +718       0            0     +718       0 | filters leave ~no trades
+  F1      52    8 (15%)  +4,580       5        -2,355  +6,340  -1,760 | -27 (t -0.11)
+  D1      43    7 (16%)  +2,037       5        -2,355  +2,523    -486 | -281 (t -0.55)
+  C1      32    2 ( 6%)  +4,740       4        -1,945  +2,133  +2,607 | -11 (t -0.02)
+  C3      35    4 (11%)  +6,659       3        -2,050  +7,882  -1,223 | +181 (t +0.57)
+- CORRECTION C1: with VWAP measured exactly on ticks (not minute bars, 15 Nov 16:10 note) and the whole stock skipped, C1 = +4,740 vs E0 +4,847: no gain on ticks.
+- Decisions (0v): nothing promoted. X1 has 53 paired trades (exit period met) but t 1.25 < 2 and half2 slightly worse -> keep in shadow.
+  X2 (exit at once on a fast drop) loses 1,022/day vs the current 'tighten to 0.3R' -> REJECTED: the current fast-drop refinement stays.
+- Pending: 16 Nov files (laptop not linked) -> add to the board at the next link; .md copy to the laptop (0c) pending since 15 Nov.

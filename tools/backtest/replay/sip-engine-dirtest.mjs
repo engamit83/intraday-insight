@@ -410,7 +410,8 @@ export class SipEngine {
     if (this.r.fastDropR) { // tick-level: price fell fastDropR R within fastSec seconds while in loss -> stop 0.3R from price
       (t.win ??= []).push([ts, p]); while (t.win.length && ts - t.win[0][0] > (this.r.fastSec ?? 60) * 1000) t.win.shift()
       const ext = sg > 0 ? Math.max(...t.win.map((x) => x[1])) : Math.min(...t.win.map((x) => x[1]))
-      if (r < 0 && (ext - p) * sg >= this.r.fastDropR * t.risk) { const ns = +(p - sg * this.r.lossTightR * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { const first = !t.fastCut; t.stop = ns; t.fastCut = true; this.save(); if (first) this.pendingNotes.push(`⚠️ FAST DROP: ${t.dir} ${t.sym} fell ${this.r.fastDropR}R within ${this.r.fastSec ?? 60}s while in loss - stop moved to ₹${ns} (0.3R from price) - stocks in play (paper)`) } }
+      if (r < 0 && (ext - p) * sg >= this.r.fastDropR * t.risk) { const ns = this.r.fastExitNow ? p : +(p - sg * this.r.lossTightR * t.risk).toFixed(2); if ((ns - t.stop) * sg > 0) { const first = !t.fastCut; // TEST X2 (15 Nov): fastExitNow = stop at the current price -> out on the next tick
+       t.stop = ns; t.fastCut = true; this.save(); if (first) this.pendingNotes.push(`⚠️ FAST DROP: ${t.dir} ${t.sym} fell ${this.r.fastDropR}R within ${this.r.fastSec ?? 60}s while in loss - stop moved to ₹${ns} (0.3R from price) - stocks in play (paper)`) } }
     }
     if (this.r.beAt && r >= this.r.beAt) { const be = +(t.entry * (1 + sg * (this.r.costPct + 2 * this.r.slipPct) / 100)).toFixed(2); if ((be - t.stop) * sg > 0) t.stop = be }
     if (r > t.best) {
