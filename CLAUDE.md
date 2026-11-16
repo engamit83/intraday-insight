@@ -104,6 +104,9 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > **RULE 0r - TAKE ALL ZERODHA DATA (owner 14 Nov 14:36, "I paid 500 for Zerodha this month - get all the data it is providing, don't miss any
 > even though it is not useful, take it"):** record every field Zerodha gives (full tick: price, qty, avg price, OHLC, volume, total buy/sell,
 > 5-level depth both sides, OI, timestamps; instruments list; historical candles for all stocks/indices/F&O it allows; anything else on the API).
+> Owner 16 Nov 22:10 ("do I have to tell you all things ... take all the data of all days we lost"): WITHOUT being asked, after ANY market day the feed missed
+> (fully or partly), Claude pulls that day's Zerodha 1-minute candles of all our stocks + indices (kite-day.mjs DATE -> data\kite\day\DATE\). Zerodha keeps
+> NO past ticks, so missed ticks cannot be recovered by anyone; minute candles are the finest it gives. Claude acts on gaps itself, the owner is only told.
 > **RULE 0s - DIRECTION BEFORE ENTRY (owner 14 Nov 14:36):** keep the 09:20 rule, but also check OTHER factors that make us sure about the direction,
 > and only then jump in. Direction is the first thing to prove.
 > Owner 14 Nov 17:24: "9:20 rule - if you want, change it or keep it as it is, but make sure you have some more factors to support the direction".

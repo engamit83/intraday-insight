@@ -2412,3 +2412,8 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Likely cause: battery ran out or a crash after waking on battery. Fix: keep the laptop on the charger on market days; if it shuts down
   again while plugged in, it is a laptop fault (Windows/hardware) to check.
 - Note: the feed does not depend on Claude's link; the link only lets Claude see/check/fix.
+
+## 16 Nov 22:15 - MISSED DAYS: Zerodha minute candles being saved (owner 22:10)
+- Zerodha has no past ticks (only candles) -> missed ticks are gone for good. kite-day.mjs (new, record only) saves each missed day's 1-minute candles
+  (OHLC + volume) for our 494 stocks + indices into data\kite\day\DATE\SYMBOL.csv. Started 22:11 (run by Claude on the laptop via Explorer) for
+  2, 3, 4, 5, 10, 11, 13, 16 Nov (~25 min). Not on Zerodha: HFCL, ICICIPRULI. Rule 0r: from now on Claude does this after every missed day without asking.
