@@ -2370,3 +2370,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   (better 4/5 years), 30-min move better than other sells 5/5 years. BUT breakout BUYS are cleaner than all sells (9.2-12.2%) -> D2 "no buys" would
   cut clean entries -> D2 dropped from the scoreboard; D1 stays (it only filters sells).
 - Laptop not linked tonight (owner told 21:30) -> .md copy to the laptop at the next link (0c).
+
+## 16 Nov 15:15 - FIRST ZERODHA-ONLY DAY: LAPTOP NOT LINKED ALL DAY
+- Feed checks 08:50 -> 15:15 (every 30 min): the laptop link tools were absent from this chat all day -> feed, login and trades could not be checked.
+  Owner: logged in to Zerodha (09:53), Claude app open on the laptop, but the chat was not linked; NO paper trade arrived (12:39).
+- Unknown cause: either all picks were filtered out, or the feed/14 Nov change (Zerodha-only feed + full recording) failed on the real market.
+  To do at the first link: stage feed-2026-11-16.log + sip-state/sip-trades, find the cause; if the 14 Nov change broke it, restore the backups
+  (feed-before-kiteonly.mjs, recorder-before-full.mjs, kite-ticks-before-full.mjs) outside market hours and tell the owner.
+- Owner told 3 times how to link (open this chat in the laptop's Claude app and send a message). Reminders limited to one an hour.
