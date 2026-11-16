@@ -2402,3 +2402,13 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   is awake -> no entries 07:18-20:24 = the laptop's scheduled tasks did not run during market hours (laptop asleep/hibernating or tasks not running).
   The 09:00 start task never fired, so the new feed code was never started -> it is not the cause. No shell on the laptop from here to check Task Scheduler.
 - Owner action asked: keep the laptop awake (not sleeping/lid closed) on market days; tomorrow's 08:50/09:17 checks will confirm the 09:00 start.
+
+## 16 Nov 22:10 - ROOT CAUSE FOUND: the laptop shut down unexpectedly at 08:23 and was OFF until 20:17
+- diag-feed.bat (read-only, run 22:07; tools/live-feed/diag-feed.bat) - Windows event log:
+  15 Nov 21:06 power off -> sleep; 16 Nov 07:12 resumed (power source change); 16 Nov 08:23:32 "previous system shutdown was UNEXPECTED"
+  (Kernel-Power 41 = crash or power loss); next boot only 20:17:36. Same unexpected shutdown also on 15 Nov 17:21.
+- So the 09:00 start, the watchdog and the feed could not run: the laptop was off. The 3 tasks are healthy: enabled, Ready, last result 0,
+  next run 17 Nov 09:00 (start/stop ran at 20:24 as 'missed run'). The feed code (14 Nov change) was never started - not the cause.
+- Likely cause: battery ran out or a crash after waking on battery. Fix: keep the laptop on the charger on market days; if it shuts down
+  again while plugged in, it is a laptop fault (Windows/hardware) to check.
+- Note: the feed does not depend on Claude's link; the link only lets Claude see/check/fix.
