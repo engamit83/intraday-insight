@@ -148,3 +148,7 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > The link itself is made by the Claude desktop app: it reconnects automatically while the app is open and the laptop is on and online, so the owner keeps
 > the app open (ideally starting at Windows sign-in) and the laptop awake during market days. On trading days also check the feed (logs\feed-DAY.log fresh,
 > logs\watchdog-DAY.txt) right after the link check.
+> Owner 16 Nov 22:02: "whenever the app is on you have to automatically connect, make it a rule" -> every session, every scheduled check and every
+> reply about the feed FIRST tries the laptop tools (load them if they are listed as deferred) and uses the link the moment it exists, without being asked.
+> Limit (honest): the link itself is made by the Claude desktop app + this chat; if the tools are not offered in this chat at all, Claude cannot create them -
+> then it tells the owner in one line and keeps trying at every check (16 Nov: tools absent 08:50-21:57 although the app was open).
