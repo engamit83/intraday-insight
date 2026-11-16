@@ -2395,3 +2395,10 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Decisions (0v): nothing promoted. X1 has 53 paired trades (exit period met) but t 1.25 < 2 and half2 slightly worse -> keep in shadow.
   X2 (exit at once on a fast drop) loses 1,022/day vs the current 'tighten to 0.3R' -> REJECTED: the current fast-drop refinement stays.
 - Pending: 16 Nov files (laptop not linked) -> add to the board at the next link; .md copy to the laptop (0c) pending since 15 Nov.
+
+## 16 Nov 22:05 - LINKED AGAIN: WHY 16 NOV HAD NO TRADE = THE FEED NEVER RAN (not the 14 Nov code)
+- Laptop linked 21:57. Facts from the laptop: Zerodha login file written 07:18 today; NO feed-2026-11-16.log, NO ticks/trades/state files for 16 Nov;
+  watchdog-2026-11-16.txt starts only at 20:24 ("check: SKIP", normal outside market hours). The watchdog task runs every 5 min whenever the laptop
+  is awake -> no entries 07:18-20:24 = the laptop's scheduled tasks did not run during market hours (laptop asleep/hibernating or tasks not running).
+  The 09:00 start task never fired, so the new feed code was never started -> it is not the cause. No shell on the laptop from here to check Task Scheduler.
+- Owner action asked: keep the laptop awake (not sleeping/lid closed) on market days; tomorrow's 08:50/09:17 checks will confirm the 09:00 start.
