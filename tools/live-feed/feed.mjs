@@ -223,6 +223,7 @@ async function onSipEvent(ev) {
       const t = ev.trade
       text = `🟢 TREND BACK in our favour: NEW ${t.dir} ${t.sym} - trailing 1R again, stop stays at ₹${t.stop} (stocks in play, paper)`
     } else if (ev.kind === 'note') text = `🟢 ${ev.text}`
+    if (ev.kind === 'skip') { say(`SIP ⏸ ${ev.dir} ${ev.sym} beyond its level at ${sipClock(ev.ts)} but NOT entered - ${ev.why} (log only)`); return }
     if (!text) return
     say(`SIP ${text}`)
     if (!ntfyTopic) await refreshOpenTrades()

@@ -2437,3 +2437,15 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   (original kept, ~4x smaller) so a full Zerodha day fits the 400 MB copy limit. Tested here (byte-identical after unzip). Not run yet: the laptop
   screen was locked at 15:47 (computer use cannot click on a locked screen). Undo: delete the two files.
 - Next: tonight replay 17 Nov on REAL ticks (after gz), T0 on all tick days, skip-reason logging change (build + test, install after hours), then the entry study.
+
+## 17 Nov 21:30 - NIGHT BLOCK
+- Laptop link: NOT reachable at 21:30 (2 tries; laptop off/asleep) -> gz of 17 Nov ticks, real-tick replay and install postponed.
+- 16 Nov no-trade cause: already found (laptop shut down 08:23, Kernel-Power 41) - not the code. Closed.
+- SKIP LOG change BUILT + TESTED (record only, NOT installed yet): sip-engine.mjs skipEv() - the first time a picked stock is beyond its level but
+  not entered, the feed log gets one line 'SIP ⏸ BUY X beyond its level at HH:MM but NOT entered - <reason>' (trap filter with the Nifty move,
+  circuit limit, entry signs/flow missing, size 0); also saved in sip-state skipLog. No phone alert. Also fixed the re-entry check to look for an
+  'entry' event (a skip event must not count as an entry).
+  Tests: tick-exits 7/7, kite 11/11, kite-only 4/4, recorder 7/7; test-sip fails the same 3 checks before and after (old, unrelated).
+  Replay 17 Nov (candle hint) old vs new engine: trades IDENTICAL for E0 (0) and T0 (+3,367); skip log lists ANGELONE, PREMIERENE, ABDL, PNB 09:20,
+  ALKEM 09:30 - 'trap filter: Nifty already +0.27% our way'. Install at the next link outside 09:00-15:30 (backup sip-engine-before-skiplog.mjs,
+  feed-before-skiplog.mjs; undo = copy the backups back).

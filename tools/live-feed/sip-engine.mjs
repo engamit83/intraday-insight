@@ -66,7 +66,7 @@ export class SipEngine {
   }
   stateFile() { return path.join(this.dataDir, `sip-state-${this.day}.json`) }
   save() {
-    try { fs.writeFileSync(this.stateFile(), JSON.stringify({ picks: this.picks, gapSkipped: this.gapSkipped ?? [], prevCloseSource: this.pcSrc ?? null, trades: [...this.trades.values()], closed: this.closed, status: this.status, or: [...this.or] })) } catch {}
+    try { fs.writeFileSync(this.stateFile(), JSON.stringify({ picks: this.picks, gapSkipped: this.gapSkipped ?? [], prevCloseSource: this.pcSrc ?? null, trades: [...this.trades.values()], closed: this.closed, status: this.status, or: [...this.or], skipLog: this.skipLog ?? [] })) } catch {}
   }
   restore() { // after a restart in the middle of the day: keep the picks and open trades
     try {
@@ -127,7 +127,7 @@ export class SipEngine {
           if (f && (this.r.reNeedVolume ? f.signs.volume && others >= this.r.reMinSigns : f.score >= this.r.reMinSigns) && (!this.r.reNeedFlow || f.signs.flow)) {
             const signs = Object.keys(f.signs).filter((k) => f.signs[k])
             const e2 = this.tryEntry({ ...pk, waited: 0 }, tick, ts, true)
-            if (e2.length) { const nt = this.trades.get(sym); nt.re = (t.re ?? 0) + 1; nt.entrySigns = signs; e2[0].reentry = true; e2[0].signs = signs; this.save(); ev.push(...e2) }
+            if (e2[0]?.kind === 'entry') { const nt = this.trades.get(sym); nt.re = (t.re ?? 0) + 1; nt.entrySigns = signs; e2[0].reentry = true; e2[0].signs = signs; this.save(); ev.push(...e2) } else ev.push(...e2) // 17 Nov: skip events (log only) from a blocked re-entry
           }
         }
       }
@@ -227,6 +227,14 @@ export class SipEngine {
     this.seedBreadth() // 27 Oct fix: breadth ready at 09:20:00 (RECLTD was entered at 09:20:00 before breadth existed)
     return [{ kind: 'picks', picks: this.picks, ts }]
   }
+  // SKIP LOG (17 Nov, record only): the first time a picked stock is beyond its level but NOT entered, say why (once per stock + reason).
+  // Changes no decision: returns [] exactly like before, plus one 'skip' event that the feed writes to its log (no phone alert).
+  skipEv(pk, ts, why) {
+    pk.skipWhy = pk.skipWhy ?? {}
+    if (pk.skipWhy[why]) return []
+    pk.skipWhy[why] = istHM(ts); this.skipLog = this.skipLog ?? []; this.skipLog.push({ sym: pk.sym, dir: pk.dir, why, at: istHM(ts) }); this.save()
+    return [{ kind: 'skip', sym: pk.sym, dir: pk.dir, why, ts }]
+  }
   tryEntry(pk, tick, ts, confirmed = false) {
     const B = pk.dir === 'BUY', sg = B ? 1 : -1, lvl = B ? pk.high : pk.low
     // TEST 8 Nov (Version 1 goal: no losing day) - day-level safety, all OFF unless set. dayNet = closed trades today (Rs)
@@ -252,13 +260,13 @@ export class SipEngine {
     }
     if (this.r.entryBase && !confirmed) { // BASE RULES (owner 25 Oct): enter only if the favour signs agree; otherwise wait (price must still be beyond the level)
       const f = this.sw.favourFor(pk.sym, pk.dir, tick.price, pk.book0, ts)
-      if (!f || f.score < this.r.entryMinSigns || (this.r.entryNeedFlow && !f.signs.flow)) { pk.waited = (pk.waited ?? 0) + 1; return [] }
+      if (!f || f.score < this.r.entryMinSigns || (this.r.entryNeedFlow && !f.signs.flow)) { pk.waited = (pk.waited ?? 0) + 1; return this.skipEv(pk, ts, !f ? 'waiting: entry signs not ready yet' : f.score < this.r.entryMinSigns ? `waiting: only ${f.score} of ${this.r.entryMinSigns} entry signs` : 'waiting: no buyer/seller flow our way') }
       pk.entrySigns = Object.keys(f.signs).filter((k) => f.signs[k])
     }
     const quote = B ? (tick.ask > 0 ? tick.ask : tick.price) : (tick.bid > 0 ? tick.bid : tick.price)
     if (this.r.circuitSafety) { // CIRCUIT SAFETY (expert audit, proposal): skip if the circuit limit in our direction is too close (no room to profit / frozen exit)
       const c = this.ckt.get(pk.sym), lim = c ? (B ? c.up : c.lo) : 0
-      if (lim > 0 && Math.abs(lim - quote) / quote * 100 < this.r.minCircuitRoomPct) { pk.circuitSkip = true; return [] }
+      if (lim > 0 && Math.abs(lim - quote) / quote * 100 < this.r.minCircuitRoomPct) { pk.circuitSkip = true; return this.skipEv(pk, ts, `circuit limit within ${this.r.minCircuitRoomPct}%`) }
     }
     const br = this.breadth()
     if (this.r.withBreadth && !this.bSeeded) return [] // 27 Oct fix: breadth not seeded yet -> wait, never enter blind
@@ -287,13 +295,13 @@ export class SipEngine {
     if (this.r.prevMoveMax != null) { const pm = this.baseline.prevMove?.[pk.sym]; if (pm != null && pm * sg >= this.r.prevMoveMax) return [] } // TEST 7 Nov: skip if yesterday already moved >= X% our way
     if (this.r.buyMinRvol && B && pk.rvol < this.r.buyMinRvol) return [] // TEST 7 Nov: stricter buys
     const trapHit = this.r.trapPct && this.mktMove != null && Math.abs(this.mktMove) >= this.r.trapPct && this.mktMove * sg > 0 && ((this.r.trapSide ?? 'SELL') === 'BOTH' || (this.r.trapSide ?? 'SELL') === pk.dir) // TEST 7 Nov: market already moved hard our way in the first 5 min
-    if (trapHit && this.r.trapMode === 'skip') return []
+    if (trapHit && this.r.trapMode === 'skip') return this.skipEv(pk, ts, `trap filter: Nifty already ${this.mktMove > 0 ? '+' : ''}${this.mktMove.toFixed(2)}% our way 09:15-09:20 (limit ${this.r.trapPct}%)`)
     if (this.r.gapAgainstMax != null) { const n = this.or.get('NIFTY'), npc = this.prevCloseFor('NIFTY'); if (n?.open > 0 && npc > 0 && (n.open / npc - 1) * 100 * sg <= -this.r.gapAgainstMax) return [] } // TEST 9 Nov (track B, OFF): skip trades against a Nifty gap of >= X%
     if (this.r.sectorRel && this.sectorMove) { const sec = this.r.sectorMap?.[pk.sym] ?? this.sectorOf?.(pk.sym); const sm = sec ? this.sectorMove.get(sec) : null; if (sm != null && this.mktAvg != null && (sm - this.mktAvg) * sg < (this.r.sectorRelMin ?? 0)) return [] } // TEST 7 Nov: sector must be stronger (buy) / weaker (sell) than the market
     const mult2 = mult * (this.r.dirHalf === pk.dir ? 0.5 : 1) * (this.oneSided === pk.dir ? 0.5 : 1) // TEST 31 Oct
       * (trapHit && this.r.trapMode === 'half' ? 0.5 : 1) // TEST 7 Nov
       * (this.r.mktDisHalf && this.mktDir && this.mktDir !== pk.dir ? 0.5 : 1) * (this.r.mktDisSkip && this.mktDir && this.mktDir !== pk.dir ? 0 : 1) // TEST 5 Nov (off)
-    if (mult2 === 0) return []
+    if (mult2 === 0) return this.skipEv(pk, ts, 'size 0 (market-direction filter)')
     const riskRs = this.r.riskRs * mult2
     const qty = Math.max(1, Math.floor(riskRs * (this.r.untilProfitMult && this.closed.reduce((a, t) => a + (t.netRs ?? 0), 0) <= 0 ? this.r.untilProfitMult : 1) / risk)) // TEST 8 Nov: smaller size until the day is in profit
     // record the 6 favour signs at EVERY entry (owner 25 Oct 16:35: compare the trades that went up with the ones that went down)
