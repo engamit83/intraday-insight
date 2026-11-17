@@ -2419,3 +2419,21 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   2, 3, 4, 5, 10, 11, 13, 16 Nov (~25 min). Not on Zerodha: HFCL, ICICIPRULI. Rule 0r: from now on Claude does this after every missed day without asking.
 - 22:43 DONE: all 8 days saved, 510/510 each (2, 3, 4, 5, 11, 13, 16 Nov full candles; 10 Nov = no candles for any stock = NSE holiday,
   Diwali Balipratipada). No errors, login was valid. Files: D:\intraday\live-feed\data\kite\day\DATE\. PROGRESS.md + CLAUDE.md copied to the laptop (0c).
+
+## 17 Nov 15:50 - DAILY REVIEW (Tue 17 Nov) - nothing changed live
+- Feed: Zerodha all day 09:00-15:35, 513/513 seen, every check OK. 14 Nov change (Zerodha-only + kite-full-DAY.csv.gz) worked on its first real day.
+  Files today are big: ticks-17 > 400 MB and kite-full-17.csv.gz > 400 MB = over the laptop copy limit.
+- Live paper: 10 picks at 09:20 (8 BUY, 2 SELL), 0 trades. Nifty +0.27% in 09:15-09:20 -> the TRAP filter (trapPct 0.2, BOTH) skipped every BUY;
+  6 BUY picks broke their level (ABDL, ANGELONE, PNB, TMPV 09:20; ALKEM 09:30; ANURAS 10:07). The 2 SELL picks never broke. Nifty day +0.44%.
+  MY MISTAKE 10:15: I told the owner "none broke its level" from the missing trades file without checking candles; corrected at 11:22.
+  Cause of the confusion: trap skips are silent in the log -> record-only change planned: log every skip with its reason.
+- What the skipped BUYs would have done [OLD DATA - hint only]: today's 1-min candles -> synthetic ticks -> the real engine (z/d17; baseline = the
+  morning baseline rebuilt without today, prev close = NSE 16 Nov). E0 (= live) 0 trades, same as live. Picks 8/10 same as live (candles + 9-day baseline).
+  T0 (no trap filter): 6 trades, +Rs 3,367: ANGELONE -573 (stop) then re-entry +3,319 (trail), ABDL +225, PREMIERENE +405, ALKEM -289, PNB +280.
+  -> today the trap filter cost about +3.4k. History says KEEP: removing it lost -35k (2022-24) / -70k (2025-26) on 5 years (10 Nov step 1);
+  12 Nov was also a trap day. One day decides nothing (0v: day-level filters need >= 20 live days). Trap shadow (T0) added to the scoreboard.
+- Scoreboard (11 tick days incl. 17 Nov as candle hint): E0 +4,847 | X1 +7,532 | X2 -5,371 vs E0 | V9 1 trade | T0 (new) 17 Nov +3,367, earlier days to be replayed.
+- NEW HELPER (record only, rule 0f): tools/live-feed/gz-ticks.mjs + gz-ticks-today.bat on the laptop: compresses data\ticks-DAY.csv into ticks-DAY.csv.gz
+  (original kept, ~4x smaller) so a full Zerodha day fits the 400 MB copy limit. Tested here (byte-identical after unzip). Not run yet: the laptop
+  screen was locked at 15:47 (computer use cannot click on a locked screen). Undo: delete the two files.
+- Next: tonight replay 17 Nov on REAL ticks (after gz), T0 on all tick days, skip-reason logging change (build + test, install after hours), then the entry study.
