@@ -149,6 +149,11 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > our direction 1% or greater at 9:20 then enter" / "change the base rule for today". Live: a side is skipped only if Nifty moved >= 2% our way 09:15-09:20
 > (was 0.2%). Installed 08:05 (backup sip-engine-before-trap2.mjs; undo = trapPct 0.2). Claude's note to the owner: 5-year replay said removing the filter
 > lost Rs 35-70k per period; 0.2% stays in the shadow board. Ask the owner at the 15:45 review whether to keep 2% after today.
+> **RULE 0x - ENTRY RULES FROZEN (owner 18 Nov 10:47-10:49):** "From above 5 rules all had to be true or few" -> all must be true; "This are the best rules
+> for entry dnt change" + trap level "Back to 0.2%" (from 19 Nov; 18 Nov ran at 2%). The live ENTRY rules are fixed: rvol >= 3, turnover >= Rs 25 cr,
+> side = 09:20 price vs official open, gap <= 1% our way, top 10 by rvol (all must hold); entry = first break of the 09:15-09:20 range 09:20-10:15, trap 0.2%,
+> circuit 2% (all must pass); re-entry = volume burst + any 3 of 5 signs. Claude does NOT change live entry rules (rule 0p no longer covers entry);
+> entry ideas (e.g. signs + direction confirmation, owner 10:36) are tested in SHADOW only and brought to the owner with numbers - only his "do it" changes entry.
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.

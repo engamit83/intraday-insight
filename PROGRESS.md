@@ -2466,3 +2466,5 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   Known so far: P1 (volume + 3 of 5) 16% vs 13% clean but net +3,119 vs +4,847; 0 of 26 confirmation factors survived on 5 years.
   Also: URBANCO 18 Nov first entry was GOOD (low after entry 162.15 > range stop 161.08, day high +2.6%) - cut by FAST-DROP (stop to 162.45)
   -> exit study: how often fast-drop cuts trades that later work vs saves real losses (tick days, refine only).
+- 18 Nov 10:48-10:49 OWNER: "This are the best rules for entry dnt change" + trap "Back to 0.2%" from tomorrow -> RULE 0x in CLAUDE.md (entry frozen;
+  entry ideas only in shadow, owner decides). Repo sip-engine.mjs back to trapPct 0.2; laptop revert after the close today (backup sip-engine-trap2-18nov.mjs).
