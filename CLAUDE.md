@@ -145,6 +145,10 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > Owner 14 Nov 19:31 (for the TICK-ONLY factors): still test them on old data as a hint, then on tick days. Both agree -> good candidate (shadow, then
 > promote by 0v). They disagree -> the live TICK result wins; the old-data result is never taken as correct on its own.
 
+> **OWNER 18 Nov 08:04-08:06 - TRAP FILTER 0.2% -> 2% (live paper, owner's own decision):** "make the nifty has increased 2% not to trade ... if nifty is in
+> our direction 1% or greater at 9:20 then enter" / "change the base rule for today". Live: a side is skipped only if Nifty moved >= 2% our way 09:15-09:20
+> (was 0.2%). Installed 08:05 (backup sip-engine-before-trap2.mjs; undo = trapPct 0.2). Claude's note to the owner: 5-year replay said removing the filter
+> lost Rs 35-70k per period; 0.2% stays in the shadow board. Ask the owner at the 15:45 review whether to keep 2% after today.
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.

@@ -2452,3 +2452,6 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - 18 Nov 08:03 INSTALLED on the laptop (link back at 08:02, before the 09:00 start): skip-log change (commit 49682e3). Laptop files before = repo
   pre-change versions (md5 checked); backups sip-engine-before-skiplog.mjs + feed-before-skiplog.mjs; installed files md5-verified on the laptop.
   Record only - no trading rule changed. Undo: copy the two backups over sip-engine.mjs + feed.mjs (outside 09:00-15:30). Owner told 08:03.
+- 18 Nov 08:05 LIVE RULE CHANGE BY THE OWNER (paper): trapPct 0.2 -> 2 ("change the base rule for today", 08:04-08:06). Installed + md5-verified
+  (backup sip-engine-before-trap2.mjs). Check: replay 17 Nov (candle hint) with the new live engine = 6 trades +3,367 (same as shadow T0).
+  Shadow board now keeps T02 = old 0.2% rule next to the live one. Ask the owner at 15:45 whether 2% stays after today.
