@@ -2470,3 +2470,5 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   entry ideas only in shadow, owner decides). Repo sip-engine.mjs back to trapPct 0.2; laptop revert after the close today (backup sip-engine-trap2-18nov.mjs).
 - 18 Nov 10:50 scheduled task 'Revert trap to 0.2% after close' set for 15:42. The older 15:50 'Install skip log after close' task could not be
   deleted or paused (permission denied) - it is OBSOLETE (skip log installed 08:03): when it fires, do nothing except check the 15:42 revert happened.
+- 18 Nov 15:44 INSTALLED on the laptop (feed stopped 15:35): sip-engine.mjs back to trapPct 0.2 (commit 513fba7, md5 38da057a... verified on the laptop);
+  the 2% version saved as sip-engine-trap2-18nov.mjs. Entry rules frozen (0x). Day 18 Nov live: 8 trades, 2 winners, net Rs -2,166.
