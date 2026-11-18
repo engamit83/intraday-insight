@@ -2468,3 +2468,5 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   -> exit study: how often fast-drop cuts trades that later work vs saves real losses (tick days, refine only).
 - 18 Nov 10:48-10:49 OWNER: "This are the best rules for entry dnt change" + trap "Back to 0.2%" from tomorrow -> RULE 0x in CLAUDE.md (entry frozen;
   entry ideas only in shadow, owner decides). Repo sip-engine.mjs back to trapPct 0.2; laptop revert after the close today (backup sip-engine-trap2-18nov.mjs).
+- 18 Nov 10:50 scheduled task 'Revert trap to 0.2% after close' set for 15:42. The older 15:50 'Install skip log after close' task could not be
+  deleted or paused (permission denied) - it is OBSOLETE (skip log installed 08:03): when it fires, do nothing except check the 15:42 revert happened.
