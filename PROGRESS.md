@@ -2472,3 +2472,16 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   deleted or paused (permission denied) - it is OBSOLETE (skip log installed 08:03): when it fires, do nothing except check the 15:42 revert happened.
 - 18 Nov 15:44 INSTALLED on the laptop (feed stopped 15:35): sip-engine.mjs back to trapPct 0.2 (commit 513fba7, md5 38da057a... verified on the laptop);
   the 2% version saved as sip-engine-trap2-18nov.mjs. Entry rules frozen (0x). Day 18 Nov live: 8 trades, 2 winners, net Rs -2,166.
+
+## 18 Nov 15:55 - DAILY REVIEW (Wed 18 Nov) - no live change (entry frozen 0x; trap back to 0.2% installed 15:44)
+- Feed: Zerodha 09:00-15:35, every check OK, new engine (skip log + trap 2%) ran clean. Nifty -0.38% day (09:15-09:20 +0.13%).
+- Live paper: 8 trades, 2 winners, net Rs -2,166 (URBANCO -645 / +1,073 re-entry, CEMPRO -985, PAGEIND +60, SIGNATURE -591 / -579, MAHABANK -463, POLYCAB -36).
+  Trap 0.2% would have given the SAME trades (Nifty only +0.13% at 09:20). Losing days streak: 0 days without a losing day (17 Nov = 0 trades).
+- ENTRY judged alone [1-min candles, hint; ticks tonight]: clean >=1.5% from the entry price: 1 of 8 (URBANCO re-entry). Best move after entry:
+  URBANCO 1st +6.3% (dipped back first), POLYCAB +3.1%, others <1%.
+- EXITS cut two good entries: URBANCO 1st (range stop 161.08 never hit, fast-drop moved stop to 162.45 -> -645; stock later +6%),
+  POLYCAB (smart-exit tightened stop -> -36; stock later +3.1% our way). -> exit study tonight (fast-drop + smart tighten: cut-good vs saved-bad, ticks).
+- FILL CHECK: MAHABANK BUY level 96.86, recorded entry 96.72 (below the level). 10:13 candle 96.53-96.99: price broke 96.86 while the recorded ask was
+  ~96.70 (stale/odd ask). Engine buys at the ask (+0.02%) -> a buy below the trigger is not a realistic fill (live-ready criterion 6).
+  Proposed fix (exit/fill code, not an entry rule): BUY fill = max(ask, last price), SELL fill = min(bid, last price). Verify on ticks tonight.
+- skipLog empty (no stock blocked today) - works as intended.
