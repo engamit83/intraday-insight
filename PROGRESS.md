@@ -2449,3 +2449,6 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   Replay 17 Nov (candle hint) old vs new engine: trades IDENTICAL for E0 (0) and T0 (+3,367); skip log lists ANGELONE, PREMIERENE, ABDL, PNB 09:20,
   ALKEM 09:30 - 'trap filter: Nifty already +0.27% our way'. Install at the next link outside 09:00-15:30 (backup sip-engine-before-skiplog.mjs,
   feed-before-skiplog.mjs; undo = copy the backups back).
+- 18 Nov 08:03 INSTALLED on the laptop (link back at 08:02, before the 09:00 start): skip-log change (commit 49682e3). Laptop files before = repo
+  pre-change versions (md5 checked); backups sip-engine-before-skiplog.mjs + feed-before-skiplog.mjs; installed files md5-verified on the laptop.
+  Record only - no trading rule changed. Undo: copy the two backups over sip-engine.mjs + feed.mjs (outside 09:00-15:30). Owner told 08:03.
