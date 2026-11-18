@@ -2455,3 +2455,7 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - 18 Nov 08:05 LIVE RULE CHANGE BY THE OWNER (paper): trapPct 0.2 -> 2 ("change the base rule for today", 08:04-08:06). Installed + md5-verified
   (backup sip-engine-before-trap2.mjs). Check: replay 17 Nov (candle hint) with the new live engine = 6 trades +3,367 (same as shadow T0).
   Shadow board now keeps T02 = old 0.2% rule next to the live one. Ask the owner at 15:45 whether 2% stays after today.
+- 18 Nov 08:10 17 Nov on REAL ticks (ticks-2026-11-17.csv.gz, 465 MB -> 120 MB via gz-ticks.mjs, run 08:06 by Claude in Explorer):
+  E0/X1/X2/V9 (trap 0.2) 0 trades (= live). T2 (trap 2 = new live) = T0: 6 trades, +Rs 1,197 (ABDL +137, ANGELONE -388 then +702, PREMIERENE +365,
+  ALKEM -250, PNB +631). Candle hint had said +3,367 -> ticks are less rosy (exits decide on ticks, 0w). Caveat: replay picks 8/10 = live
+  (rebuilt 9-day baseline: PAGEIND/PREMIERENE instead of TMPV/ANURAS).
