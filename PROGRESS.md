@@ -2486,11 +2486,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   Proposed fix (exit/fill code, not an entry rule): BUY fill = max(ask, last price), SELL fill = min(bid, last price). Verify on ticks tonight.
 - skipLog empty (no stock blocked today) - works as intended.
 
-## 18 Nov 22:xx - NIGHT BLOCK: FAST-DROP EXIT STUDY [TICK] (owner's URBANCO question)
+## 18 Nov 21:47 - NIGHT BLOCK: FAST-DROP EXIT STUDY [TICK] (owner's URBANCO question)
 - Same entries (live BASE, trap 0.2%), real ticks of 10 days (22 Oct - 9 Nov + 17 Nov; 12 Nov baseline missing, 18 Nov ticks not compressed -
   laptop screen locked). Exit variants (never removing the rule, only refining): E0 = live (fast-drop 0.5R in 60 s -> stop 0.3R from price),
   FD75 = trigger at 0.75R, FD100 = 1.0R, LT5 = stop 0.5R from price, FD75LT5 = both.
-- Net over 52 trades: E0 +4,629 | LT5 +3,661 | FD75 +3,200 | FD100 +3,159 | FD75LT5 +2,? (worse on 6 of 9 days).
+- Net over 54 trades (same entries): E0 +4,629 | LT5 +3,661 | FD75LT5 +2,691 | FD75 +2,200 | FD100 +2,159.
   E0 is best or equal on 7 of 9 days. Looser fast-drop helped only 29 Oct (LT5 +579 vs -1,431).
 - VERDICT: the current fast-drop rule earns its keep over the tick days; URBANCO 18 Nov was the exception (cut a trade that later ran +6%).
   No change. Re-test when 50+ more trades exist (0v).
