@@ -2459,3 +2459,10 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   E0/X1/X2/V9 (trap 0.2) 0 trades (= live). T2 (trap 2 = new live) = T0: 6 trades, +Rs 1,197 (ABDL +137, ANGELONE -388 then +702, PREMIERENE +365,
   ALKEM -250, PNB +631). Candle hint had said +3,367 -> ticks are less rosy (exits decide on ticks, 0w). Caveat: replay picks 8/10 = live
   (rebuilt 9-day baseline: PAGEIND/PREMIERENE instead of TMPV/ANURAS).
+- 18 Nov 10:36 OWNER ASK (do in tonight's block): "somewhere our entry rule stays ... sign plus direction confirmation, will u be able to analyse".
+  Plan: on ALL tick days (10 + 17 + 18 Nov) for every 09:20 pick, at every tick beyond the level: the 6 signs (flow, book, volume, vwap, lows, market)
+  + direction confirmations (Nifty/sector move with us, stock vs open/VWAP, 09:20 side held) -> which combination at the entry moment gives clean
+  >=1.5% from the ENTRY price more often than BASE (13%), walk-forward (first half of days build, second half check), + net with exits.
+  Known so far: P1 (volume + 3 of 5) 16% vs 13% clean but net +3,119 vs +4,847; 0 of 26 confirmation factors survived on 5 years.
+  Also: URBANCO 18 Nov first entry was GOOD (low after entry 162.15 > range stop 161.08, day high +2.6%) - cut by FAST-DROP (stop to 162.45)
+  -> exit study: how often fast-drop cuts trades that later work vs saves real losses (tick days, refine only).
