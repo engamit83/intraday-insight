@@ -2495,3 +2495,7 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - VERDICT: the current fast-drop rule earns its keep over the tick days; URBANCO 18 Nov was the exception (cut a trade that later ran +6%).
   No change. Re-test when 50+ more trades exist (0v).
 - Entry study (signs + direction confirmation, owner 18 Nov 10:36): not run tonight (needs the 18 Nov ticks + a longer tick run). Next night block.
+- 19 Nov 11:37-11:47 FEED GAP: the laptop lost internet (no prices from 11:37:19, 'getaddrinfo ENOTFOUND ws.kite.trade' = no DNS/internet),
+  feed reconnected on its own at 11:47:13 (watchdog OK). The Claude link was also down at 11:45 (owner told). ~10 min of ticks missing ->
+  pull Zerodha 1-min candles for 19 Nov after the close (rule 0r, kite-day.mjs 2026-11-19). Open trades kept their stops during the gap
+  (exits run on ticks; none was hit in the gap - VOLTAS/POLYCAB still open, IREDA closed 11:52 +1,109).
