@@ -2513,3 +2513,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - URBANCO re-entry exit 174.70 vs stop 175.53: 09:44 one-minute spike to 174.70 on 420k volume (sweep) - the fill is the real traded price
   through the stop, not a code error. Realistic.
 - New measure kept from today: 'reached +1.5% before the real stop' next to 'strict clean' (owner 18 Nov: how entries are judged).
+
+## 19 Nov 21:40 - NIGHT BLOCK: OWNER'S ENTRY STUDY (signs + direction) [OLD DATA - hint: 1-min candles of the LIVE trades]
+- Laptop NOT linked at 21:30 (2 tries) -> no tick files; study run on the 61 live paper trades of 9 days (23 Oct - 19 Nov) with their recorded
+  signs at entry + the day's 1-min candles. Ticks to confirm later (0w).
+- ENTRIES: 54% reached +1.5% BEFORE their original range stop ('good'), only 10% strict-clean. Both halves similar (50% / 57%).
+- Signs at entry do NOT pick better entries: good-rate with sign vs without - flow 47% vs 61%, volume burst 41% vs 59%, book 54/56, vwap 54/56,
+  lows 58/50, market 55/50; >=3 signs 55% vs 50%. Direction confirmation (Nifty moving our way at entry) 53% vs 55%. -> no combination beats BASE;
+  same answer as the 13 Nov tick test. Proposal to the owner: NONE for entry (entry frozen anyway, 0x).
+- THE REAL LEAK IS THE EXIT: the 33 good entries made only +676 each on average (they had reached ~+1R+), the 28 bad ones lost -860 each.
+  Net -1,781 although more than half the entries worked. Exits give back most of the move on good trades (VOLTAS/POLYCAB/POLICYBZR 19 Nov,
+  URBANCO 18 Nov) while losers run nearly the full -1R.
+- NEXT (exit study, tick days, same entries, refine never remove): smart-exit tighten (0.3R) -> 0.5R / only after +1R; P8 (0.8R -> keep half) ->
+  start at 1.2R / keep 40%; measure good-entry capture and bad-entry loss separately. Needs the laptop link (stage the tick days one by one).
+- Still to do at next link: copy .md files (0c), gz 18 + 19 Nov ticks, kite-day.mjs 2026-11-19 for the 11:37-11:47 gap, MAHABANK 18 Nov fill check.
