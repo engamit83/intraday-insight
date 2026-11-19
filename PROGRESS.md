@@ -2499,3 +2499,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   feed reconnected on its own at 11:47:13 (watchdog OK). The Claude link was also down at 11:45 (owner told). ~10 min of ticks missing ->
   pull Zerodha 1-min candles for 19 Nov after the close (rule 0r, kite-day.mjs 2026-11-19). Open trades kept their stops during the gap
   (exits run on ticks; none was hit in the gap - VOLTAS/POLYCAB still open, IREDA closed 11:52 +1,109).
+
+## 19 Nov 15:55 - DAILY REVIEW (Thu 19 Nov) - no live change (entry frozen 0x, trap 0.2%)
+- Feed: Zerodha 09:00-15:35; GAP 11:37-11:47 (laptop internet lost, auto-reconnect) - minute candles missing 11:38-11:46 -> pull Zerodha 1-min
+  candles for 19 Nov (kite-day.mjs) at the next unlocked-screen moment (Zerodha keeps minute history; no urgency). Nifty +1.30% (25,187 -> 25,514).
+- Live paper: 10 trades, 6 winners, net Rs +3,045 - FIRST WINNING DAY of the Zerodha period. Streak: 1 day without a losing day.
+  URBANCO -449 / -415, POLICYBZR +157, VOLTAS -267 / +1,161, ETERNAL -262, POLYCAB +215 / +1,527 (15:15 close), BLUESTARCO +269, IREDA +1,109.
+- ENTRY judged alone [1-min candles, hint]: strict clean (no return to entry) 0 of 10; reached +1.5% BEFORE the original range stop: 7 of 10.
+  Best move after entry: IREDA +8.0%, BLUESTARCO +5.5%, VOLTAS 1st +5.2%, POLYCAB 1st +3.5%, POLICYBZR +2.2% -> the entries were good.
+- EXITS cut 3 good entries early: VOLTAS 1st -267 (smart-exit tighten 09:25; stock +5.2%), POLYCAB 1st +215 (fast-drop then P8; +3.5%),
+  POLICYBZR +157 (P8; +2.2%). Same pattern as 18 Nov (URBANCO). Fast-drop alone tested OK on 10 tick days (18 Nov night) -> next exit study:
+  SMART-EXIT TIGHTEN + P8 0.8R/half on all tick days (refine, never remove; same entries), tick data.
+- URBANCO re-entry exit 174.70 vs stop 175.53: 09:44 one-minute spike to 174.70 on 420k volume (sweep) - the fill is the real traded price
+  through the stop, not a code error. Realistic.
+- New measure kept from today: 'reached +1.5% before the real stop' next to 'strict clean' (owner 18 Nov: how entries are judged).
