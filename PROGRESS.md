@@ -2530,3 +2530,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - 20 Nov: LAPTOP UNREACHABLE ALL DAY (checks 08:50-14:50 all failed; owner told 08:50, 09:50, 10:50, 11:50, 13:50). Feed/paper trades unknown.
   At the next link: did the feed run (feed-2026-11-20.log)? If not / partly -> kite-day.mjs 2026-11-20 (rule 0r) + the 19 Nov 11:37-11:47 gap;
   copy PROGRESS.md + CLAUDE.md (pending since 19 Nov 21:40).
+
+## 20 Nov 15:50 - DAILY / WEEK REVIEW (Fri 20 Nov) - laptop unreachable, no day data
+- Week 16-20 Nov (live paper, known days): Mon 16 no feed (laptop shut down 08:23) | Tue 17 0 trades (trap 0.2% blocked all buys) |
+  Wed 18 -2,166 (8 trades, trap 2% by owner) | Thu 19 +3,045 (10 trades) | Fri 20 UNKNOWN (laptop unreachable 08:50-15:45).
+  Known week net about +879. Losing days: 18 Nov. Days in a row without a losing day: 1 (19 Nov; 20 Nov unknown).
+- Biggest issue this week = INFRASTRUCTURE, not rules: 2 of 5 days lost to the laptop (off / unreachable) + a 10-min internet gap on 19 Nov.
+  The V1 live-ready count (20 days, no outage) cannot start until the laptop runs every market day.
+- Rules this week: entry frozen (0x, trap 0.2%); entry study = signs/direction add nothing; exits leak profit on good entries -> exit study next.
