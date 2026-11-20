@@ -2538,3 +2538,5 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Biggest issue this week = INFRASTRUCTURE, not rules: 2 of 5 days lost to the laptop (off / unreachable) + a 10-min internet gap on 19 Nov.
   The V1 live-ready count (20 days, no outage) cannot start until the laptop runs every market day.
 - Rules this week: entry frozen (0x, trap 0.2%); entry study = signs/direction add nothing; exits leak profit on good entries -> exit study next.
+- 20 Nov 21:30 night block: laptop still unreachable -> exit study postponed to Mon 23 Nov 21:30 (needs tick files; a 1-min candle replay
+  cannot reproduce the smart exit, which reads order-book/flow ticks - so no candle 'hint' run, it would mislead). Owner not messaged (nothing new).
