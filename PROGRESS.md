@@ -2527,3 +2527,6 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - NEXT (exit study, tick days, same entries, refine never remove): smart-exit tighten (0.3R) -> 0.5R / only after +1R; P8 (0.8R -> keep half) ->
   start at 1.2R / keep 40%; measure good-entry capture and bad-entry loss separately. Needs the laptop link (stage the tick days one by one).
 - Still to do at next link: copy .md files (0c), gz 18 + 19 Nov ticks, kite-day.mjs 2026-11-19 for the 11:37-11:47 gap, MAHABANK 18 Nov fill check.
+- 20 Nov: LAPTOP UNREACHABLE ALL DAY (checks 08:50-14:50 all failed; owner told 08:50, 09:50, 10:50, 11:50, 13:50). Feed/paper trades unknown.
+  At the next link: did the feed run (feed-2026-11-20.log)? If not / partly -> kite-day.mjs 2026-11-20 (rule 0r) + the 19 Nov 11:37-11:47 gap;
+  copy PROGRESS.md + CLAUDE.md (pending since 19 Nov 21:40).
