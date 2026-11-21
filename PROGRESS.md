@@ -2540,3 +2540,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Rules this week: entry frozen (0x, trap 0.2%); entry study = signs/direction add nothing; exits leak profit on good entries -> exit study next.
 - 20 Nov 21:30 night block: laptop still unreachable -> exit study postponed to Mon 23 Nov 21:30 (needs tick files; a 1-min candle replay
   cannot reproduce the smart exit, which reads order-book/flow ticks - so no candle 'hint' run, it would mislead). Owner not messaged (nothing new).
+
+## 21 Nov 10:05 - SATURDAY WEEKLY REVIEW (laptop unreachable since 20 Nov 08:50 - review from data already here)
+- LIVE PAPER all Zerodha/Sharekhan days with a state file (23 Oct - 19 Nov, 12 days; rules changed along the way): net Rs -3,831, 6 losing days,
+  2 days with 0 trades. Best +3,968 (23 Oct), +3,045 (19 Nov); worst -5,508 (26 Oct). V1 goal (no losing day) not near.
+- Same-entry tick replay (E0, 10 days, 54 trades): +4,629 -> the live losses come mostly from days with rule changes / missing days, but the
+  edge is thin either way.
+- DIAGNOSIS (this week's studies): ENTRIES are mostly fine (54% reach +1.5% before the stop; signs/direction do not improve them - 19 Nov study);
+  EXITS leak: good entries keep only ~0.68R, bad ones lose ~0.86R. Fast-drop itself tested OK (18 Nov). Suspects: smart-exit tighten (0.3R) and
+  P8 (0.8R -> keep half) on good trades.
+- INFRASTRUCTURE is the #1 blocker: 16 Nov laptop off, 19 Nov 10-min internet loss, 20 Nov unreachable all day. Live-ready count needs 20 clean days.
+- PROPOSALS (owner decides, nothing changed): (1) laptop: sleep 'Never' on charger, hibernate off, Claude app starts at Windows sign-in, Windows
+  Update active hours 08:00-16:00, on the charger; (2) exit study on ticks Mon 23 Nov (warnTightR 0.5, protectAt 1.2, protectFrac 0.4/0.6) -
+  promote only by 0v; (3) entry stays frozen (0x).
+- Old pending: P8 10% (X1) and fast-drop exit-now (X2) - X2 rejected; X1 waits for the exit study (same family).
