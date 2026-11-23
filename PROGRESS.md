@@ -2563,3 +2563,6 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   (3 items recorded, no duplicates on the 2nd poll). Owner asked to double-click news-live.bat (screen locked for computer use).
   Next: start it automatically with the feed from 25 Nov (auto-feed.bat), then test news before sudden drops (early-warning study).
   Undo: close the window / delete the two files.
+- 23 Nov 15:16 last feed check: feed OK all day from 09:23 (watchdog OK every 5 min since 09:23 - my 09:25 'watchdog did not run' was wrong,
+  the file appeared later; only the 09:00 START did not happen). News recorder not started today (news-live.bat not double-clicked).
+  Next feed check 08:50 Wed 25 Nov (24 Nov holiday).
