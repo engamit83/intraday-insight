@@ -2554,3 +2554,6 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   Update active hours 08:00-16:00, on the charger; (2) exit study on ticks Mon 23 Nov (warnTightR 0.5, protectAt 1.2, protectFrac 0.4/0.6) -
   promote only by 0v; (3) entry stays frozen (0x).
 - Old pending: P8 10% (X1) and fast-drop exit-now (X2) - X2 rejected; X1 waits for the exit study (same family).
+- 23 Nov 09:20 link back (laptop was off/unreachable 20 Nov 08:50 - 23 Nov 09:17). NO feed on 20 Nov and none yet on 23 Nov (no feed log, no
+  watchdog log today, last Zerodha login 19 Nov 08:35) -> owner asked to run kite-login.bat now. After the close: kite-day.mjs 2026-11-20 2026-11-23
+  (if partial) + 19 Nov gap (rule 0r).
