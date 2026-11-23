@@ -159,6 +159,10 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > sudden-drop detector + exit (order flow: sell-volume burst, bid-depth collapse, total sell vs buy, Nifty/sector falling together, speed) that
 > separates real reversals from noise, and earlier no-loss/profit exits; tested on tick days, same entries, vs the live exits; proposed with numbers.
 > Rule 0k still holds (exits refined, not removed, until the owner decides a replacement).
+> Owner 13:38-13:42: re-entry stays available after such an exit; "we will exit this sudden drop immediately, try to find some supporting factors so
+> we can move out immediately" -> GOAL = an IMMEDIATE exit on a confirmed sudden drop (owner's decision on direction). Claude finds the supporting
+> factors on tick days (exit at once only when they confirm; re-entry judged together), shows the numbers vs the live exits, and installs it as a
+> live paper exit once it is at least as good as the current one on the same entries; the fast-drop rule stays as the fallback (0k).
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
