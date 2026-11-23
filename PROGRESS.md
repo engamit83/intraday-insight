@@ -2574,3 +2574,19 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Owner work items today: (1) immediate exit on confirmed sudden drop + early-warning factors (CLAUDE.md 13:07-13:50); (2) live news:
   NSE recorder built + on the laptop (not started today), next: RBI/SEBI/PIB + market headlines + VIX/USDINR/crude; (3) late-start backfill
   (picks from Zerodha minute candles if the feed starts 09:15-10:15); (4) what-if 23 Nov from 09:23 - waits for kite-day-1123.bat (owner asked twice).
+
+## 23 Nov 21:50 - NIGHT BLOCK: LATE-START BACKFILL INSTALLED (live paper, feed.mjs) [TICK-checked]
+- WHY: 23 Nov the laptop woke ~09:18, feed connected 09:23 -> engine skipped the day ("feed started after 09:15"). Owner 12:21-12:23:
+  "if feed starts at 9:23 can't you check what was the price at 9:20 ... it is so simple".
+- WHAT (feed.mjs only; engine + entry rules unchanged, 0x): when the Zerodha session starts between 09:16 and 10:14 and today has no picks
+  (or only the 'feed started late' skip), the feed loads Zerodha's 09:15-09:19 minute candles of all watched stocks/indices + yesterday's
+  close (quote/ohlc), replays them into the engine (open, low/high, close per minute, volume spread), makes the normal 09:20 picks, then
+  continues on LIVE ticks. Entries only at live prices (first live tick beyond the level, until 10:15). Live ticks are held ~2-3 min while
+  the candles load (Zerodha limit ~3 requests/s). Any failure -> normal late start (no picks), feed keeps running.
+- TEST [TICK]: 17 Nov and 12 Nov ticks, picks from minute candles (built from the ticks) + live from 09:23 vs the full-tick engine:
+  picks identical 10/10 both days (also after a restart with a saved 'skipped' state). 12 Nov trades differ only because entries start
+  09:23 (full -1,183 vs late +673 - one day, noise). Caveat: real Zerodha candle volume may differ slightly from tick volume (09:15 candle);
+  earlier proof: minute-data stock selection = ticks 95%.
+- Feed tests: kite 11/11, kite-only 4/4, e2e, tick-e2e, watchdog, recorder 7/7 pass; test-extras hangs on old feed too (Sharekhan test).
+- INSTALLED 21:50 IST (outside market hours). Laptop feed.mjs md5 2bdcbe6d997f288fdda7bb21e9139549 verified.
+  Backup: feed-before-backfill.mjs (md5 9fa204a6...). UNDO: copy feed-before-backfill.mjs over feed.mjs, or set LATE_BACKFILL=0 in .env.

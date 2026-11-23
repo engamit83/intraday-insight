@@ -230,13 +230,67 @@ async function onSipEvent(ev) {
     await ntfy(text)
   } catch (e) { say(`! stocks-in-play alert failed: ${e.message}`) }
 }
+// LATE-START BACKFILL (owner 23 Nov 12:21-12:23: feed started 09:23, "can't you check what was the price at 9:20"): if the Zerodha feed starts
+// after 09:16 but before 10:14, the engine first gets the 09:15-09:20 minute candles from Zerodha (with yesterday's close), makes its normal
+// 09:20 picks from them, and only then takes live prices - entries happen at the first LIVE price beyond the level (never at a past price).
+// While the candles load (~3 min) the engine waits (sipHold); recording is not affected. Entry rules unchanged (0x). Undo: LATE_BACKFILL=0.
+let sipHold = false
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms))
+async function lateBackfill(login, tokenToSymbol) {
+  const now = Date.now(), sec = istMinuteOfDay(now) * 60
+  if (!sip || process.env.LATE_BACKFILL === '0' || sec < 9 * 3600 + 16 * 60 || sec >= 10 * 3600 + 14 * 60) return
+  const day = new Date(now + 330 * 60_000).toISOString().slice(0, 10)
+  try { const st = JSON.parse(fs.readFileSync(path.join(here, 'data', `sip-state-${day}.json`), 'utf8')); if (st.picks?.length || st.trades?.length || (st.picks && !String(st.status ?? '').startsWith('skipped: feed started'))) return } catch { /* no state yet */ }
+  sipHold = true
+  const H = { 'X-Kite-Version': '3', Authorization: `token ${login.key}:${login.token}` }
+  try {
+    say(`SIP late start: loading the 09:15-09:20 minute candles of ${tokenToSymbol.size} stocks/indices from Zerodha (about ${Math.ceil(tokenToSymbol.size * 0.36 / 60)} min) - picks follow, entries only at live prices.`)
+    const prev = new Map(), list = [...tokenToSymbol.entries()]
+    for (let i = 0; i < list.length; i += 400) { // yesterday's close for the gap check (quote/ohlc, up to 1000 per call)
+      try {
+        const q = list.slice(i, i + 400).map(([tok]) => `i=${tok}`).join('&')
+        const j = await (await fetch(`${KITE_API}/quote/ohlc?${q}`, { headers: H, signal: AbortSignal.timeout(30_000) })).json()
+        for (const v of Object.values(j.data ?? {})) { const sym = tokenToSymbol.get(v.instrument_token); if (sym && v.ohlc?.close > 0) prev.set(sym, v.ohlc.close) }
+      } catch (e) { say(`! late start: previous close not loaded (${e.message})`) }
+      await sleepMs(400)
+    }
+    const ticks = []
+    let ok = 0
+    for (const [tok, sym] of list) {
+      try {
+        const r = await fetch(`${KITE_API}/instruments/historical/${tok}/minute?from=${day}+09:15:00&to=${day}+09:20:00`, { headers: H, signal: AbortSignal.timeout(30_000) })
+        if (r.ok) {
+          const c = (await r.json()).data?.candles ?? []
+          let cum = 0
+          for (const [t, o, h, l, cl, v] of c) {
+            const m0 = Date.parse(t); if (!(m0 > 0) || new Date(m0 + 330 * 60_000).toISOString().slice(11, 16) >= '09:20') continue
+            const up = cl >= o, seq = up ? [[500, o], [20_000, l], [40_000, h], [58_000, cl]] : [[500, o], [20_000, h], [40_000, l], [58_000, cl]]
+            seq.forEach(([dt, px], k) => { if (k > 0) cum += v / 3; ticks.push([m0 + dt, sym, { price: px, bid: px, ask: px, cum: Math.round(cum), prevClose: prev.get(sym) }]) })
+          }
+          if (c.length) ok++
+        }
+      } catch { /* one stock missing is fine */ }
+      await sleepMs(360)
+    }
+    ticks.sort((a, b) => a[0] - b[0])
+    if (!ticks.length) throw new Error('no 09:15-09:20 candles came back')
+    sip.onTimer(Date.parse(`${day}T09:14:00+05:30`)) // loads today's saved state (if any) without selecting
+    if (sip.picks?.length || sip.trades.size) return
+    sip.picks = null; sip.status = 'waiting'; sip.firstTickSec = null; sip.or.clear() // undo an earlier 'feed started late' skip today
+    for (const [ts, sym, t] of ticks) { for (const ev of sip.onTick(sym, t, ts)) onSipEvent(ev) }
+    const t920 = Date.parse(`${day}T09:20:00+05:30`)
+    for (const ev of sip.onTimer(t920)) onSipEvent(ev)
+    say(`SIP late start: ${ok} of ${list.length} loaded from Zerodha minute candles; picks made as at 09:20 - entries from now on live prices only.`)
+  } catch (e) { say(`! late start backfill failed (${e.message}) - engine continues as a normal late start`) }
+  finally { sipHold = false }
+}
 function sipTick(symbol, t, now) {
-  if (!sip) return
+  if (!sip || sipHold) return
   try { for (const ev of sip.onTick(symbol, { price: t.price, bid: t.bid, ask: t.ask, cum: t.cumulativeVolume, totBuy: t.totBuy, totSell: t.totSell, prevClose: t.prevClose }, now)) onSipEvent(ev) }
   catch (e) { say(`! stocks-in-play error (feed continues): ${e.message}`); sip = null }
 }
 function sipTimer() {
-  if (!sip) return
+  if (!sip || sipHold) return
   try { for (const ev of sip.onTimer(Date.now())) onSipEvent(ev) } catch (e) { say(`! stocks-in-play timer error (feed continues): ${e.message}`); sip = null }
 }
 async function flushMoves() {
@@ -269,6 +323,7 @@ async function runKiteSession(login) {
   uploadSymbols = new Set(appList ?? []) // only the app's own list goes to the database; if not remembered yet, nothing is uploaded (trading and recording still run)
   say(`Zerodha: watching ${tokenToSymbol.size} stocks/indices (${wanted.size - tokenToSymbol.size} names not found at Zerodha).${appList ? '' : ' App stock list not remembered yet - candles are not uploaded to the app today.'}`)
   const tokens = [...tokenToSymbol.keys()]
+  lateBackfill(login, tokenToSymbol) // 23 Nov: no-op unless the feed starts 09:16-10:14 without picks
   const ws = new WebSocket(`${KITE_WS}?api_key=${encodeURIComponent(login.key)}&access_token=${encodeURIComponent(login.token)}`)
   await new Promise((resolve) => {
     let timers = [], opened = false
