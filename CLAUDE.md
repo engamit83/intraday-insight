@@ -154,6 +154,11 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > side = 09:20 price vs official open, gap <= 1% our way, top 10 by rvol (all must hold); entry = first break of the 09:15-09:20 range 09:20-10:15, trap 0.2%,
 > circuit 2% (all must pass); re-entry = volume burst + any 3 of 5 signs. Claude does NOT change live entry rules (rule 0p no longer covers entry);
 > entry ideas (e.g. signs + direction confirmation, owner 10:36) are tested in SHADOW only and brought to the owner with numbers - only his "do it" changes entry.
+> **OWNER 23 Nov 13:07 - EXIT RESEARCH (sudden drop):** "how do we check to see if it is a sudden drop of large amount, we should immediately exit ...
+> move out of this stop loss thing, find a better way to find this out and exit with no loss or some profit". -> Claude researches a better
+> sudden-drop detector + exit (order flow: sell-volume burst, bid-depth collapse, total sell vs buy, Nifty/sector falling together, speed) that
+> separates real reversals from noise, and earlier no-loss/profit exits; tested on tick days, same entries, vs the live exits; proposed with numbers.
+> Rule 0k still holds (exits refined, not removed, until the owner decides a replacement).
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
