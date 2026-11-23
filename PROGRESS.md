@@ -2557,3 +2557,9 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - 23 Nov 09:20 link back (laptop was off/unreachable 20 Nov 08:50 - 23 Nov 09:17). NO feed on 20 Nov and none yet on 23 Nov (no feed log, no
   watchdog log today, last Zerodha login 19 Nov 08:35) -> owner asked to run kite-login.bat now. After the close: kite-day.mjs 2026-11-20 2026-11-23
   (if partial) + 19 Nov gap (rule 0r).
+- 23 Nov 14:30 LIVE NEWS RECORDER (owner 14:27 "News is always yes, do it without any delay, live news"): tools/live-feed/news-live.mjs + news-live.bat
+  copied to the laptop. Record only: NSE corporate announcements every 60 s, block + bulk deals every 10 min -> data\news-live-DAY.csv/.jsonl,
+  logs\news-live-DAY.log; items for today's picks/trades marked OURS; stops 15:40; separate process (feed untouched). Tested with fake NSE data
+  (3 items recorded, no duplicates on the 2nd poll). Owner asked to double-click news-live.bat (screen locked for computer use).
+  Next: start it automatically with the feed from 25 Nov (auto-feed.bat), then test news before sudden drops (early-warning study).
+  Undo: close the window / delete the two files.
