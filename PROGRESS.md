@@ -2566,3 +2566,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - 23 Nov 15:16 last feed check: feed OK all day from 09:23 (watchdog OK every 5 min since 09:23 - my 09:25 'watchdog did not run' was wrong,
   the file appeared later; only the 09:00 START did not happen). News recorder not started today (news-live.bat not double-clicked).
   Next feed check 08:50 Wed 25 Nov (24 Nov holiday).
+
+## 23 Nov 15:50 - DAILY REVIEW (Mon 23 Nov)
+- Laptop unreachable Fri 20 Nov 08:50 - Mon 23 Nov 09:17 (no feed 20 Nov). Today: Zerodha login 09:19, feed started 09:23:39 by the owner
+  (auto-feed.bat), 09:00 START did not run; feed + watchdog OK 09:23-15:35. Paper: 0 trades (late start -> no picks, by design).
+- Streak unchanged (last trading days: 18 Nov -2,166, 19 Nov +3,045, 20 Nov no feed, 23 Nov no picks).
+- Owner work items today: (1) immediate exit on confirmed sudden drop + early-warning factors (CLAUDE.md 13:07-13:50); (2) live news:
+  NSE recorder built + on the laptop (not started today), next: RBI/SEBI/PIB + market headlines + VIX/USDINR/crude; (3) late-start backfill
+  (picks from Zerodha minute candles if the feed starts 09:15-10:15); (4) what-if 23 Nov from 09:23 - waits for kite-day-1123.bat (owner asked twice).
