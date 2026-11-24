@@ -2590,3 +2590,18 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Feed tests: kite 11/11, kite-only 4/4, e2e, tick-e2e, watchdog, recorder 7/7 pass; test-extras hangs on old feed too (Sharekhan test).
 - INSTALLED 21:50 IST (outside market hours). Laptop feed.mjs md5 2bdcbe6d997f288fdda7bb21e9139549 verified.
   Backup: feed-before-backfill.mjs (md5 9fa204a6...). UNDO: copy feed-before-backfill.mjs over feed.mjs, or set LATE_BACKFILL=0 in .env.
+
+## 24 Nov 10:40 - HOLIDAY BLOCK: LIVE NEWS AUTO-START + MARKET-WIDE NEWS + INDIA VIX (record only, no trading rule changed)
+- Laptop link OK; Zerodha login file dated today 08:25 (holiday - feed correctly not started). kite-day-1123.bat still NOT run.
+- news-live.mjs: + market-wide news every 3 min (RSS: RBI press releases, SEBI, PIB finance, ET markets + economy, Moneycontrol
+  markets + business) -> same files (kind 'market news', symbol = source); items > 2 days old ignored; a failing source is logged once
+  and retried. + exits by itself on weekends/NSE holidays. Fake-feed test: RSS/Atom/CDATA parsed, duplicates skipped, 503 handled,
+  holiday exit OK. Feed URLs could not be opened from here (web check needed approval) - first live day shows which sources answer.
+- auto-feed.bat: starts news-live minimized (window NSE-LIVE-NEWS) with the feed and on every feed restart, if not already running.
+  Watchdog unaffected (it matches only feed.mjs / auto-feed.bat).
+- record-extra.csv: + INDIAVIX (Zerodha index 'INDIA VIX') -> VIX ticks recorded live from 25 Nov. Not a pick candidate (no baseline).
+  USD/INR and crude need Zerodha currency/commodity segments - not added (instrument loader is NSE equity + indices only).
+- Tests: kite 11/11, kite-only 4/4, recorder 7/7.
+- Installed 10:40 IST (holiday). Backups on laptop: auto-feed-before-news.bat, news-live-before-rss.mjs, record-extra-before-vix.csv.
+  UNDO: copy each backup over the new file.
+- Open: sudden-drop exit research needs the 18/19/23 Nov tick files compressed (>400 MB can't be copied here).

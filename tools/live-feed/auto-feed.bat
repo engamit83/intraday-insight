@@ -9,6 +9,7 @@ if errorlevel 1 (
   timeout /t 10 >nul
   exit /b
 )
+call :news
 powershell -NoProfile -Command "if(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -like '*feed.mjs*' }){exit 0}else{exit 1}"
 if not errorlevel 1 (
   echo Feed is already running - nothing to do.
@@ -18,6 +19,7 @@ if not errorlevel 1 (
 title INTRADAY-FEED
 :run
 echo [%date% %time%] Starting feed...
+call :news
 node feed.mjs
 if %errorlevel%==3 goto holiday
 call :inhours
@@ -33,6 +35,12 @@ exit /b
 echo Market closed - feed finished for today.
 timeout /t 10 >nul
 exit /b
+
+:news
+REM 24 Nov: live news recorder (record only) starts with the feed, minimized, if not already running. It stops itself at 15:40 and on holidays.
+powershell -NoProfile -Command "if(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -like '*news-live.mjs*' }){exit 0}else{exit 1}"
+if errorlevel 1 start "NSE-LIVE-NEWS" /min cmd /c node news-live.mjs
+exit /b 0
 
 :inhours
 powershell -NoProfile -Command "$d=Get-Date; $t=$d.TimeOfDay; if([int]$d.DayOfWeek -ge 1 -and [int]$d.DayOfWeek -le 5 -and $t -ge [timespan]'08:55:00' -and $t -le [timespan]'15:35:00'){exit 0}else{exit 1}"

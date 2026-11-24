@@ -1,5 +1,6 @@
 // news-live.mjs - owner 23 Nov 14:27 "News is always yes, do it without any delay, live news". RECORD ONLY - no trading decision uses it yet.
 // Every 60 s: NSE corporate announcements of TODAY (all equities). Every 10 min: today's block + bulk deals.
+// Every 3 min: market-wide news (RBI, SEBI, PIB, ET + Moneycontrol market/economy headlines) - added 24 Nov.
 // Each NEW item -> data\news-live-DAY.csv (time seen, symbol, kind, NSE time, subject) + data\news-live-DAY.jsonl (full raw item, all fields)
 // + one line in logs\news-live-DAY.log. Items for stocks in today's paper picks/trades are marked OURS (from data\sip-state-DAY.json).
 // Runs until 15:40 IST, then stops. Separate process: it never touches the price feed. Usage: node news-live.mjs   (or news-live.bat)
@@ -75,19 +76,63 @@ async function pollDeals(kind) {
   }
   return n
 }
+// MARKET-WIDE NEWS (owner 23 Nov 14:32: government policy, global markets, RBI): RSS feeds polled every 3 min, record only.
+// Item -> kind 'market news', symbol = source name. Items older than 2 days are ignored (first poll of the day would replay old ones).
+export const RSS = [
+  ['RBI', 'https://www.rbi.org.in/pressreleases_rss.xml'],
+  ['SEBI', 'https://www.sebi.gov.in/sebirss.xml'],
+  ['PIB-FINANCE', 'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3'],
+  ['ET-MARKETS', 'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms'],
+  ['ET-ECONOMY', 'https://economictimes.indiatimes.com/news/economy/rssfeeds/1373380680.cms'],
+  ['MC-MARKETS', 'https://www.moneycontrol.com/rss/marketreports.xml'],
+  ['MC-BUSINESS', 'https://www.moneycontrol.com/rss/business.xml'],
+]
+const unx = (t) => String(t ?? '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/\s+/g, ' ').trim()
+export function parseRss(xml) {
+  const items = []
+  for (const m of String(xml).matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/g)) {
+    const b = m[0], tag = (n) => { const x = b.match(new RegExp(`<${n}\\b[^>]*>([\\s\\S]*?)<\\/${n}>`)); return x ? unx(x[1]) : '' }
+    const link = tag('link') || (b.match(/<link[^>]*href="([^"]+)"/)?.[1] ?? '')
+    items.push({ title: tag('title'), link, date: tag('pubDate') || tag('updated') || tag('dc:date') || tag('published'), desc: tag('description').slice(0, 500) })
+  }
+  return items
+}
+async function pollRss(src, url) {
+  const r = await fetchFn(url, { headers: UA, signal: AbortSignal.timeout(30_000) })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  let n = 0
+  for (const it of parseRss(await r.text())) {
+    if (!it.title) continue
+    const d = Date.parse(it.date); if (d > 0 && Date.now() - d > 2 * 86_400_000) continue
+    if (record('market news', src, it.date, it.title, { src, ...it }, `rss|${src}|${it.link || it.title}`)) n++
+  }
+  return n
+}
+export async function runRss() {
+  const out = {}
+  for (const [src, url] of RSS) { try { out[src] = await pollRss(src, url) } catch (e) { out[src] = -1; if (!rssWarned.has(src)) { rssWarned.add(src); say(`! ${src} news feed failed: ${e.message} (will keep trying)`) } } }
+  return out
+}
+const rssWarned = new Set()
 export async function runOnce(withDeals) {
   const out = {}
   try { out.ann = await pollAnnouncements() } catch (e) { say(`! announcements failed: ${e.message}`) }
   if (withDeals) for (const k of ['block', 'bulk']) { try { out[k] = await pollDeals(k) } catch (e) { say(`! ${k} deals failed: ${e.message}`) } }
   return out
 }
+function holidayToday() {
+  const wd = ist().getUTCDay(); if (wd === 0 || wd === 6) return true
+  try { return JSON.parse(fs.readFileSync(path.join(dataDir, 'nse-holidays.json'), 'utf8')).includes(DAY) } catch { return false }
+}
+if (!globalThis.__newsTest && holidayToday() && !process.env.NEWS_FORCE) { say(`market holiday/weekend ${DAY} - news recorder not needed today.`); process.exit(0) }
 if (!globalThis.__newsTest) {
-  say(`News recorder started for ${DAY} (record only). Announcements every 60 s, block/bulk deals every 10 min, until 15:40.`)
+  say(`News recorder started for ${DAY} (record only). Announcements every 60 s, block/bulk deals every 10 min, market news (RBI/SEBI/PIB/ET/Moneycontrol) every 3 min, until 15:40.`)
   let i = 0, lastBeat = 0
   while (true) {
     const t = ist().toISOString().slice(11, 16)
     if (t >= '15:40') { say('15:40 - news recorder stopped for today.'); break }
     const r = await runOnce(i % 10 === 0)
+    if (i % 3 === 0) await runRss()
     if (Date.now() - lastBeat > 30 * 60_000) { say(`status: ${seen.size} items recorded today`); lastBeat = Date.now() }
     i++; await sleep(60_000)
   }
