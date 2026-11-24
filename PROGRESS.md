@@ -2615,3 +2615,7 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Test: day list correct for 25 Nov close / mid-day / holiday. Installed 15:45 IST (holiday).
 - UNDO: copy auto-feed-before-kiteauto.bat over auto-feed.bat (kite-day-auto.mjs then unused).
 - Tried to run kite-day-1123.bat myself at 15:30 (owner: "you do it"): laptop screen locked -> could not click. Now covered by the automatic pull.
+
+## 24 Nov 15:45 - DAILY REVIEW (Tue 24 Nov): NSE HOLIDAY (Guru Nanak Jayanti) - no trading, feed correctly not started, nothing to review.
+- Streak unchanged. Work done today: news auto-start + market-wide news + VIX (10:40), automatic Zerodha candle backup (15:45).
+- Note: the daily-review routine prompt is old (mentions V9 / "do it" for live changes) - current rules are CLAUDE.md 0p/0x.
