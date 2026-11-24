@@ -33,6 +33,8 @@ timeout /t 10 >nul
 exit /b
 :done
 echo Market closed - feed finished for today.
+REM 24 Nov (owner "make it automatic"): save Zerodha 1-minute candles of today + any recent day with missing candles (backup for feed gaps).
+start "ZERODHA-DAY" /min cmd /c node kite-day-auto.mjs
 timeout /t 10 >nul
 exit /b
 

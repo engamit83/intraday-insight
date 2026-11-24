@@ -2605,3 +2605,13 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Installed 10:40 IST (holiday). Backups on laptop: auto-feed-before-news.bat, news-live-before-rss.mjs, record-extra-before-vix.csv.
   UNDO: copy each backup over the new file.
 - Open: sudden-drop exit research needs the 18/19/23 Nov tick files compressed (>400 MB can't be copied here).
+
+## 24 Nov 15:45 - AUTOMATIC ZERODHA MINUTE-CANDLE BACKUP (owner 15:37 "make it automatic") - record only
+- New kite-day-auto.mjs, started by auto-feed.bat when the market closes (minimized window ZERODHA-DAY): pulls Zerodha 1-minute candles
+  (all our stocks + indices incl. VIX) for TODAY (after 15:31) + every trading day of the last 10 whose data\kite\day\DAY folder has < 400 files
+  (skips weekends/NSE holidays). Uses kite-day.mjs (already-saved files skipped). Needs that day's Zerodha login; if none, it only logs and
+  retries at the next close. First run (25 Nov close) fills 9-23 Nov gaps incl. 19 Nov (partial), 20 Nov (missed), 23 Nov 09:15-09:23 (~30 min).
+- Our own tick recording stays the main data; candles are only the backup for missed minutes (rule 0r, owner 16 Nov).
+- Test: day list correct for 25 Nov close / mid-day / holiday. Installed 15:45 IST (holiday).
+- UNDO: copy auto-feed-before-kiteauto.bat over auto-feed.bat (kite-day-auto.mjs then unused).
+- Tried to run kite-day-1123.bat myself at 15:30 (owner: "you do it"): laptop screen locked -> could not click. Now covered by the automatic pull.
