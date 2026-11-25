@@ -2647,3 +2647,14 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - kite-day-auto ran at 15:35 by itself: pulling 9, 12, 17, 18, 25 Nov candles (incomplete folders) - working.
 - V9 comparison from the old routine prompt skipped: entry rules frozen by owner (0x); V9 is not a candidate.
 - NEXT: 23 Nov what-if from Kite candles (needs 510 files staged - night block); exit research (sudden drop) needs compressed tick files.
+
+## 25 Nov 21:35 - NIGHT BLOCK: 23 Nov what-if POSTPONED (data gap found) + after-close job improved
+- 23 Nov candles (pulled 09:06 today) are MISSING ~64 stocks (incl. LT, TCS, MARUTI, LALPATHLAB, CANBK, PNB...): the 09:08-09:18 internet
+  outage made those downloads fail ("fetch failed"); 20 + 19 Nov likely the same (65 FAILED lines). A what-if on incomplete picks would be wrong
+  -> postponed. kite-day-auto treated a folder with >= 400 files as complete, so it would never refill them.
+- FIX installed 21:35 (kite-day-auto.mjs; backup kite-day-auto-before-500.mjs): complete = >= 500 files (full day ~508) -> 26 Nov close refills
+  the gaps of 19/20/23 Nov (only missing files are fetched). ALSO after the close it now compresses recent tick files (ticks-DAY.csv -> .gz,
+  original kept) for the last 10 trading days so Claude can copy them (400 MB limit) for the sudden-drop exit research without owner clicks.
+- Today's automatic candle pull at the close: 9, 12, 17, 18, 25 Nov - 25 Nov 510/510 saved, finished 15:55.
+- UNDO: copy kite-day-auto-before-500.mjs over kite-day-auto.mjs.
+- NEXT (26 Nov after close): check refill of 19/20/23 Nov + tick .gz files; then 23 Nov what-if; then exit research on tick days.
