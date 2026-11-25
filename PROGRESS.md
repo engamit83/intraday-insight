@@ -2629,3 +2629,21 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Trades by 09:45: PNBHOUSING BUY -315 (stop 09:21:52); HYUNDAI SELL open; BAJAJFINSV BUY open.
 - kite-day-1123.bat run by Claude via Explorer at 09:06 (owner "do it now"): 23/20/19 Nov candles 510/510 each, done 09:28.
 - News: RSS works (ET 65, PIB 21, RBI 10 by 09:45); SEBI + Moneycontrol 0 items; NSE announcements 21/21 timed out, deals too -> fix tonight.
+
+## 25 Nov 15:55 - DAILY REVIEW (Wed 25 Nov) + AFTER-CLOSE INSTALLS
+- PAPER DAY: +637 (4 trades, 2 winners): PNBHOUSING BUY -315 (stop 09:21, 1 min after entry), LALPATHLAB BUY -215 (stall stop 10:17),
+  HYUNDAI SELL +339 (P8 protect stop 10:20, best +0.8R), BAJAJFINSV BUY +828 (smart-exit trail 11:49, best +2.1R kept 1.7R). Winning day.
+  Streak: 1 day without a losing day (last trading days: 18 Nov -2,166, 19 Nov +3,045, 20 Nov no feed, 23 Nov no picks, 25 Nov +637).
+- CAVEAT: picks came from the late-start backfill with only 220/514 stocks (internet outage 09:08-09:18) - not the full normal pick list.
+  Second outage 12:56-13:06 (no open trades). Laptop internet = the weakest link today; owner told.
+- Laptop research line: morning direction +1% before -1% 52% of 404; gap held 56% of 93. Shadow later entries net -12,229 (monitor only).
+- INSTALLED 15:53 (feed stopped 15:35): late-start backfill fix (feed.mjs md5 def6369e..., size 40,746; backup feed-before-bf2.mjs).
+  One run at a time, starts only after the socket opens, waits to 09:20:05, retries failed stocks 3 rounds, skipped if the live opening
+  range is complete. Harness test: 1 run, waited, 60/60 after retry, 10 picks; repeat calls no-op. Feed tests pass. UNDO: copy feed-before-bf2.mjs over feed.mjs.
+- INSTALLED 15:55 news-live.mjs (backup news-live-before-nseann.mjs): NSE API announcements failed 148/148 today (timeouts, NSE blocks the
+  laptop's automated calls) -> + NSE archive RSS 'Online_announcements.xml' every 3 min as 2nd route; API backs off to every 10 min after
+  5 failures; each RSS source logs bytes/items on its first answer (SEBI + Moneycontrol answered 0 items today -> diagnose tomorrow).
+  News today: ET 73, PIB 29, RBI 15, NSE 0. Fake-feed test passed. UNDO: copy news-live-before-nseann.mjs over news-live.mjs.
+- kite-day-auto ran at 15:35 by itself: pulling 9, 12, 17, 18, 25 Nov candles (incomplete folders) - working.
+- V9 comparison from the old routine prompt skipped: entry rules frozen by owner (0x); V9 is not a candidate.
+- NEXT: 23 Nov what-if from Kite candles (needs 510 files staged - night block); exit research (sudden drop) needs compressed tick files.

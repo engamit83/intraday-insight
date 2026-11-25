@@ -79,6 +79,7 @@ async function pollDeals(kind) {
 // MARKET-WIDE NEWS (owner 23 Nov 14:32: government policy, global markets, RBI): RSS feeds polled every 3 min, record only.
 // Item -> kind 'market news', symbol = source name. Items older than 2 days are ignored (first poll of the day would replay old ones).
 export const RSS = [
+  ['NSE-ANN', 'https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml'], // 25 Nov: the NSE API timed out all day (148/148) - archive RSS as 2nd route
   ['RBI', 'https://www.rbi.org.in/pressreleases_rss.xml'],
   ['SEBI', 'https://www.sebi.gov.in/sebirss.xml'],
   ['PIB-FINANCE', 'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3'],
@@ -101,10 +102,12 @@ async function pollRss(src, url) {
   const r = await fetchFn(url, { headers: UA, signal: AbortSignal.timeout(30_000) })
   if (!r.ok) throw new Error(`HTTP ${r.status}`)
   let n = 0
-  for (const it of parseRss(await r.text())) {
+  const body = await r.text(), items = parseRss(body)
+  if (!rssFirst.has(src)) { rssFirst.add(src); say(`${src} feed answered: ${body.length} bytes, ${items.length} items${items.length ? '' : ' - NOT an RSS feed? starts: ' + body.slice(0, 80).replace(/\s+/g, ' ')}`) }
+  for (const it of items) {
     if (!it.title) continue
     const d = Date.parse(it.date); if (d > 0 && Date.now() - d > 2 * 86_400_000) continue
-    if (record('market news', src, it.date, it.title, { src, ...it }, `rss|${src}|${it.link || it.title}`)) n++
+    if (record(src === 'NSE-ANN' ? 'announcement' : 'market news', src, it.date, src === 'NSE-ANN' && it.desc ? `${it.title} - ${it.desc}` : it.title, { src, ...it }, `rss|${src}|${it.link || it.title}`)) n++
   }
   return n
 }
@@ -113,10 +116,12 @@ export async function runRss() {
   for (const [src, url] of RSS) { try { out[src] = await pollRss(src, url) } catch (e) { out[src] = -1; if (!rssWarned.has(src)) { rssWarned.add(src); say(`! ${src} news feed failed: ${e.message} (will keep trying)`) } } }
   return out
 }
-const rssWarned = new Set()
+const rssWarned = new Set(), rssFirst = new Set()
+let annFails = 0, annSkip = 0
 export async function runOnce(withDeals) {
   const out = {}
-  try { out.ann = await pollAnnouncements() } catch (e) { say(`! announcements failed: ${e.message}`) }
+  if (annSkip > 0) annSkip--
+  else try { out.ann = await pollAnnouncements(); annFails = 0 } catch (e) { annFails++; if (annFails >= 5) annSkip = 9; if (annFails <= 5 || annFails % 6 === 0) say(`! announcements failed (${annFails} in a row${annFails >= 5 ? ', now trying every 10 min - NSE-ANN RSS still every 3 min' : ''}): ${e.message}`) }
   if (withDeals) for (const k of ['block', 'bulk']) { try { out[k] = await pollDeals(k) } catch (e) { say(`! ${k} deals failed: ${e.message}`) } }
   return out
 }
