@@ -2619,3 +2619,13 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 ## 24 Nov 15:45 - DAILY REVIEW (Tue 24 Nov): NSE HOLIDAY (Guru Nanak Jayanti) - no trading, feed correctly not started, nothing to review.
 - Streak unchanged. Work done today: news auto-start + market-wide news + VIX (10:40), automatic Zerodha candle backup (15:45).
 - Note: the daily-review routine prompt is old (mentions V9 / "do it" for live changes) - current rules are CLAUDE.md 0p/0x.
+
+## 25 Nov 09:45 - FEED CHECK: INTERNET OUTAGE 09:08-09:18, FIRST REAL LATE-START BACKFILL
+- Feed connected 09:01:19 (login 09:00); laptop internet lost ~09:08 (no prices 489 s, ENOTFOUND ws.kite.trade); reconnected 09:18:55; watchdog OK; ticks fine since.
+- Late-start backfill fired: 8 picks at 09:20 (LALPATHLAB B, MAXHEALTH S, TORNTPOWER B, HYUNDAI S, BAJAJFINSV B, PNBHOUSING B, DMART B, PTCIL B)
+  BUT from only 220/514 stocks and incomplete candles. BUGS: (1) backfill launched on EVERY reconnect attempt (6 times, overlapping; one finishing
+  releases the hold for the others); (2) started 09:18:55 -> 09:18/09:19 candles not complete; (3) failed fetches not retried; (4) previous close failed.
+  FIX TONIGHT: run once at a time, start after socket opens, wait until 09:20:05, retry failures, need >= 90% loaded, log coverage.
+- Trades by 09:45: PNBHOUSING BUY -315 (stop 09:21:52); HYUNDAI SELL open; BAJAJFINSV BUY open.
+- kite-day-1123.bat run by Claude via Explorer at 09:06 (owner "do it now"): 23/20/19 Nov candles 510/510 each, done 09:28.
+- News: RSS works (ET 65, PIB 21, RBI 10 by 09:45); SEBI + Moneycontrol 0 items; NSE announcements 21/21 timed out, deals too -> fix tonight.
