@@ -2666,3 +2666,17 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Sells -2,785: APLAPOLLO -928 (09:20 entry, fast-drop stop) + re-entry -697; ENRIN -570 (fast-drop stop) + re-entry -590. Both sells failed twice.
 - Streak: back to 0 (last losing day 26 Nov). Rule 0d: diagnose tonight on tick data (sell entries + re-entries; Nifty direction that day).
 - NSE-ANN RSS works (191 announcements by 09:17); SEBI RSS valid but empty.
+
+## 26 Nov 16:25 - DAILY REVIEW (Thu 26 Nov) + BREADTH FINDING [TICK, live trades - small sample]
+- Day -1,091 (9 trades): buys +1,694, sells -2,785 (APLAPOLLO/ENRIN each lost twice incl. re-entry). Feed: login 08:38, connected 09:00,
+  514/514 from 09:15; internet drop 14:21-14:25 (no open trades). Laptop research line: Nifty +0.04%, morning direction 46% of 369.
+- After-close job worked: 23 Nov refilled (64 missing -> 510/510), 26 Nov 510/510; tick files compressed (.gz ~115 MB each) for 12, 18, 19,
+  23, 25, 26 Nov (17 Nov already) -> exit research can start (copy limit OK). 19/20 Nov: not listed as incomplete (check counts tonight).
+- FINDING: market breadth at entry (share of stocks up, recorded per trade). Both losing sells today entered with breadth ~62% (market up).
+  All 76 live trades 23 Oct-26 Nov: WITH breadth (BUY >=60 / SELL <=40) 25 trades, 16 won, +4,857; neutral 40-60: 24, 9 won, -2,957;
+  AGAINST breadth (SELL >=60 / BUY <=40): 8 trades, 1 won, -5,050; no breadth recorded: 19, -1,135.
+  Skipping against-breadth trades: total -4,285 -> +765, losing days 7 -> 5 (12 days).
+  CAUTION: only 8 against-trades (rule 0v wants ~100); breadth at 09:20 is testable on 5 years of minute data (0w) -> run that test.
+  Entry rules frozen (0x) -> SHADOW + proposal to the owner only; no live change.
+- NEXT: 5-year minute-data test of "skip when breadth against" (walk-forward 2022-24 / 2025-26); add it to the shadow board; 23 Nov what-if;
+  exit research on the .gz tick days.
