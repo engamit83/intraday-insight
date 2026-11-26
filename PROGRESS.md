@@ -2680,3 +2680,16 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   Entry rules frozen (0x) -> SHADOW + proposal to the owner only; no live change.
 - NEXT: 5-year minute-data test of "skip when breadth against" (walk-forward 2022-24 / 2025-26); add it to the shadow board; 23 Nov what-if;
   exit research on the .gz tick days.
+
+## 26 Nov 21:40 - NIGHT BLOCK: BREADTH-AGAINST TEST ON 5 YEARS [OLD DATA - decides for 09:20 filters, rule 0w]
+- Data: existing BASE replays 2022-26 (z/mdays2 *-S-BASE.json, 1,184 days, 6,758 trades, breadth at entry recorded per trade).
+- Per trade by breadth at entry (60/40 bands): WITH 1,562 tr avg -47 | MIXED 3,677 avg -36 | AGAINST 1,519 avg -76 (worst group;
+  worse than WITH in 4 of 5 years: 2022 -38/-22, 2024 -51/-27, 2025 -112/-51, 2026 -83/-12; 2023 the exception -87/-147).
+- Filters (net / losing days, all 5 years): BASE -319,970 / 684 | E6 45/55 -203,607 / 573 | 55/45 -146,053 / 490 | 60/40 -73,168 / 350 |
+  65/35 -48,192 / 220. Stricter = fewer trades and smaller losses, but the average per trade does NOT improve (60/40 -47 = BASE -47);
+  "skip only AGAINST (BUY < 40 / SELL > 60)" ~ -204k, avg ~-39/trade (better than -47, still negative).
+- READ: live (8 trades, -5,050) and 5 years agree that AGAINST-breadth trades are the worst group, but no breadth filter makes the base
+  profitable on old minute data (old data can't judge exits, 0k). Tries counted: 6 variants.
+- PROPOSAL (entry frozen 0x -> owner decides): add "skip a pick when breadth is clearly against it (BUY with < 40% of stocks up / SELL with
+  > 60%)" as a SHADOW first (replayed on each live day), promote only after ~100 live trades per rule 0v.
+- 23 Nov what-if NOT done: laptop not linked at 21:35 (bridge offline). Laptop .md copy pending (rule 0c, next link).
