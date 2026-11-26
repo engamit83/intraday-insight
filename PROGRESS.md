@@ -2658,3 +2658,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Today's automatic candle pull at the close: 9, 12, 17, 18, 25 Nov - 25 Nov 510/510 saved, finished 15:55.
 - UNDO: copy kite-day-auto-before-500.mjs over kite-day-auto.mjs.
 - NEXT (26 Nov after close): check refill of 19/20/23 Nov + tick .gz files; then 23 Nov what-if; then exit research on tick days.
+
+## 26 Nov 11:46 - LOSING DAY -1,091 (paper), all trades closed by 11:26
+- Login trouble 08:30 (owner), solved 08:38; feed connected 09:00:06, 514/514 from 09:15 (full picks). No feed problems.
+- Picks: LGEINDIA, APLAPOLLO, ENRIN, ACE, COHANCE, TORNTPHARM, PHOENIXLTD, TITAGARH, WIPRO, SUNTV.
+- Buys +1,694: ACE +889 (trail, best +2.58R), SUNTV +550 (trail), TORNTPHARM +453 (trail), WIPRO -198 (stop).
+- Sells -2,785: APLAPOLLO -928 (09:20 entry, fast-drop stop) + re-entry -697; ENRIN -570 (fast-drop stop) + re-entry -590. Both sells failed twice.
+- Streak: back to 0 (last losing day 26 Nov). Rule 0d: diagnose tonight on tick data (sell entries + re-entries; Nifty direction that day).
+- NSE-ANN RSS works (191 announcements by 09:17); SEBI RSS valid but empty.
