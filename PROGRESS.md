@@ -2693,3 +2693,15 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - PROPOSAL (entry frozen 0x -> owner decides): add "skip a pick when breadth is clearly against it (BUY with < 40% of stocks up / SELL with
   > 60%)" as a SHADOW first (replayed on each live day), promote only after ~100 live trades per rule 0v.
 - 23 Nov what-if NOT done: laptop not linked at 21:35 (bridge offline). Laptop .md copy pending (rule 0c, next link).
+
+## 27 Nov 15:50 - DAILY REVIEW (Fri 27 Nov): LOSING DAY -1,599 (2nd in a row)
+- 4 picks, all BUY (ACE, KAJARIACER, INTELLECT, AWL). Trades: INTELLECT -364 (fast-drop stop 09:23), ACE -941 (stop 09:37), KAJARIACER -685
+  (stall stop 10:00), AWL -218 (stall stop 10:56), ACE re-entry +609 (15:15 square-off, best 0.75R). 4 of 5 stopped in the first hour.
+- Market: breadth at entry 67-74% (all trades WITH breadth) but Nifty closed -0.90%; laptop research line: morning direction 41% of 342
+  (BUY side only 31%). = a gap/early-strength day that faded. Breadth filter would NOT have helped today.
+- Updated live breadth table (81 trades): WITH 30 tr, 17 won, +3,258 | MIXED 24, 9 won, -2,957 | AGAINST 8, 1 won, -5,050 | none 19, -1,135.
+- Stop fills below the stop (KAJARIACER 1230.65 vs 1233.51, ACE 1296.54 vs 1298.29) = first traded price after the stop was crossed
+  (fast fall) - realistic for paper, it is real slippage.
+- Feed: connected 09:00, 514/514 from 09:15; internet drop 13:42-13:50 (owner told). News NSE-ANN RSS working.
+- Week 23-27 Nov: 23 Nov 0 trades (late start), 25 Nov +637, 26 Nov -1,091, 27 Nov -1,599 = -2,053 (24 Nov holiday).
+- Owner questions still open: breadth-against shadow test? Sharekhan backup feed?
