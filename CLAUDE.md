@@ -178,6 +178,7 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > market turn (exit, take the other side; a stock-only turn = exit, no flip). These two are the candidate to build + test (5 years where valid + tick days)
 > -> numbers -> owner's "do it" for live. IDEA 3 (half size first, add the rest at +0.5-1R, stop to first entry) is SKIPPED as a rule ("our entry is
 > strong") but Claude computes it alongside as a what-if ("what would we gain or lose, is it worth it") and reports it.
+> Owner 01:27: the flip does NOT close the old trade - the EXIT rules do that (0n; exits still to be improved); the flip only opens the new opposite trade.
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
