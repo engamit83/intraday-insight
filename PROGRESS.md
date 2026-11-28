@@ -2705,3 +2705,21 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - Feed: connected 09:00, 514/514 from 09:15; internet drop 13:42-13:50 (owner told). News NSE-ANN RSS working.
 - Week 23-27 Nov: 23 Nov 0 trades (late start), 25 Nov +637, 26 Nov -1,091, 27 Nov -1,599 = -2,053 (24 Nov holiday).
 - Owner questions still open: breadth-against shadow test? Sharekhan backup feed?
+
+## 28 Nov 10:00 - SATURDAY WEEKLY REVIEW (week 23-27 Nov) [TICK = live paper trades]
+- Laptop link: NOT reachable 10:00 (bridge offline) -> review from the trade files already copied (all live days 23 Oct-27 Nov).
+- This week: 23 Nov 0 trades (late start), 24 holiday, 25 +637, 26 -1,091, 27 -1,599 = -2,053. Losing days 2 of 3.
+- All 13 live paper days: 81 trades, 36 won (44%), net -5,884, losing days 8 of 13, worst -5,508 (26 Oct), best +3,968 (23 Oct).
+  By side: BUY 38 tr -3,611 | SELL 43 tr -2,273. By exit: STOP 47 tr -34,003 (avg -723) | TRAIL 31 tr +26,117 (avg +842) | 15:15 3 tr +2,002.
+- DIAGNOSIS: winners and losers are about the same size (+842 vs -723) with 44% winners -> the leak is the 47 stop-outs, most within
+  the first hour (26-27 Nov: 7 of 9 losers stopped before 10:00). Entry study (Nov): 54% of entries reach +1.5% before the stop, so
+  entries are not random - the exits give back. Market breadth: AGAINST-market trades worst (8 tr -5,050) but 27 Nov showed WITH-market
+  trades can fail too (Nifty reversed -0.9%).
+- NEXT (proposals, owner decides entry; exits refined on ticks per 0k/0n):
+  1. Sudden-drop / early-warning exit study on the compressed tick days (12,17,18,19,23,25,26 Nov .gz) - measure what happened 30-120 s
+     before each stop-out vs control moments; goal = cut the -723 average stop loss.
+  2. Breadth-against SHADOW (skip BUY <40% / SELL >60%) - awaiting owner's yes.
+  3. Sharekhan backup feed - awaiting owner's yes.
+  4. 23 Nov what-if - pending laptop link.
+- Review chain: daily review folded into the after-close block (weekdays ~16:00, chained day to day) + Saturday 10:00 weekly review,
+  scheduled through 12 Dec.
