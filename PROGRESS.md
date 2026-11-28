@@ -2735,3 +2735,11 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - READ: on this day there is no clear "selling building up" warning before a sudden drop; what precedes drops is activity/volatility
   (spikes, fast volume), not direction. One day only -> repeat on 12/18/19/23/25/26/27 Nov .gz days when the laptop is linked, then test
   on OUR trades: does "fast spike + volume burst while in profit" -> lock profit earlier beat the live exits on the same entries.
+
+## 28 Nov 23:50 - 27 Nov DIAGNOSIS (owner: "entry issue or exit issue, needs to be taken care of")
+- ENTRY problem: best move after entry INTELLECT +0.26R, ACE 0.00R, KAJARIACER +0.19R, AWL +0.15R (none got near +1.5%); laptop line:
+  BUY-side morning direction held only 31% of 249 that day; Nifty -0.9% (early strength faded).
+- EXITS did their job: losers cut at -0.74R, -0.95R, -0.69R, -0.44R (fast-drop/stall rules), not the full -1R; ACE re-entry kept 0.62R of 0.75R.
+- 5-year check "how much of the market is on our side at entry" (BASE replays, avg Rs/trade): <40% -77 | 40-60% -35 | 60-70% -70 |
+  70-80% +58 | 80%+ -186 (137 tr). Not a clean pattern -> no simple fix from breadth for fade days. NEXT: study fade days (strong
+  gap/early strength that reverses) on 5 years: what at 09:20 separates them (gap size, pre-open, Nifty gap, VIX).
