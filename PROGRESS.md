@@ -2743,3 +2743,9 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 - 5-year check "how much of the market is on our side at entry" (BASE replays, avg Rs/trade): <40% -77 | 40-60% -35 | 60-70% -70 |
   70-80% +58 | 80%+ -186 (137 tr). Not a clean pattern -> no simple fix from breadth for fade days. NEXT: study fade days (strong
   gap/early strength that reverses) on 5 years: what at 09:20 separates them (gap size, pre-open, Nifty gap, VIX).
+
+## 29 Nov 00:00 - OWNER DESIGN (recorded in CLAUDE.md): FLIP + NO TRADE IN CHOPPY MARKET -> SHADOW TEST
+- First entry = 09:20 base rules; then re-check the side (price vs open) and enter the opposite side on the range break, any number
+  of flips; no trades while 40-<60% of stocks are up. Build as shadow on the 7 .gz tick days (+ old data for the breadth part), report.
+- Caution for the test: 5-year BASE replays had MIXED-market (40-60%) trades as the least-bad group (avg -35 vs -77 against, -47 with),
+  live MIXED 24 tr -2,957; late-entry shadow (after 10:15) -12,229 by 25 Nov; many flips = more costs + whipsaw. Measure all of it.

@@ -166,6 +166,12 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > Owner 13:50: "I want to save my profit, check the factors which are present when the sudden drop happens, if we are able to locate it BEFORE the
 > drop we need to come out before it drops" -> also an EARLY-WARNING study: what the ticks/order book/market looked like in the 30-120 s BEFORE each
 > sudden drop vs the same moments in trades that did NOT drop; if a reliable warning exists, exit (or lock profit) before the drop. Priority: protect profit.
+> **OWNER 28-29 Nov (23:46-00:00) - DIRECTION-FLIP + CHOPPY-MARKET IDEA (TEST FIRST, entry rules still frozen 0x until his "do it"):**
+> 27 Nov was "not an entry issue - market moved up then faded; identify it soon, move out, and if recognised fast enough take the opposite trade".
+> Owner's design: keep the 09:20 rules for the FIRST entry; afterwards re-check rule 3 (side = price vs 09:15 open) and enter the opposite
+> side on the same break rule (other side of the 09:15-09:20 range), "flip any number of times"; and "in choppy (40% to <60% of stocks up)
+> we don't trade". Claude builds this as a SHADOW test on the recorded tick days (and old data where valid, 0w) and brings numbers; live only
+> after the owner's "do it". Also pending: breadth-against shadow (same family).
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
