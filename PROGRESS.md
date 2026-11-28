@@ -2753,3 +2753,9 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
 ## 29 Nov 00:20 - OWNER: TEST TURNOVER LEVELS (rule 2) - "so far we are safe ... but we can still test those levels"
 - TODO [OLD DATA decides - stock selection, 0w]: rule 2 turnover >= Rs 10 / 15 / 25 cr (live = 25), everything else equal, 5 years
   (build 2022-24, check 2025-26): trades, win %, net after costs, losing days, avg spread proxy. Live rule stays 25 cr (0x).
+
+## 29 Nov 01:10 - PLAN AGREED WITH OWNER (recorded in CLAUDE.md)
+- Build + test: IDEA 1 (with-market only, no trade in a choppy market - 4 choppy definitions tested) + IDEA 2 (flip when stock AND market turn).
+  Evidence: breadth/Nifty filters on 5 years (old data decides 09:20-level filters, 0w) + flips and exits on the 7-8 .gz tick days [TICK].
+- IDEA 3 (half size first, add at +0.5/0.75/1R, stop to first entry) = what-if only, reported next to 1+2 ("is it worth it").
+- Report table: NOW vs 1 vs 1+2 (+ idea-3 what-if): trades, win %, net after costs, losing days, worst day. Live only with owner's "do it".

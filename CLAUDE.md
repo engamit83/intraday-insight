@@ -172,6 +172,12 @@ analyse every trading day with ALL the data we have, self-improve towards this g
 > side on the same break rule (other side of the 09:15-09:20 range), "flip any number of times"; and "in choppy (40% to <60% of stocks up)
 > we don't trade". Claude builds this as a SHADOW test on the recorded tick days (and old data where valid, 0w) and brings numbers; live only
 > after the owner's "do it". Also pending: breadth-against shadow (same family).
+> **OWNER 29 Nov 01:00-01:10 - PLAN AGREED (entry still frozen 0x until his "do it" on the numbers):** Claude's expert plan, owner agreed:
+> IDEA 1 = trade only WITH the market (BUY only when most stocks + Nifty are rising, SELL only when falling) and do NOT trade when the market is
+> undecided/choppy (definition to be chosen by data: breadth 40-60%, Nifty range, Nifty/stock crossing its open); IDEA 2 = flip when the stock AND the
+> market turn (exit, take the other side; a stock-only turn = exit, no flip). These two are the candidate to build + test (5 years where valid + tick days)
+> -> numbers -> owner's "do it" for live. IDEA 3 (half size first, add the rest at +0.5-1R, stop to first entry) is SKIPPED as a rule ("our entry is
+> strong") but Claude computes it alongside as a what-if ("what would we gain or lose, is it worth it") and reports it.
 > **RULE 0i - STAY CONNECTED TO THE LAPTOP (owner 10 Nov 09:47):** every session, every scheduled review and every work block starts with a laptop-link check
 > (a device call, e.g. list D:\intraday\live-feed\logs). If it works, keep using it all day. If it fails: retry once, then tell the owner at once in one line
 > ("laptop not linked - please open the Claude desktop app / wake the laptop") and keep retrying at each next step; never silently work without the laptop.
