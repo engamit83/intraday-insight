@@ -2723,3 +2723,15 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   4. 23 Nov what-if - pending laptop link.
 - Review chain: daily review folded into the after-close block (weekdays ~16:00, chained day to day) + Saturday 10:00 weekly review,
   scheduled through 12 Dec.
+
+## 28 Nov 11:10 - WEEKEND: EARLY-WARNING STUDY (sudden drops) - FIRST DAY [TICK, 17 Nov, all liquid stocks]
+- Laptop offline again at 11:00 -> 23 Nov what-if still pending; used the 17 Nov tick file already here (full day, 10 columns incl.
+  total buy/sell qty and best bid/offer qty). Script z/ew/ew.py.
+- Event = price falls >= 0.6% within the next 60 s (first per stock per 10 min), 09:30-15:28; control = moments with next-60 s move
+  within +-0.2%. 192 drops vs 1,168 calm moments, features measured on the 30-120 s BEFORE the moment:
+  move last 60 s: DROP median +0.04% (p75 +0.25%) vs CALM 0.00% (p75 +0.04%) -> drops often come right after a quick spike UP;
+  volume speed (last 30 s vs 10-min average): DROP 0.80 vs CALM 0.55 -> more activity before drops;
+  buy-vs-sell total qty change, bid/offer qty, Nifty last 60 s: NO difference.
+- READ: on this day there is no clear "selling building up" warning before a sudden drop; what precedes drops is activity/volatility
+  (spikes, fast volume), not direction. One day only -> repeat on 12/18/19/23/25/26/27 Nov .gz days when the laptop is linked, then test
+  on OUR trades: does "fast spike + volume burst while in profit" -> lock profit earlier beat the live exits on the same entries.
