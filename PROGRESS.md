@@ -2749,3 +2749,7 @@ Rs after costs (before costs in brackets); losing days / market days; worst day;
   of flips; no trades while 40-<60% of stocks are up. Build as shadow on the 7 .gz tick days (+ old data for the breadth part), report.
 - Caution for the test: 5-year BASE replays had MIXED-market (40-60%) trades as the least-bad group (avg -35 vs -77 against, -47 with),
   live MIXED 24 tr -2,957; late-entry shadow (after 10:15) -12,229 by 25 Nov; many flips = more costs + whipsaw. Measure all of it.
+
+## 29 Nov 00:20 - OWNER: TEST TURNOVER LEVELS (rule 2) - "so far we are safe ... but we can still test those levels"
+- TODO [OLD DATA decides - stock selection, 0w]: rule 2 turnover >= Rs 10 / 15 / 25 cr (live = 25), everything else equal, 5 years
+  (build 2022-24, check 2025-26): trades, win %, net after costs, losing days, avg spread proxy. Live rule stays 25 cr (0x).
